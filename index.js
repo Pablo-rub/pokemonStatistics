@@ -108,270 +108,6 @@ const replaySchema = new mongoose.Schema({
         field: {
           type: String,
           duration: Number
-        },
-        terrain: {
-          type: String,
-          duration: Number
-        },
-        trickRoom: {
-          duration: Number
-        },
-        tailwind: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        reflect: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        lightScreen: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        auroraVeil: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        safeguard: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        mist: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        spikes: {
-          player1: {
-            layers: Number
-          },
-          player2: {
-            layers: Number
-          }
-        },
-        toxicSpikes: {
-          player1: {
-            layers: Number
-          },
-          player2: {
-            layers: Number
-          }
-        },
-        stealthRock: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        stickyWeb: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        leechSeed: {
-          player1: {
-            amount: Number
-          },
-          player2: {
-            amount: Number
-          }
-        },
-        substitute: {
-          player1: {
-            hp: Number
-          },
-          player2: {
-            hp: Number
-          }
-        },
-        wish: {
-          player1: {
-            amount: Number
-          },
-          player2: {
-            amount: Number
-          }
-        },
-        futureSight: {
-          player1: {
-            damage: Number
-          },
-          player2: {
-            damage: Number
-          }
-        },
-        doomDesire: {
-          player1: {
-            damage: Number
-          },
-          player2: {
-            damage: Number
-          }
-        },
-        reflectType: {
-          player1: {
-            type: String
-          },
-          player2: {
-            type: String
-          }
-        },
-        transform: {
-          player1: {
-            pokemon: String
-          },
-          player2: {
-            pokemon: String
-          }
-        },
-        imposter: {
-          player1: {
-            pokemon: String
-          },
-          player2: {
-            pokemon: String
-          }
-        },
-        powerTrick: {
-          player1: {
-            pokemon: String
-          },
-          player2: {
-            pokemon: String
-          }
-        },
-        healBlock: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        embargo: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        torment: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        encore: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        disable: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        taunt: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        heal: {
-          player1: {
-            amount: Number
-          },
-          player2: {
-            amount: Number
-          }
-        },
-        wish: {
-          player1: {
-            amount: Number
-          },
-          player2: {
-            amount: Number
-          }
-        },
-        ingrain: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        aquaRing: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        magnetRise: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        telekinesis: {
-          player1: {
-            duration: Number
-          },
-          player2: {
-            duration: Number
-          }
-        },
-        magicRoom: {
-          duration: Number
-        },
-        wonderRoom: {
-          duration: Number
-        },
-        gravity: {
-          duration: Number
         }
       }]
     }]
@@ -387,15 +123,14 @@ app.post('/replays', async (req, res) => {
         //Obtaining the data from the JSON file in the URL
         const response = await axios.get(`${replayUrl}.json`);
         const replayData = response.data;
-
+        
         //Extracting the data from the replay
         const [player1, player2] = replayData.players;
         const turns = []; 
         const log = replayData.log;
         let turnNumber = 1;
-
+        
         for (let line of log) {
-          const winMatch = line.match(/\|win\|([^\|]+)/);
           const turnMatch = line.match(/(\d+):/);
 
           if (turnMatch) {
@@ -572,14 +307,16 @@ app.post('/replays', async (req, res) => {
             }
           }
         }
-
+        
         //Creating the new entry in the database
+        const winnerMatch = log.match(/\|win\|([^\|]+)/);
+        const winner = winnerMatch ? winnerMatch[1].trim() : null;
         const newReplay = new Replay({
           player1,
           player2,
-          winner: winMatch ? winMatch[1] : null,
-          loser: winMatch ? (winMatch[1] === player1 ? player2 : player1) : null,
-          date: new Date(replayData.uploadTime * 1000),
+          winner: winner,
+          loser: winner === player1 ? player2 : player1,
+          date: date = new Date(replayData.uploadtime * 1000),
           turns
         });
 
