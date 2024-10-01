@@ -34,6 +34,10 @@ const replaySchema = new mongoose.Schema({
           remainingHp: Number
       }]
     },
+    faintedPokemons: {
+      player1: [{name: String, turnFainted: Number}],
+      player2: [{name: String, turnFainted: Number}]
+    },
     turns: [{
       turnNumber: {type: Number, required: true},
       activePokemons: {
@@ -70,16 +74,6 @@ const replaySchema = new mongoose.Schema({
             accuracy: Number,
             evasion: Number
           }
-        }]
-      },
-      faintedPokemons: {
-        player1: [{
-          name: String,
-          turnFainted: Number
-        }],
-        player2: [{
-          name: String,
-          turnFainted: Number
         }]
       },
       events: [{
@@ -126,6 +120,10 @@ app.post('/replays', async (req, res) => {
     // Extracting the data from the replay
     const [player1, player2] = replayData.players;
     const pokemonsRevealed = {
+      player1: [],
+      player2: []
+    };
+    const faintedPokemons = {
       player1: [],
       player2: []
     };
@@ -197,7 +195,19 @@ app.post('/replays', async (req, res) => {
         });
       }
 
-      // Optionally: Capture other events like moves, damage, etc. here
+      // Detect fainted Pokémon
+      const faintedMatch = line.match(/\|faint\|(p1[ab]|p2[ab]): (.+)/);
+      if (faintedMatch) {
+        const player = faintedMatch[1].startsWith('p1') ? 'player1' : 'player2';
+        const pokemonName = faintedMatch[2];
+        const slot = faintedMatch[1].endsWith('a') ? 0 : 1;
+
+        // Update activePokemons
+        activePokemons[player][slot] = null;
+
+        // Update faintedPokemons
+        faintedPokemons[player].push({name: pokemonName, turnFainted: turnNumber});
+      }
     }
 
     // Create the new entry in the database
@@ -208,6 +218,7 @@ app.post('/replays', async (req, res) => {
       loser: winnerMatch.trim() === player1 ? player2 : player1,
       date: new Date(replayData.uploadtime * 1000),
       pokemonsRevealed,
+      faintedPokemons,
       turns
     });
 
