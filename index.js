@@ -146,35 +146,16 @@ app.post('/replays', async (req, res) => {
         winnerMatch = match[1];
         break;
       }
-
-      // Detect active Pokémon switches and update revealed Pokémon if necessary
+      
+      // If gender is present, remove it by using the replace method
       const switchMatchesG = line.match(/\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)(?:, ([MF])\|)?(\d+)\/(\d+)/);
-      const switchMatchesNG = line.match(/\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)\|(\d+)\/(\d+)/);
       if (switchMatchesG) {
-        const player = switchMatchesG[1].startsWith('p1') ? 'player1' : 'player2';
-        const pokemonName = switchMatchesG[2]; // Pokémon name
-        const remainingHp = parseInt(switchMatchesG[6]); // Remaining HP
-            
-        // Assign to the correct slot in the activePokemons array
-        const slot = switchMatchesG[1].endsWith('a') ? 0 : 1; // 'a' -> slot 0, 'b' -> slot 1
-            
-        const pokemon = {
-          name: pokemonName,
-          moves: [], // You can update this if the moves are available elsewhere in the log
-          ability: "", // You can update this if the ability is available
-          item: "", // You can update this if the item is available
-          remainingHp: remainingHp
-        };
-
-        // Update active Pokémon
-        activePokemons[player][slot] = pokemon;
-
-        // Add Pokémon to pokemonsRevealed if it hasn't been revealed yet
-        const isRevealed = pokemonsRevealed[player].some(p => p.name === pokemonName);
-        if (!isRevealed) {
-          pokemonsRevealed[player].push(pokemon);
-        }
-      } else if (switchMatchesNG) {
+        line = line.replace(`, ${switchMatchesG[5]}|`, '|');
+      }
+      
+      // Detect active Pokémon switches and update revealed Pokémon if necessary
+      const switchMatchesNG = line.match(/\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)\|(\d+)\/(\d+)/);
+      if (switchMatchesNG) {
         const player = switchMatchesNG[1].startsWith('p1') ? 'player1' : 'player2';
         const pokemonName = switchMatchesNG[2]; // Pokémon name
         const remainingHp = parseInt(switchMatchesNG[6]); // Remaining HP
