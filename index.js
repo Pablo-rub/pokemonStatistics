@@ -20,7 +20,7 @@ const replaySchema = new mongoose.Schema({
     date: {type: Date, required: true},
     turns: [{
       turnNumber: {type: Number, required: true},
-      pokemonRevealed: {
+      pokemonsRevealed: {
         player1: [{
             name: String,
             moves: [String],              // Movimientos disponibles
@@ -36,7 +36,7 @@ const replaySchema = new mongoose.Schema({
             remainingHp: Number
         }]
       },
-      activePokemon: {
+      activePokemons: {
         player1: [{
           name: String,
           moves: [String],
@@ -72,7 +72,7 @@ const replaySchema = new mongoose.Schema({
           }
         }]
       },
-      faintedPokemon: {
+      faintedPokemons: {
         player1: [{
           name: String,
           turnFainted: Number
@@ -127,22 +127,29 @@ app.post('/replays', async (req, res) => {
         //Extracting the data from the replay
         const [player1, player2] = replayData.players;
         const turns = []; 
-        const log = replayData.log;
+        const log = replayData.log.split('\n');
         let turnNumber = 1;
-        
-        for (let line of log) {
-          const turnMatch = line.match(/(\d+):/);
+        let winnerMatch;
 
+        for (let line of log) {
+
+          let match = line.match(/win\|(.+)/);
+          if (match) {
+            winnerMatch = match[1];
+            break;
+          }
+
+          const turnMatch = line.match(/\|turn\|(\d+)/);
           if (turnMatch) {
             turnNumber = parseInt(turnMatch[1]);
             if (!turns[turnNumber - 1]) {
               turns[turnNumber - 1] = {
                 turnNumber: turnNumber,
-                pokemonRevealed: {
+                pokemonsRevealed: {
                   player1: [],
                   player2: []
                 },
-                activePokemon: {
+                activePokemons: {
                   player1: [],
                   player2: []
                 },
@@ -150,172 +157,14 @@ app.post('/replays', async (req, res) => {
               };
             }
           }
-
-          //Extract events and update turns
-          if (line.includes('|switch|')) {
-            const switchMatch = line.match(/\|switch\|([^\|]+)\|([^\|]+)\|/);
-            if (switchMatch) {
-              const player = switchMatch[1] === player1 ? 'player1' : 'player2';
-              const pokemon = switchMatch[2];
-              turns [turnNumber - 1].activePokemon[player].push({
-                name: pokemon,
-                moves: [],
-                ability: '',
-                item: '',
-                remainingHp: 100
-              });
-            }
-          }
-
-          //Capture fainted events
-          if (line.includes('|faint|')) {
-            const faintMatch = line.match(/\|faint\|([^\|]+)\|([^\|]+)\|/);
-            if (faintMatch) {
-                const player = faintMatch[1] === player1 ? 'player1' : 'player2';
-                const pokemon = faintMatch[2];
-                turns[turnNumber - 1].events.push({
-                    player: player,
-                    event: 'faint',
-                    pokemon: pokemon
-                });
-            }
-          }
-
-          //Capture move events
-          if (line.includes('|move|')) {
-            const moveMatch = line.match(/\|move\|([^\|]+)\|([^\|]+)\|([^\|]+)\|/);
-            if (moveMatch) {
-                const player = moveMatch[1] === player1 ? 'player1' : 'player2';
-                const pokemon = moveMatch[2];
-                const move = moveMatch[3];
-                turns[turnNumber - 1].events.push({
-                    player: player,
-                    event: 'move',
-                    pokemon: pokemon,
-                    move: move
-                });
-            }
-          }
-
-          //Capture status events
-          if (line.includes('|status|')) {
-            const statusMatch = line.match(/\|status\|([^\|]+)\|([^\|]+)\|([^\|]+)\|/);
-            if (statusMatch) {
-                const player = statusMatch[1] === player1 ? 'player1' : 'player2';
-                const pokemon = statusMatch[2];
-                const status = statusMatch[3];
-                turns[turnNumber - 1].events.push({
-                    player: player,
-                    event: 'status',
-                    pokemon: pokemon,
-                    status: status
-                });
-            }
-          }
-
-          //Capture stats changes events
-          if (line.includes('|-boost|')) {
-            const boostMatch = line.match(/\|-boost\|([^\|]+)\|([^\|]+)\|([^\|]+)\|([^\|]+)\|/);
-            if (boostMatch) {
-                const player = boostMatch[1] === player1 ? 'player1' : 'player2';
-                const pokemon = boostMatch[2];
-                const stat = boostMatch[3];
-                const boost = parseInt(boostMatch[4]);
-                turns[turnNumber - 1].events.push({
-                    player: player,
-                    event: 'boost',
-                    pokemon: pokemon,
-                    stat: stat,
-                    boost: boost
-                });
-            }
-          }
-
-          //Capture damage events
-          if (line.includes('|-damage|')) {
-            const damageMatch = line.match(/\|-damage\|([^\|]+)\|([^\|]+)\|([^\|]+)\|([^\|]+)\|/);
-            if (damageMatch) {
-                const player = damageMatch[1] === player1 ? 'player1' : 'player2';
-                const pokemon = damageMatch[2];
-                const damage = parseInt(damageMatch[3]);
-                turns[turnNumber - 1].events.push({
-                    player: player,
-                    event: 'damage',
-                    pokemon: pokemon,
-                    damage: damage
-                });
-            }
-          }
-
-          //Capture item events
-          if (line.includes('|-item|')) {
-            const itemMatch = line.match(/\|-item\|([^\|]+)\|([^\|]+)\|([^\|]+)\|/);
-            if (itemMatch) {
-                const player = itemMatch[1] === player1 ? 'player1' : 'player2';
-                const pokemon = itemMatch[2];
-                const item = itemMatch[3];
-                turns[turnNumber - 1].events.push({
-                    player: player,
-                    event: 'item',
-                    pokemon: pokemon,
-                    item: item
-                });
-            }
-          }
-
-          //Capture ability events
-          if (line.includes('|-ability|')) {
-            const abilityMatch = line.match(/\|-ability\|([^\|]+)\|([^\|]+)\|([^\|]+)\|/);
-            if (abilityMatch) {
-                const player = abilityMatch[1] === player1 ? 'player1' : 'player2';
-                const pokemon = abilityMatch[2];
-                const ability = abilityMatch[3];
-                turns[turnNumber - 1].events.push({
-                    player: player,
-                    event: 'ability',
-                    pokemon: pokemon,
-                    ability: ability
-                });
-            }
-          }
-
-          //Capture weather events
-          if (line.includes('|-weather|')) {
-            const weatherMatch = line.match(/\|-weather\|([^\|]+)\|([^\|]+)\|/);
-            if (weatherMatch) {
-                const player = weatherMatch[1] === player1 ? 'player1' : 'player2';
-                const weather = weatherMatch[2];
-                turns[turnNumber - 1].events.push({
-                    player: player,
-                    event: 'weather',
-                    weather: weather
-                });
-            }
-          }
-
-          //Capture field events
-          if (line.includes('|-field|')) {
-            const fieldMatch = line.match(/\|-field\|([^\|]+)\|([^\|]+)\|/);
-            if (fieldMatch) {
-                const player = fieldMatch[1] === player1 ? 'player1' : 'player2';
-                const field = fieldMatch[2];
-                turns[turnNumber - 1].events.push({
-                    player: player,
-                    event: 'field',
-                    field: field
-                });
-            }
-          }
         }
         
         //Creating the new entry in the database
-        const winnerMatch = log.match(/\|win\|([^\|]+)/);
-        const winner = winnerMatch ? winnerMatch[1].trim() : null;
         const newReplay = new Replay({
           player1,
           player2,
-          winner: winner,
-          loser: winner === player1 ? player2 : player1,
+          winner: winnerMatch[1].trim(),
+          loser: winnerMatch[1] === player1 ? player2 : player1,
           date: date = new Date(replayData.uploadtime * 1000),
           turns
         });
