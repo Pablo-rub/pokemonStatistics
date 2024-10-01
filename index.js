@@ -144,22 +144,19 @@ app.post('/replays', async (req, res) => {
         winnerMatch = match[1];
         break;
       }
-      
-      // If gender is present, remove it by using the replace method
-      const switchMatchesG = line.match(/\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)(?:, ([MF])\|)?(\d+)\/(\d+)/);
-      if (switchMatchesG) {
-        line = line.replace(`, ${switchMatchesG[5]}|`, '|');
-      }
-      
+            
       // Detect active Pokémon switches and update revealed Pokémon if necessary
+      const switchMatchesG = line.match(/\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)(?:, ([MF])\|)?(\d+)\/(\d+)/);
       const switchMatchesNG = line.match(/\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)\|(\d+)\/(\d+)/);
-      if (switchMatchesNG) {
-        const player = switchMatchesNG[1].startsWith('p1') ? 'player1' : 'player2';
-        const pokemonName = switchMatchesNG[2]; // Pokémon name
-        const remainingHp = parseInt(switchMatchesNG[6]); // Remaining HP
+      
+      let switchMatches = switchMatchesG || switchMatchesNG;
+      if (switchMatches) {
+        const player = switchMatches[1].startsWith('p1') ? 'player1' : 'player2';
+        const pokemonName = switchMatches[2]; // Pokémon name
+        const remainingHp = parseInt(switchMatches[6]); // Remaining HP
             
         // Assign to the correct slot in the activePokemons array
-        const slot = switchMatchesNG[1].endsWith('a') ? 0 : 1; // 'a' -> slot 0, 'b' -> slot 1
+        const slot = switchMatches[1].endsWith('a') ? 0 : 1; // 'a' -> slot 0, 'b' -> slot 1
             
         const pokemon = {
           name: pokemonName,
@@ -207,6 +204,30 @@ app.post('/replays', async (req, res) => {
 
         // Update faintedPokemons
         faintedPokemons[player].push({name: pokemonName, turnFainted: turnNumber});
+      }
+
+      // Detect the usage of an item in different formats
+      const itemMatchActivate = line.match(/\|-activate\|(p1[ab]|p2[ab]): (.+?)\|item: (.+?)\|/);
+      const itemMatchStatus = line.match(/\|-status\|(p1[ab]|p2[ab]): (.+?)\|.+?\[from\] item: (.+)/);
+      const itemMatchDamage = line.match(/\|-damage\|(p1[ab]|p2[ab]): (.+?)\|.+?\[from\] item: (.+)/);
+      const itemMatchEnd = line.match(/\|-enditem\|(p1[ab]|p2[ab]): (.+?)\|(.+)/);
+      const itemMatchBoost = line.match(/\|-boost\|(p1[ab]|p2[ab]): (.+?)\|.+?\[from\] item: (.+)/);
+
+      let itemMatch = itemMatchActivate || itemMatchStatus || itemMatchDamage || itemMatchEnd || itemMatchBoost;
+      if (itemMatch) {
+        console.log(itemMatch);
+        const player = itemMatch[1].startsWith('p1') ? 'player1' : 'player2';
+        const pokemonName = itemMatch[2];
+        const item = itemMatch[3];
+
+        // Update the item of the Pokémon
+        const pokemon = activePokemons[player].find(p => p && p.name === pokemonName);
+        if (pokemon && !pokemon.item) {
+          pokemon.item = item;
+        }
+
+        activePokemons[player] = activePokemons[player].map(p => p && p.name === pokemonName ? { ...p, item: item } : p);
+        pokemonsRevealed[player] = pokemonsRevealed[player].map(p => p.name === pokemonName ? { ...p, item: item } : p);
       }
     }
 
