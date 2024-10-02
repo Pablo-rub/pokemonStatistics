@@ -242,11 +242,32 @@ app.post('/replays', async (req, res) => {
         if (pokemon) {
           pokemon.ability = ability;
         }
-        
+
         // Update the ability of the Pokémon in pokemonsRevealed
         pokemonsRevealed[player] = pokemonsRevealed[player].map(p => 
           p.name === pokemonName ? { ...p, ability: ability } : p
         );
+      }
+
+      // Detect the usage of a move
+      let moveMatch = line.match(/\|move\|(p1[ab]|p2[ab]): (.+)\|(.+?)\|(p1[ab]|p2[ab]): (.+)/);
+      if (moveMatch) {
+        const player = moveMatch[1].startsWith('p1') ? 'player1' : 'player2';
+        const pokemonName = moveMatch[2];
+        const move = moveMatch[3];
+        const target = moveMatch[4];
+ 
+        // Update the moveset of the Pokémon
+        const pokemon = activePokemons[player].find(p => p && p.name === pokemonName);
+        if (pokemon) {
+          // Solo agrega el movimiento si no está ya en la lista
+          if (!pokemon.moves.includes(move)) {
+            pokemon.moves.push(move);
+          }
+
+          // También actualiza la lista de movimientos en pokemonsRevealed
+          pokemonsRevealed[player] = pokemonsRevealed[player].map(p => p.name === pokemonName ? { ...p, moves: [...new Set([...p.moves, move])] } : p);
+        }
       }
     }
 
