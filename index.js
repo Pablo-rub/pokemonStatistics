@@ -229,6 +229,25 @@ app.post('/replays', async (req, res) => {
         activePokemons[player] = activePokemons[player].map(p => p && p.name === pokemonName ? { ...p, item: item } : p);
         pokemonsRevealed[player] = pokemonsRevealed[player].map(p => p.name === pokemonName ? { ...p, item: item } : p);
       }
+
+      // Detect the usage of an ability
+      let abilityMatch = line.match(/\|-ability\|(p1[ab]|p2[ab]): (.+)\|(.+)\|(.+)/);
+      if (abilityMatch) {
+        const player = abilityMatch[1].startsWith('p1') ? 'player1' : 'player2';
+        const pokemonName = abilityMatch[2];
+        const ability = abilityMatch[3];
+      
+        // Update the ability of the Pokémon
+        const pokemon = activePokemons[player].find(p => p && p.name === pokemonName);
+        if (pokemon) {
+          pokemon.ability = ability;
+        }
+        
+        // Update the ability of the Pokémon in pokemonsRevealed
+        pokemonsRevealed[player] = pokemonsRevealed[player].map(p => 
+          p.name === pokemonName ? { ...p, ability: ability } : p
+        );
+      }
     }
 
     // Create the new entry in the database
