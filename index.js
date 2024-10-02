@@ -75,35 +75,7 @@ const replaySchema = new mongoose.Schema({
             evasion: Number
           }
         }]
-      },
-      events: [{
-        player: {type: String, required: true},
-        event: {type: String, required: true},
-        pokemon: {type: String},
-        move: {type: String},
-        target: {type: String},
-        damage: {type: Number},
-        status: {type: String},
-        statsChanges: {
-          attack: Number,
-          defense: Number,
-          specialAttack: Number,
-          specialDefense: Number,
-          speed: Number,
-          accuracy: Number,
-          evasion: Number
-        },
-        item: {type: String},
-        ability: {type: String},
-        weather: {
-          type: String,
-          duration: Number
-        },
-        field: {
-          type: String,
-          duration: Number
-        }
-      }]
+      }
     }]
 });
 
@@ -144,6 +116,22 @@ app.post('/replays', async (req, res) => {
         winnerMatch = match[1];
         break;
       }
+
+      // Detect new turn
+      const turnMatch = line.match(/\|turn\|(\d+)/);
+      if (turnMatch) {
+        turnNumber = parseInt(turnMatch[1]);
+        //console.log("Start of turn number ", turnNumber);
+
+        // Create a new object for the turn if it doesn't exist
+        turns.push({
+          turnNumber: turnNumber,
+          activePokemons: {
+            player1: [...activePokemons.player1],
+            player2: [...activePokemons.player2]
+          }
+        });
+      }
             
       // Detect active Pokémon switches and update revealed Pokémon if necessary
       const switchMatchesG = line.match(/\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)(?:, ([MF])\|)?(\d+)\/(\d+)/);
@@ -168,42 +156,14 @@ app.post('/replays', async (req, res) => {
 
         // Update active Pokémon
         activePokemons[player][slot] = pokemon;
+        //console.log(pokemonName, "entered the battle");
 
         // Add Pokémon to pokemonsRevealed if it hasn't been revealed yet
         const isRevealed = pokemonsRevealed[player].some(p => p.name === pokemonName);
         if (!isRevealed) {
           pokemonsRevealed[player].push(pokemon);
+          //console.log(pokemonName, "was revealed");
         }
-      }
-
-      // Detect new turn
-      const turnMatch = line.match(/\|turn\|(\d+)/);
-      if (turnMatch) {
-        turnNumber = parseInt(turnMatch[1]);
-
-        // Create a new object for the turn if it doesn't exist
-        turns.push({
-          turnNumber: turnNumber,
-          activePokemons: {
-            player1: [...activePokemons.player1],
-            player2: [...activePokemons.player2]
-          },
-          events: [] // You can capture additional events if necessary
-        });
-      }
-
-      // Detect fainted Pokémon
-      const faintedMatch = line.match(/\|faint\|(p1[ab]|p2[ab]): (.+)/);
-      if (faintedMatch) {
-        const player = faintedMatch[1].startsWith('p1') ? 'player1' : 'player2';
-        const pokemonName = faintedMatch[2];
-        const slot = faintedMatch[1].endsWith('a') ? 0 : 1;
-
-        // Update activePokemons
-        activePokemons[player][slot] = null;
-
-        // Update faintedPokemons
-        faintedPokemons[player].push({name: pokemonName, turnFainted: turnNumber});
       }
 
       // Detect the usage of an item in different formats
@@ -215,7 +175,6 @@ app.post('/replays', async (req, res) => {
 
       let itemMatch = itemMatchActivate || itemMatchStatus || itemMatchDamage || itemMatchEnd || itemMatchBoost;
       if (itemMatch) {
-        console.log(itemMatch);
         const player = itemMatch[1].startsWith('p1') ? 'player1' : 'player2';
         const pokemonName = itemMatch[2];
         const item = itemMatch[3];
@@ -228,6 +187,7 @@ app.post('/replays', async (req, res) => {
 
         activePokemons[player] = activePokemons[player].map(p => p && p.name === pokemonName ? { ...p, item: item } : p);
         pokemonsRevealed[player] = pokemonsRevealed[player].map(p => p.name === pokemonName ? { ...p, item: item } : p);
+        //console.log(pokemonName, "used the item", item);
       }
 
       // Detect the usage of an ability
@@ -241,6 +201,7 @@ app.post('/replays', async (req, res) => {
         const pokemon = activePokemons[player].find(p => p && p.name === pokemonName);
         if (pokemon) {
           pokemon.ability = ability;
+          //console.log(pokemonName, "has the ability", ability);
         }
 
         // Update the ability of the Pokémon in pokemonsRevealed
@@ -255,7 +216,7 @@ app.post('/replays', async (req, res) => {
         const player = moveMatch[1].startsWith('p1') ? 'player1' : 'player2';
         const pokemonName = moveMatch[2];
         const move = moveMatch[3];
-        const target = moveMatch[4];
+        const target = moveMatch[5];
  
         // Update the moveset of the Pokémon
         const pokemon = activePokemons[player].find(p => p && p.name === pokemonName);
@@ -264,10 +225,41 @@ app.post('/replays', async (req, res) => {
           if (!pokemon.moves.includes(move)) {
             pokemon.moves.push(move);
           }
-
+          
           // También actualiza la lista de movimientos en pokemonsRevealed
           pokemonsRevealed[player] = pokemonsRevealed[player].map(p => p.name === pokemonName ? { ...p, moves: [...new Set([...p.moves, move])] } : p);
+          //console.log(pokemonName, "used the move", move, "against", target);
         }
+      }
+
+      // Update the remaining HP of a Pokémon in each turn
+      let damageMatch = line.match(/\|-damage\|(p1[ab]|p2[ab]): (.+?)\|(.+)/);
+      if (damageMatch) {
+        const player = damageMatch[1].startsWith('p1') ? 'player1' : 'player2';
+        const pokemonName = damageMatch[2].trim().toLowerCase();
+        let remainingHpInfo = damageMatch[3];
+        let newHp;
+
+        // Update the item of the Pokémon
+        const pokemon = activePokemons[player].find(p => p && p.name.toLowerCase() === pokemonName);
+        if (pokemon) {
+          if (remainingHpInfo.includes('/')) {
+            let [hp, maxHp] = remainingHpInfo.split('/');
+            newHp = parseInt(hp);
+            pokemon.remainingHp = newHp;
+          } else if (remainingHpInfo === '0 fnt') {
+            newHp = 0;
+            pokemon.remainingHp = newHp;
+            faintedPokemons[player].push({ name: pokemonName, turnFainted: turnNumber });
+          } else {
+            //console.log("Error: remaining HP info not found");
+          }
+        }
+
+        debugger;
+        turns[turns.length - 1].activePokemons[player] = turns[turns.length - 1].activePokemons[player].map(p => p && p.name.toLowerCase() === pokemonName ? { ...p, remainingHp: newHp } : p);
+        pokemonsRevealed[player] = pokemonsRevealed[player].map(p => p.name === pokemonName ? { ...p, remainingHp: newHp } : p);
+        //console.log(pokemonName, "hp left", newHp);
       }
     }
 
@@ -287,7 +279,7 @@ app.post('/replays', async (req, res) => {
     res.status(201).send(newReplay);
 
   } catch (error) {
-    console.error("Error obtaining the data from the replay: ", error);
+    //console.error("Error obtaining the data from the replay: ", error);
     res.status(400).send(error);
   }
 });
@@ -297,16 +289,16 @@ async function run() {
     // Create a Mongoose client with a MongoClientOptions object to set the Stable API version
     await mongoose.connect(uri, clientOptions);
     await mongoose.connection.db.admin().command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    //console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
     //Initialize server
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
+        //console.log(`Server running on port ${PORT}`);
     });
 
   } catch (error) {
-    console.error("Error connecting to MongoDB: ", error);
+    //console.error("Error connecting to MongoDB: ", error);
   }
 }
 
