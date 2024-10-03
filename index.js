@@ -18,13 +18,13 @@ const replaySchema = new mongoose.Schema({
     winner: {type: String, required: true},
     loser: {type: String, required: true},
     date: {type: Date, required: true},
-    pokemonsRevealed: {
+    revealedPokemons: {
       player1: [{
           name: String,
-          moves: [String],              // Movimientos disponibles
-          ability: String,              // Habilidad del Pokémon
-          item: String,                 // Objeto que lleva equipado
-          remainingHp: Number           // Vida restante
+          moves: [String],
+          ability: String,
+          item: String,
+          remainingHp: Number
       }],
       player2: [{
           name: String,
@@ -46,34 +46,14 @@ const replaySchema = new mongoose.Schema({
           moves: [String],
           ability: String,
           item: String,
-          remainingHp: Number,
-          status: String,
-          statsChanges: {
-            attack: Number,
-            defense: Number,
-            specialAttack: Number,
-            specialDefense: Number,
-            speed: Number,
-            accuracy: Number,
-            evasion: Number
-          }
+          remainingHp: Number
         }],
         player2: [{
           name: String,
           moves: [String],
           ability: String,
           item: String,
-          remainingHp: Number,
-          status: String,
-          statsChanges: {
-            attack: Number,
-            defense: Number,
-            specialAttack: Number,
-            specialDefense: Number,
-            speed: Number,
-            accuracy: Number,
-            evasion: Number
-          }
+          remainingHp: Number
         }]
       }
     }]
@@ -88,84 +68,56 @@ app.post('/replays', async (req, res) => {
     // Obtaining the data from the JSON file in the URL
     const response = await axios.get(`${replayUrl}.json`);
     const replayData = response.data;
-
+    
     // Extracting the data from the replay
-    const [player1, player2] = replayData.players;
-    const pokemonsRevealed = {
-      player1: [],
-      player2: []
-    };
-    const faintedPokemons = {
-      player1: [],
-      player2: []
-    };
-
-    const turns = []; 
+    const id = replayData.id;
+    const format = replayData.format;
+    const players = replayData.players;
     const log = replayData.log.split('\n');
-    let turnNumber = 1;
-    let winnerMatch;
-    let activePokemons = {
-      player1: [null, null],
-      player2: [null, null]
-    };
+    const uploadtime = replayData.uploadtime;
+    const views = replayData.views;
+    const formatId = replayData.formatid;
+    const rating = replayData.rating;
+    const private = replayData.private;
+    const password = replayData.password;
 
+    //Defining the variables to store the data
+    const player1 = players[0];
+    //console.log("Player 1: ", player1);
+    const player2 = players[1];
+    //console.log("Player 2: ", player2);
+    const winner = processWinner(log);
+    //console.log("Winner of the match is:", winner);
+    const loser = winner === player1 ? player2 : player1;
+    //console.log("Loser of the match is:", loser);
+    const date = new Date(uploadtime * 1000);
+    //console.log("Date of the match is:", date);
+    let revealedPokemons = {player1: [],player2: []};
+    let faintedPokemons = {player1: [],player2: []};
+    let turns = initializeTurns(log);
+    //console.log("Empty initial turns: ", turns);
+
+    let i = 1;
     for (let line of log) {
-      // Detect the winner
-      let match = line.match(/win\|(.+)/);
-      if (match) {
-        winnerMatch = match[1];
-        break;
-      }
+      //console.log("Looking at line", i++);
 
       // Detect new turn
       const turnMatch = line.match(/\|turn\|(\d+)/);
       if (turnMatch) {
-        turnNumber = parseInt(turnMatch[1]);
-        //console.log("Start of turn number ", turnNumber);
-
-        // Create a new object for the turn if it doesn't exist
-        turns.push({
-          turnNumber: turnNumber,
-          activePokemons: {
-            player1: [...activePokemons.player1],
-            player2: [...activePokemons.player2]
-          }
-        });
+        console.log("Start of turn", turnMatch[1]);
       }
-            
+      
       // Detect active Pokémon switches and update revealed Pokémon if necessary
       const switchMatchesG = line.match(/\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)(?:, ([MF])\|)?(\d+)\/(\d+)/);
       const switchMatchesNG = line.match(/\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)\|(\d+)\/(\d+)/);
       
       let switchMatches = switchMatchesG || switchMatchesNG;
       if (switchMatches) {
-        const player = switchMatches[1].startsWith('p1') ? 'player1' : 'player2';
-        const pokemonName = switchMatches[2]; // Pokémon name
-        const remainingHp = parseInt(switchMatches[6]); // Remaining HP
-            
-        // Assign to the correct slot in the activePokemons array
-        const slot = switchMatches[1].endsWith('a') ? 0 : 1; // 'a' -> slot 0, 'b' -> slot 1
-            
-        const pokemon = {
-          name: pokemonName,
-          moves: [], // You can update this if the moves are available elsewhere in the log
-          ability: "", // You can update this if the ability is available
-          item: "", // You can update this if the item is available
-          remainingHp: remainingHp
-        };
-
-        // Update active Pokémon
-        activePokemons[player][slot] = pokemon;
-        //console.log(pokemonName, "entered the battle");
-
-        // Add Pokémon to pokemonsRevealed if it hasn't been revealed yet
-        const isRevealed = pokemonsRevealed[player].some(p => p.name === pokemonName);
-        if (!isRevealed) {
-          pokemonsRevealed[player].push(pokemon);
-          //console.log(pokemonName, "was revealed");
-        }
+        [newActivePokemons, newRevealedPokemons] = processSwitch(log, turns, revealedPokemons);
+        revealedPokemons = newRevealedPokemons;
+        turns[turnMatch[1]].activePokemons = newActivePokemons;
       }
-
+/*
       // Detect the usage of an item in different formats
       const itemMatchActivate = line.match(/\|-activate\|(p1[ab]|p2[ab]): (.+?)\|item: (.+?)\|/);
       const itemMatchStatus = line.match(/\|-status\|(p1[ab]|p2[ab]): (.+?)\|.+?\[from\] item: (.+)/);
@@ -186,7 +138,7 @@ app.post('/replays', async (req, res) => {
         }
 
         activePokemons[player] = activePokemons[player].map(p => p && p.name === pokemonName ? { ...p, item: item } : p);
-        pokemonsRevealed[player] = pokemonsRevealed[player].map(p => p.name === pokemonName ? { ...p, item: item } : p);
+        revealedPokemons[player] = revealedPokemons[player].map(p => p.name === pokemonName ? { ...p, item: item } : p);
         //console.log(pokemonName, "used the item", item);
       }
 
@@ -204,8 +156,8 @@ app.post('/replays', async (req, res) => {
           //console.log(pokemonName, "has the ability", ability);
         }
 
-        // Update the ability of the Pokémon in pokemonsRevealed
-        pokemonsRevealed[player] = pokemonsRevealed[player].map(p => 
+        // Update the ability of the Pokémon in revealedPokemons
+        revealedPokemons[player] = revealedPokemons[player].map(p => 
           p.name === pokemonName ? { ...p, ability: ability } : p
         );
       }
@@ -226,8 +178,8 @@ app.post('/replays', async (req, res) => {
             pokemon.moves.push(move);
           }
           
-          // También actualiza la lista de movimientos en pokemonsRevealed
-          pokemonsRevealed[player] = pokemonsRevealed[player].map(p => p.name === pokemonName ? { ...p, moves: [...new Set([...p.moves, move])] } : p);
+          // También actualiza la lista de movimientos en revealedPokemons
+          revealedPokemons[player] = revealedPokemons[player].map(p => p.name === pokemonName ? { ...p, moves: [...new Set([...p.moves, move])] } : p);
           //console.log(pokemonName, "used the move", move, "against", target);
         }
       }
@@ -258,21 +210,23 @@ app.post('/replays', async (req, res) => {
 
         debugger;
         turns[turns.length - 1].activePokemons[player] = turns[turns.length - 1].activePokemons[player].map(p => p && p.name.toLowerCase() === pokemonName ? { ...p, remainingHp: newHp } : p);
-        pokemonsRevealed[player] = pokemonsRevealed[player].map(p => p.name === pokemonName ? { ...p, remainingHp: newHp } : p);
+        revealedPokemons[player] = revealedPokemons[player].map(p => p.name === pokemonName ? { ...p, remainingHp: newHp } : p);
         //console.log(pokemonName, "hp left", newHp);
       }
+        */
+       i++;
     }
 
     // Create the new entry in the database
     const newReplay = new Replay({
-      player1,
-      player2,
-      winner: winnerMatch.trim(),
-      loser: winnerMatch.trim() === player1 ? player2 : player1,
-      date: new Date(replayData.uploadtime * 1000),
-      pokemonsRevealed,
-      faintedPokemons,
-      turns
+      player1: player1,
+      player2: player2,
+      winner: winner,
+      loser: loser,
+      date: date,
+      revealedPokemons: revealedPokemons,
+      faintedPokemons: faintedPokemons,
+      turns: turns
     });
 
     await newReplay.save();
@@ -283,6 +237,71 @@ app.post('/replays', async (req, res) => {
     res.status(400).send(error);
   }
 });
+
+// Obtain the winner of the match
+function processWinner(log) {
+  let winner = log.find(line => line.includes("|win|"));
+  if (winner) {
+    winner = winner.split("|")[2];
+  }
+
+  return winner.trim();
+}
+
+// Initialize the turns array
+function initializeTurns(log) {
+  let turns = [];
+
+  for (let line of log) {
+    // Detect new turn
+    const turnMatch = line.match(/\|turn\|(\d+)/);
+    if (turnMatch) {
+      turnNumber = parseInt(turnMatch[1]);
+
+      // Create a new object for the turn if it doesn't exist
+      turns.push({
+        turnNumber: turnNumber,
+        activePokemons: {
+          player1: [],
+          player2: []
+        }
+      });
+    }
+  }
+
+  return turns;
+}
+
+// Process the switch of a Pokémon
+function processSwitch(log, turns, revealedPokemons) {
+  const player = switchMatches[1].startsWith('p1') ? 'player1' : 'player2';
+  const pokemonName = switchMatches[2]; // Pokémon name
+  const remainingHp = parseInt(switchMatches[6]); // Remaining HP
+            
+  // Assign to the correct slot in the activePokemons array
+  const slot = switchMatches[1].endsWith('a') ? 0 : 1; // 'a' -> slot 0, 'b' -> slot 1
+            
+  const pokemon = {
+    name: pokemonName,
+    moves: [], // You can update this if the moves are available elsewhere in the log
+    ability: "", // You can update this if the ability is available
+    item: "", // You can update this if the item is available
+    remainingHp: remainingHp
+  };
+
+  // Update active Pokémon
+  activePokemons[player][slot] = pokemon;
+  //console.log(pokemonName, "entered the battle");
+
+  // Add Pokémon to revealedPokemons if it hasn't been revealed yet
+  const isRevealed = revealedPokemons[player].some(p => p.name === pokemonName);
+  if (!isRevealed) {
+    revealedPokemons[player].push(pokemon);
+    //console.log(pokemonName, "was revealed");
+  }
+
+  return [activePokemons, revealedPokemons];
+}
 
 async function run() {
   try {
