@@ -94,16 +94,27 @@ app.post('/replays', async (req, res) => {
     //console.log("Date of the match is:", date);
     let revealedPokemons = {player1: [],player2: []};
     let faintedPokemons = {player1: [],player2: []};
-    let turns = initializeTurns(log);
+    let turns = [];
     //console.log("Empty initial turns: ", turns);
 
-    let i = 1;
+    // Initialize the first turn
+    let actualTurn = 0;
+    turns.push({
+      turnNumber: actualTurn,
+      activePokemons: {
+        player1: [],
+        player2: []
+      }
+    });
+
     for (let line of log) {
-      //console.log("Looking at line", i++);
+      //console.log("Looking at line");
 
       // Detect new turn
       const turnMatch = line.match(/\|turn\|(\d+)/);
       if (turnMatch) {
+        actualTurn = parseInt(turnMatch[1]);
+        turns = processTurn(actualTurn, turns);
         console.log("Start of turn", turnMatch[1]);
       }
       
@@ -113,9 +124,12 @@ app.post('/replays', async (req, res) => {
       
       let switchMatches = switchMatchesG || switchMatchesNG;
       if (switchMatches) {
-        [newActivePokemons, newRevealedPokemons] = processSwitch(log, turns, revealedPokemons);
+        //console.log("Switch detected");
+        const [newTurns, newRevealedPokemons] = processSwitch(actualTurn, switchMatches, turns, revealedPokemons);
+        //console.log("Turn processed");
         revealedPokemons = newRevealedPokemons;
-        turns[turnMatch[1]].activePokemons = newActivePokemons;
+        turns = newTurns;
+        //console.log("New active pokemons", newActivePokemons);
       }
 /*
       // Detect the usage of an item in different formats
@@ -214,7 +228,6 @@ app.post('/replays', async (req, res) => {
         //console.log(pokemonName, "hp left", newHp);
       }
         */
-       i++;
     }
 
     // Create the new entry in the database
@@ -238,6 +251,73 @@ app.post('/replays', async (req, res) => {
   }
 });
 
+
+// Process the turn
+function processTurn(actualTurn, turns, revealedPokemons) {
+  // Check if we are adding the first turn
+  if (turns.length === 0) {
+    // If no turns exist yet, initialize the first turn
+    turns.push({
+      turnNumber: actualTurn,
+      activePokemons: {
+        player1: [],
+        player2: []
+      }
+    });
+  } else {
+    // Copy the active Pokémon from the previous turn
+    const previousTurn = turns[actualTurn - 1];
+    
+    // Create a new object for the current turn
+    turns.push({
+      turnNumber: actualTurn,
+      activePokemons: {
+        player1: JSON.parse(JSON.stringify(previousTurn.activePokemons.player1)), // Deep copy
+        player2: JSON.parse(JSON.stringify(previousTurn.activePokemons.player2))  // Deep copy
+      }
+    });
+  }
+
+  return turns;
+}
+
+
+// Process the switch of a Pokémon
+function processSwitch(actualTurn, switchMatches, turns, revealedPokemons) {
+  const player = switchMatches[1].startsWith('p1') ? 'player1' : 'player2';
+  const pokemonName = switchMatches[2];
+  //console.log(pokemonName, "entered the battle");
+  const slot = switchMatches[1].endsWith('a') ? 0 : 1; // 'a' -> slot 0, 'b' -> slot 1
+  //console.log("In the slot", slot);
+
+  // Add Pokémon to revealedPokemons if it hasn't been revealed yet
+  const isRevealed = revealedPokemons[player].some(p => p.name === pokemonName);
+  //console.log("Is revealed?", isRevealed);
+  if (!isRevealed) {
+    pokemon = {
+      name: pokemonName,
+      moves: [],
+      ability: "",
+      item: "",
+      remainingHp: 100
+    };
+
+    revealedPokemons[player].push(pokemon);
+    console.log(pokemonName, "was revealed");
+  } else {
+    // Load the info of the Pokémon
+    pokemon = revealedPokemons[player].find(p => p.name === pokemonName);
+    console.log("Pokemon loaded", pokemon);
+  }
+
+  // Update active Pokémons
+  console.log(turns[actualTurn]);
+  turns[actualTurn].activePokemons[player][slot] = pokemon;
+  console.log("Active pokemons of turn", actualTurn, "updated", turns[actualTurn].activePokemons);
+
+  return [turns, revealedPokemons];
+}
+
 // Obtain the winner of the match
 function processWinner(log) {
   let winner = log.find(line => line.includes("|win|"));
@@ -246,61 +326,6 @@ function processWinner(log) {
   }
 
   return winner.trim();
-}
-
-// Initialize the turns array
-function initializeTurns(log) {
-  let turns = [];
-
-  for (let line of log) {
-    // Detect new turn
-    const turnMatch = line.match(/\|turn\|(\d+)/);
-    if (turnMatch) {
-      turnNumber = parseInt(turnMatch[1]);
-
-      // Create a new object for the turn if it doesn't exist
-      turns.push({
-        turnNumber: turnNumber,
-        activePokemons: {
-          player1: [],
-          player2: []
-        }
-      });
-    }
-  }
-
-  return turns;
-}
-
-// Process the switch of a Pokémon
-function processSwitch(log, turns, revealedPokemons) {
-  const player = switchMatches[1].startsWith('p1') ? 'player1' : 'player2';
-  const pokemonName = switchMatches[2]; // Pokémon name
-  const remainingHp = parseInt(switchMatches[6]); // Remaining HP
-            
-  // Assign to the correct slot in the activePokemons array
-  const slot = switchMatches[1].endsWith('a') ? 0 : 1; // 'a' -> slot 0, 'b' -> slot 1
-            
-  const pokemon = {
-    name: pokemonName,
-    moves: [], // You can update this if the moves are available elsewhere in the log
-    ability: "", // You can update this if the ability is available
-    item: "", // You can update this if the item is available
-    remainingHp: remainingHp
-  };
-
-  // Update active Pokémon
-  activePokemons[player][slot] = pokemon;
-  //console.log(pokemonName, "entered the battle");
-
-  // Add Pokémon to revealedPokemons if it hasn't been revealed yet
-  const isRevealed = revealedPokemons[player].some(p => p.name === pokemonName);
-  if (!isRevealed) {
-    revealedPokemons[player].push(pokemon);
-    //console.log(pokemonName, "was revealed");
-  }
-
-  return [activePokemons, revealedPokemons];
 }
 
 async function run() {
