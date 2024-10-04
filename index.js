@@ -13,7 +13,18 @@ const clientOptions = {
 const app = express();
 app.use(express.json());
 
-//Define the schema for the replays
+// Define the schema for the pokemons
+const pokemonSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  moves: [String],
+  ability: String,
+  item: String,
+  remainingHp: Number,
+  volatileStatus: String,
+  nonVolatileStatus: String,
+});
+
+// Define the schema for the replays
 const replaySchema = new mongoose.Schema({
   player1: { type: String, required: true },
   player2: { type: String, required: true },
@@ -21,24 +32,8 @@ const replaySchema = new mongoose.Schema({
   loser: { type: String, required: true },
   date: { type: Date, required: true },
   revealedPokemons: {
-    player1: [
-      {
-        name: String,
-        moves: [String],
-        ability: String,
-        item: String,
-        remainingHp: Number,
-      },
-    ],
-    player2: [
-      {
-        name: String,
-        moves: [String],
-        ability: String,
-        item: String,
-        remainingHp: Number,
-      },
-    ],
+    player1: [pokemonSchema],
+    player2: [pokemonSchema],
   },
   faintedPokemons: {
     player1: [{ name: String, turnFainted: Number }],
@@ -48,44 +43,12 @@ const replaySchema = new mongoose.Schema({
     {
       turnNumber: { type: Number, required: true },
       startsWith: {
-        player1: [
-          {
-            name: String,
-            moves: [String],
-            ability: String,
-            item: String,
-            remainingHp: Number,
-          },
-        ],
-        player2: [
-          {
-            name: String,
-            moves: [String],
-            ability: String,
-            item: String,
-            remainingHp: Number,
-          },
-        ],
+        player1: [pokemonSchema],
+        player2: [pokemonSchema],
       },
       endsWith: {
-        player1: [
-          {
-            name: String,
-            moves: [String],
-            ability: String,
-            item: String,
-            remainingHp: Number,
-          },
-        ],
-        player2: [
-          {
-            name: String,
-            moves: [String],
-            ability: String,
-            item: String,
-            remainingHp: Number,
-          },
-        ],
+        player1: [pokemonSchema],
+        player2: [pokemonSchema],
       },
     },
   ],
@@ -221,7 +184,22 @@ app.post("/replays", async (req, res) => {
       let damageMatch = line.match(/\|-damage\|(p1[ab]|p2[ab]): (.+?)\|(.+)/);
       if (damageMatch) {
         //console.log(damageMatch);
-        processDamage(actualTurn, damageMatch, turns, revealedPokemons, faintedPokemons);
+        processDamage(
+          actualTurn,
+          damageMatch,
+          turns,
+          revealedPokemons,
+          faintedPokemons
+        );
+      }
+
+      // Detect the effect of a status condition
+      const statusMatch = line.match(
+        /\|-status\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(.+)/
+      );
+      if (statusMatch) {
+        //console.log(statusMatch);
+        processStatus(actualTurn, statusMatch, turns, revealedPokemons);
       }
     }
 
@@ -269,19 +247,12 @@ function processTurn(actualTurn, turns, revealedPokemons) {
     turns.push({
       turnNumber: actualTurn,
       startsWith: {
-        player1: JSON.parse(
-          JSON.stringify(previousTurn.endsWith.player1)
-        ), // Deep copy
-        player2: JSON.parse(
-          JSON.stringify(previousTurn.endsWith.player2)
-        ), // Deep copy
+        player1: JSON.parse(JSON.stringify(previousTurn.endsWith.player1)), // Deep copy
+        player2: JSON.parse(JSON.stringify(previousTurn.endsWith.player2)), // Deep copy
       },
-        endsWith: {player1: JSON.parse(
-          JSON.stringify(previousTurn.endsWith.player1)
-        ), // Deep copy
-        player2: JSON.parse(
-          JSON.stringify(previousTurn.endsWith.player2)
-        ), // Deep copy
+      endsWith: {
+        player1: JSON.parse(JSON.stringify(previousTurn.endsWith.player1)), // Deep copy
+        player2: JSON.parse(JSON.stringify(previousTurn.endsWith.player2)), // Deep copy
       },
     });
   }
@@ -398,7 +369,13 @@ function processMove(actualTurn, moveMatch, turns, revealedPokemons) {
 }
 
 // Process the damage received by a Pokémon
-function processDamage(actualTurn, damageMatch, turns, revealedPokemons, faintedPokemons) {
+function processDamage(
+  actualTurn,
+  damageMatch,
+  turns,
+  revealedPokemons,
+  faintedPokemons
+) {
   const player = damageMatch[1].startsWith("p1") ? "player1" : "player2";
   const pokemonName = damageMatch[2];
   const damageInfo = damageMatch[3];
@@ -407,7 +384,10 @@ function processDamage(actualTurn, damageMatch, turns, revealedPokemons, fainted
   let remainingHp;
   if (damageInfo === "0 fnt") {
     // Update the faintedPokemons
-    faintedPokemons[player].push({ name: pokemonName, turnFainted: actualTurn });
+    faintedPokemons[player].push({
+      name: pokemonName,
+      turnFainted: actualTurn,
+    });
     remainingHp = 0;
     //console.log(pokemonName, "fainted");
   } else {
@@ -430,6 +410,27 @@ function processDamage(actualTurn, damageMatch, turns, revealedPokemons, fainted
   );
 
   //console.log(pokemonName, "received", damageInfo, "damage");
+}
+
+// Process the effect of a status condition
+function processStatus(actualTurn, statusMatch, turns, revealedPokemons) {
+  const player = statusMatch[1].startsWith("p1") ? "player1" : "player2";
+  const pokemonName = statusMatch[2];
+  const status = statusMatch[3];
+
+  // Update the status of the Pokémon in revealedPokemons
+  revealedPokemons[player] = revealedPokemons[player].map((p) =>
+    p.name === pokemonName ? { ...p, nonVolatileStatus: status } : p
+  );
+
+  // Update the status of the Pokémon in endsWith
+  const pokemon = turns[actualTurn].endsWith[player].find(
+    (p) => p && p.name === pokemonName
+  );
+  
+  if (pokemon) {
+    pokemon.nonVolatileStatus = status;
+  }
 }
 
 // Obtain the winner of the match
