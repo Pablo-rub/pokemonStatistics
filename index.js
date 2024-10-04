@@ -131,7 +131,7 @@ app.post('/replays', async (req, res) => {
         turns = newTurns;
         //console.log("New active pokemons", newActivePokemons);
       }
-/*
+
       // Detect the usage of an item in different formats
       const itemMatchActivate = line.match(/\|-activate\|(p1[ab]|p2[ab]): (.+?)\|item: (.+?)\|/);
       const itemMatchStatus = line.match(/\|-status\|(p1[ab]|p2[ab]): (.+?)\|.+?\[from\] item: (.+)/);
@@ -141,21 +141,9 @@ app.post('/replays', async (req, res) => {
 
       let itemMatch = itemMatchActivate || itemMatchStatus || itemMatchDamage || itemMatchEnd || itemMatchBoost;
       if (itemMatch) {
-        const player = itemMatch[1].startsWith('p1') ? 'player1' : 'player2';
-        const pokemonName = itemMatch[2];
-        const item = itemMatch[3];
-
-        // Update the item of the Pokémon
-        const pokemon = activePokemons[player].find(p => p && p.name === pokemonName);
-        if (pokemon && !pokemon.item) {
-          pokemon.item = item;
-        }
-
-        activePokemons[player] = activePokemons[player].map(p => p && p.name === pokemonName ? { ...p, item: item } : p);
-        revealedPokemons[player] = revealedPokemons[player].map(p => p.name === pokemonName ? { ...p, item: item } : p);
-        //console.log(pokemonName, "used the item", item);
+        processItem(actualTurn, itemMatch, turns, revealedPokemons);
       }
-
+/*
       // Detect the usage of an ability
       let abilityMatch = line.match(/\|-ability\|(p1[ab]|p2[ab]): (.+)\|(.+)\|(.+)/);
       if (abilityMatch) {
@@ -281,7 +269,6 @@ function processTurn(actualTurn, turns, revealedPokemons) {
   return turns;
 }
 
-
 // Process the switch of a Pokémon
 function processSwitch(actualTurn, switchMatches, turns, revealedPokemons) {
   const player = switchMatches[1].startsWith('p1') ? 'player1' : 'player2';
@@ -316,6 +303,26 @@ function processSwitch(actualTurn, switchMatches, turns, revealedPokemons) {
   console.log("Active pokemons of turn", actualTurn, "updated", turns[actualTurn].activePokemons);
 
   return [turns, revealedPokemons];
+}
+
+// Process the usage of an item
+function processItem(actualTurn, itemMatch, turns, revealedPokemons) {
+  const player = itemMatch[1].startsWith('p1') ? 'player1' : 'player2';
+  const pokemonName = itemMatch[2];
+  const item = itemMatch[3];
+
+  // Update the item of the Pokémon in revealedPokemons
+  revealedPokemons[player] = revealedPokemons[player].map(p => 
+    p.name === pokemonName ? { ...p, item: item } : p
+  );
+
+  // Update the item of the Pokémon in activePokemons
+  const pokemon = turns[actualTurn].activePokemons[player].find(p => p && p.name === pokemonName);
+  if (pokemon) {
+    pokemon.item = item;
+  }
+
+  //console.log(pokemonName, "used the item", item);
 }
 
 // Obtain the winner of the match
