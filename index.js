@@ -22,6 +22,13 @@ const pokemonSchema = new mongoose.Schema({
   remainingHp: Number,
   volatileStatus: String,
   nonVolatileStatus: String,
+  stats: {
+    atk: Number,
+    def: Number,
+    spa: Number,
+    spd: Number,
+    spe: Number,
+  },
 });
 
 // Define the schema for the replays
@@ -201,6 +208,15 @@ app.post("/replays", async (req, res) => {
         //console.log(statusMatch);
         processStatus(actualTurn, statusMatch, turns, revealedPokemons);
       }
+
+      // Detect the effect of a boost
+      const boostMatch = line.match(
+        /\|-boost\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(.+)/
+      );
+      if (boostMatch) {
+        //console.log(boostMatch);
+        processBoost(actualTurn, boostMatch, turns, revealedPokemons);
+      }
     }
 
     // Create the new entry in the database
@@ -280,13 +296,16 @@ function processSwitch(actualTurn, switchMatches, turns, revealedPokemons) {
       ability: "",
       item: "",
       remainingHp: 100,
+      nonVolatileStatus: "",
+      stats: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
     };
 
     revealedPokemons[player].push(pokemon);
     //console.log(pokemonName, "was revealed");
   } else {
-    // Load the info of the Pokémon
+    // Load the info of the Pokémon from revealedPokemons, but the stats boosts return to 0
     pokemon = revealedPokemons[player].find((p) => p.name === pokemonName);
+    pokemon = { ...pokemon, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 };
     //console.log("Pokemon loaded", pokemon);
   }
 
@@ -431,6 +450,27 @@ function processStatus(actualTurn, statusMatch, turns, revealedPokemons) {
   if (pokemon) {
     pokemon.nonVolatileStatus = status;
   }
+}
+
+// Process the effect of a boost
+function processBoost(actualTurn, boostMatch, turns, revealedPokemons) {
+  const player = boostMatch[1].startsWith("p1") ? "player1" : "player2";
+  const pokemonName = boostMatch[2];
+  const statBoosted = boostMatch[3];
+  const boost = parseInt(boostMatch[4]);
+
+  // Update the boosts of the Pokémon in endsWith
+  const pokemon = turns[actualTurn].endsWith[player].find(
+    (p) => p && p.name === pokemonName
+  );
+
+  pokemon.stats[statBoosted] += boost;
+  //console.log("new stats", pokemon.stats);
+
+  // Update the boosts of the Pokémon in revealedPokemons
+  revealedPokemons[player] = revealedPokemons[player].map((p) =>
+    p.name === pokemonName ? { ...p, stats: pokemon.stats } : p
+  );
 }
 
 // Obtain the winner of the match
