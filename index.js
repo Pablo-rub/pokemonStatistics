@@ -331,46 +331,28 @@ function processSwitch(actualTurn, switchMatches, turns, revealedPokemons) {
 
 // Process the usage of an item
 function processItem(actualTurn, itemMatch, turns, revealedPokemons) {
+  const player = itemMatch[1].startsWith("p1") ? "player1" : "player2";
+  const pokemonName = itemMatch[2];
+  let item = itemMatch[3];
+  
   if (itemMatch[0].startsWith("|-enditem")) {
-    const player = itemMatch[1].startsWith("p1") ? "player1" : "player2";
-    const pokemonName = itemMatch[2];
-    const item = itemMatch[3];
-
-    // Update the item of the Pokémon in revealedPokemons
-    revealedPokemons[player] = revealedPokemons[player].map((p) =>
-      p.name === pokemonName ? { ...p, item: "none" } : p
-    );
-
-    // Update the item of the Pokémon in endsWith
-    const pokemon = turns[actualTurn].endsWith[player].find(
-      (p) => p && p.name === pokemonName
-    );
-
-    if (pokemon) {
-      pokemon.item = "none";
-    }
-
-    //console.log(pokemonName, "lost the item", item);
-  } else {
-    const player = itemMatch[1].startsWith("p1") ? "player1" : "player2";
-    const pokemonName = itemMatch[2];
-    const item = itemMatch[3];
-
-    // Update the item of the Pokémon in revealedPokemons
-    revealedPokemons[player] = revealedPokemons[player].map((p) =>
-      p.name === pokemonName ? { ...p, item: item } : p
-    );
-
-    // Update the item of the Pokémon in endsWith
-    const pokemon = turns[actualTurn].endsWith[player].find(
-      (p) => p && p.name === pokemonName
-    );
-    if (pokemon) {
-      pokemon.item = item;
-    }
-
-    //console.log(pokemonName, "used the item", item);
+    item = "none";
   }
+
+  // Update the item of the Pokémon in revealedPokemons
+  revealedPokemons[player] = revealedPokemons[player].map((p) =>
+    p.name === pokemonName ? { ...p, item: item } : p
+  );
+
+  // Update the item of the Pokémon in endsWith
+  const pokemon = turns[actualTurn].endsWith[player].find(
+    (p) => p && p.name === pokemonName
+  );
+  if (pokemon) {
+    pokemon.item = item;
+  }
+
+  //console.log(pokemonName, "used the item", item);
 }
 
 // Process the usage of an ability
