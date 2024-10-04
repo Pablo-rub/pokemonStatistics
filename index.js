@@ -47,7 +47,27 @@ const replaySchema = new mongoose.Schema({
   turns: [
     {
       turnNumber: { type: Number, required: true },
-      activePokemons: {
+      startsWith: {
+        player1: [
+          {
+            name: String,
+            moves: [String],
+            ability: String,
+            item: String,
+            remainingHp: Number,
+          },
+        ],
+        player2: [
+          {
+            name: String,
+            moves: [String],
+            ability: String,
+            item: String,
+            remainingHp: Number,
+          },
+        ],
+      },
+      endsWith: {
         player1: [
           {
             name: String,
@@ -113,7 +133,11 @@ app.post("/replays", async (req, res) => {
     let actualTurn = 0;
     turns.push({
       turnNumber: actualTurn,
-      activePokemons: {
+      startsWith: {
+        player1: [],
+        player2: [],
+      },
+      endsWith: {
         player1: [],
         player2: [],
       },
@@ -127,7 +151,7 @@ app.post("/replays", async (req, res) => {
       if (turnMatch) {
         actualTurn = parseInt(turnMatch[1]);
         turns = processTurn(actualTurn, turns);
-        console.log("Start of turn", turnMatch[1]);
+        //console.log("Start of turn", turnMatch[1]);
       }
 
       // Detect active Pokémon switches and update revealed Pokémon if necessary
@@ -148,9 +172,6 @@ app.post("/replays", async (req, res) => {
           revealedPokemons
         );
         //console.log("Turn processed");
-        revealedPokemons = newRevealedPokemons;
-        turns = newTurns;
-        //console.log("New active pokemons", newActivePokemons);
       }
 
       // Detect the usage of an item in different formats
@@ -195,37 +216,13 @@ app.post("/replays", async (req, res) => {
       if (moveMatch) {
         processMove(actualTurn, moveMatch, turns, revealedPokemons);
       }
-      /*
+
       // Update the remaining HP of a Pokémon in each turn
       let damageMatch = line.match(/\|-damage\|(p1[ab]|p2[ab]): (.+?)\|(.+)/);
       if (damageMatch) {
-        const player = damageMatch[1].startsWith('p1') ? 'player1' : 'player2';
-        const pokemonName = damageMatch[2].trim().toLowerCase();
-        let remainingHpInfo = damageMatch[3];
-        let newHp;
-
-        // Update the item of the Pokémon
-        const pokemon = activePokemons[player].find(p => p && p.name.toLowerCase() === pokemonName);
-        if (pokemon) {
-          if (remainingHpInfo.includes('/')) {
-            let [hp, maxHp] = remainingHpInfo.split('/');
-            newHp = parseInt(hp);
-            pokemon.remainingHp = newHp;
-          } else if (remainingHpInfo === '0 fnt') {
-            newHp = 0;
-            pokemon.remainingHp = newHp;
-            faintedPokemons[player].push({ name: pokemonName, turnFainted: turnNumber });
-          } else {
-            //console.log("Error: remaining HP info not found");
-          }
-        }
-
-        debugger;
-        turns[turns.length - 1].activePokemons[player] = turns[turns.length - 1].activePokemons[player].map(p => p && p.name.toLowerCase() === pokemonName ? { ...p, remainingHp: newHp } : p);
-        revealedPokemons[player] = revealedPokemons[player].map(p => p.name === pokemonName ? { ...p, remainingHp: newHp } : p);
-        //console.log(pokemonName, "hp left", newHp);
+        //console.log(damageMatch);
+        processDamage(actualTurn, damageMatch, turns, revealedPokemons, faintedPokemons);
       }
-        */
     }
 
     // Create the new entry in the database
@@ -255,7 +252,11 @@ function processTurn(actualTurn, turns, revealedPokemons) {
     // If no turns exist yet, initialize the first turn
     turns.push({
       turnNumber: actualTurn,
-      activePokemons: {
+      startsWith: {
+        player1: [],
+        player2: [],
+      },
+      endsWith: {
         player1: [],
         player2: [],
       },
@@ -267,12 +268,19 @@ function processTurn(actualTurn, turns, revealedPokemons) {
     // Create a new object for the current turn
     turns.push({
       turnNumber: actualTurn,
-      activePokemons: {
+      startsWith: {
         player1: JSON.parse(
-          JSON.stringify(previousTurn.activePokemons.player1)
+          JSON.stringify(previousTurn.endsWith.player1)
         ), // Deep copy
         player2: JSON.parse(
-          JSON.stringify(previousTurn.activePokemons.player2)
+          JSON.stringify(previousTurn.endsWith.player2)
+        ), // Deep copy
+      },
+        endsWith: {player1: JSON.parse(
+          JSON.stringify(previousTurn.endsWith.player1)
+        ), // Deep copy
+        player2: JSON.parse(
+          JSON.stringify(previousTurn.endsWith.player2)
         ), // Deep copy
       },
     });
@@ -304,22 +312,22 @@ function processSwitch(actualTurn, switchMatches, turns, revealedPokemons) {
     };
 
     revealedPokemons[player].push(pokemon);
-    console.log(pokemonName, "was revealed");
+    //console.log(pokemonName, "was revealed");
   } else {
     // Load the info of the Pokémon
     pokemon = revealedPokemons[player].find((p) => p.name === pokemonName);
-    console.log("Pokemon loaded", pokemon);
+    //console.log("Pokemon loaded", pokemon);
   }
 
   // Update active Pokémons
-  console.log(turns[actualTurn]);
-  turns[actualTurn].activePokemons[player][slot] = pokemon;
-  console.log(
+  //console.log(turns[actualTurn]);
+  turns[actualTurn].endsWith[player][slot] = pokemon;
+  /*console.log(
     "Active pokemons of turn",
     actualTurn,
     "updated",
-    turns[actualTurn].activePokemons
-  );
+    turns[actualTurn].endsWith
+  );*/
 
   return [turns, revealedPokemons];
 }
@@ -335,8 +343,8 @@ function processItem(actualTurn, itemMatch, turns, revealedPokemons) {
     p.name === pokemonName ? { ...p, item: item } : p
   );
 
-  // Update the item of the Pokémon in activePokemons
-  const pokemon = turns[actualTurn].activePokemons[player].find(
+  // Update the item of the Pokémon in endsWith
+  const pokemon = turns[actualTurn].endsWith[player].find(
     (p) => p && p.name === pokemonName
   );
   if (pokemon) {
@@ -357,8 +365,8 @@ function processAbility(actualTurn, abilityMatch, turns, revealedPokemons) {
     p.name === pokemonName ? { ...p, ability: ability } : p
   );
 
-  // Update the ability of the Pokémon in activePokemons
-  const pokemon = turns[actualTurn].activePokemons[player].find(
+  // Update the ability of the Pokémon in endsWith
+  const pokemon = turns[actualTurn].endsWith[player].find(
     (p) => p && p.name === pokemonName
   );
   if (pokemon) {
@@ -380,13 +388,48 @@ function processMove(actualTurn, moveMatch, turns, revealedPokemons) {
       : p
   );
 
-  // Update the moves of the Pokémon in activePokemons
-  const pokemon = turns[actualTurn].activePokemons[player].find(
+  // Update the moves of the Pokémon in endsWith
+  const pokemon = turns[actualTurn].endsWith[player].find(
     (p) => p && p.name === pokemonName
   );
   if (pokemon && !pokemon.moves.includes(move)) {
     pokemon.moves.push(move);
   }
+}
+
+// Process the damage received by a Pokémon
+function processDamage(actualTurn, damageMatch, turns, revealedPokemons, faintedPokemons) {
+  const player = damageMatch[1].startsWith("p1") ? "player1" : "player2";
+  const pokemonName = damageMatch[2];
+  const damageInfo = damageMatch[3];
+  //console.log("Damage info", damageInfo);
+
+  let remainingHp;
+  if (damageInfo === "0 fnt") {
+    // Update the faintedPokemons
+    faintedPokemons[player].push({ name: pokemonName, turnFainted: actualTurn });
+    remainingHp = 0;
+    //console.log(pokemonName, "fainted");
+  } else {
+    // Update the remaining HP of the Pokémon in revealedPokemons
+    remainingHp = parseInt(damageInfo.split("/")[0]);
+  }
+
+  // Update the remaining HP of the Pokémon in endsWith
+  const pokemon = turns[actualTurn].endsWith[player].find(
+    (p) => p && p.name === pokemonName
+  );
+
+  if (pokemon) {
+    pokemon.remainingHp = remainingHp;
+  }
+
+  // Update the remaining HP of the Pokémon in revealedPokemons
+  revealedPokemons[player] = revealedPokemons[player].map((p) =>
+    p.name === pokemonName ? { ...p, remainingHp: remainingHp } : p
+  );
+
+  //console.log(pokemonName, "received", damageInfo, "damage");
 }
 
 // Obtain the winner of the match
