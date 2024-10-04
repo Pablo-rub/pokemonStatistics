@@ -143,27 +143,13 @@ app.post('/replays', async (req, res) => {
       if (itemMatch) {
         processItem(actualTurn, itemMatch, turns, revealedPokemons);
       }
-/*
+
       // Detect the usage of an ability
       let abilityMatch = line.match(/\|-ability\|(p1[ab]|p2[ab]): (.+)\|(.+)\|(.+)/);
       if (abilityMatch) {
-        const player = abilityMatch[1].startsWith('p1') ? 'player1' : 'player2';
-        const pokemonName = abilityMatch[2];
-        const ability = abilityMatch[3];
-      
-        // Update the ability of the Pokémon
-        const pokemon = activePokemons[player].find(p => p && p.name === pokemonName);
-        if (pokemon) {
-          pokemon.ability = ability;
-          //console.log(pokemonName, "has the ability", ability);
-        }
-
-        // Update the ability of the Pokémon in revealedPokemons
-        revealedPokemons[player] = revealedPokemons[player].map(p => 
-          p.name === pokemonName ? { ...p, ability: ability } : p
-        );
+        processAbility(actualTurn, abilityMatch, turns, revealedPokemons);
       }
-
+/*
       // Detect the usage of a move
       let moveMatch = line.match(/\|move\|(p1[ab]|p2[ab]): (.+)\|(.+?)\|(p1[ab]|p2[ab]): (.+)/);
       if (moveMatch) {
@@ -323,6 +309,24 @@ function processItem(actualTurn, itemMatch, turns, revealedPokemons) {
   }
 
   //console.log(pokemonName, "used the item", item);
+}
+
+// Process the usage of an ability
+function processAbility(actualTurn, abilityMatch, turns, revealedPokemons) {
+  const player = abilityMatch[1].startsWith('p1') ? 'player1' : 'player2';
+  const pokemonName = abilityMatch[2];
+  const ability = abilityMatch[3];
+      
+  // Update the ability of the Pokémon in revealedPokemons
+  revealedPokemons[player] = revealedPokemons[player].map(p => 
+    p.name === pokemonName ? { ...p, ability: ability } : p
+  );
+
+  // Update the ability of the Pokémon in activePokemons
+  const pokemon = turns[actualTurn].activePokemons[player].find(p => p && p.name === pokemonName);
+  if (pokemon) {
+    pokemon.ability = ability;
+  }
 }
 
 // Obtain the winner of the match
