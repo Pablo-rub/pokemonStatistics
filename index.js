@@ -29,7 +29,7 @@ const pokemonSchema = new mongoose.Schema({
     spd: Number,
     spe: Number,
   },
-  tera: { type: {type: String}, active: {type: Boolean}}
+  tera: { type: {type: String}, active: {type: Boolean}},
 });
 
 // Define the schema for the replays
@@ -57,6 +57,10 @@ const replaySchema = new mongoose.Schema({
       endsWith: {
         player1: [pokemonSchema],
         player2: [pokemonSchema],
+      },
+      field: {
+        terrain: { type: String },
+        duration: { type: Number },
       },
     },
   ],
@@ -111,6 +115,10 @@ app.post("/replays", async (req, res) => {
       endsWith: {
         player1: [],
         player2: [],
+      },
+      field: {
+        terrain: "",
+        duration: 0,
       },
     });
     
@@ -172,6 +180,7 @@ app.post("/replays", async (req, res) => {
       const teraMatch = line.match(
         /\|-terastallize\|(p1[ab]|p2[ab]): (.+?)\|(.+)/
       );
+      const fieldMatch = line.match(/\|-fieldstart\|move: (\w+\s?\w*)\|\[of\] (p\d[ab]): (\w+)/);
       
       // Detect new turn
       if (turnMatch) {
@@ -229,6 +238,9 @@ app.post("/replays", async (req, res) => {
       } else if (teraMatch) { // Detect the terastallize effect
         //console.log(teraMatch);
         processTerastallize(actualTurn, teraMatch, turns, revealedPokemons);
+      } else if (fieldMatch) { // Detect the start of a field effect
+        //console.log(fieldMatch);
+        turns[actualTurn].field = { terrain: fieldMatch[1], duration: 5 };
       }
     }
 
@@ -267,10 +279,18 @@ function processTurn(actualTurn, turns, revealedPokemons) {
         player1: [],
         player2: [],
       },
+      field: {
+        terrain: "",
+        duration: 0,
+      },
     });
   } else {
     // Copy the active Pokémon from the previous turn
+    //console.log("Previous turn", turns[actualTurn - 1]);
     const previousTurn = turns[actualTurn - 1];
+    //console.log(previousTurn.field.duration, previousTurn.field.terrain);
+    const previousTerrainEnds = (previousTurn.field.duration - 1) > 1;
+    //console.log(previousTerrainEnds);
 
     // Create a new object for the current turn
     turns.push({
@@ -282,6 +302,10 @@ function processTurn(actualTurn, turns, revealedPokemons) {
       endsWith: {
         player1: JSON.parse(JSON.stringify(previousTurn.endsWith.player1)), // Deep copy
         player2: JSON.parse(JSON.stringify(previousTurn.endsWith.player2)), // Deep copy
+      },
+      field: {
+        terrain: previousTerrainEnds ? previousTurn.field.terrain : "",
+        duration: previousTerrainEnds ? previousTurn.field.duration - 1 : 0,
       },
     });
   }
