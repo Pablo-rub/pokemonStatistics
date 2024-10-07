@@ -29,6 +29,7 @@ const pokemonSchema = new mongoose.Schema({
     spd: Number,
     spe: Number,
   },
+  tera: { type: {type: String}, active: {type: Boolean}}
 });
 
 // Define the schema for the replays
@@ -168,6 +169,9 @@ app.post("/replays", async (req, res) => {
       const unBoostMatch = line.match(
         /\|-unboost\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(.+)/
       );
+      const teraMatch = line.match(
+        /\|-terastallize\|(p1[ab]|p2[ab]): (.+?)\|(.+)/
+      );
       
       // Detect new turn
       if (turnMatch) {
@@ -202,7 +206,7 @@ app.post("/replays", async (req, res) => {
           faintedPokemons
         );
       } else if (healMatch) { // Detect the healing of a Pokémon
-        console.log("heal detected");
+        //console.log("heal detected");
         processDamage(
           actualTurn,
           healMatch,
@@ -222,6 +226,9 @@ app.post("/replays", async (req, res) => {
       } else if (unBoostMatch) { // Detect the effect of an unboost
         //console.log(unBoostMatch);
         processBoost(actualTurn, unBoostMatch, turns, revealedPokemons);
+      } else if (teraMatch) { // Detect the terastallize effect
+        //console.log(teraMatch);
+        processTerastallize(actualTurn, teraMatch, turns, revealedPokemons);
       }
     }
 
@@ -304,6 +311,7 @@ function processSwitch(actualTurn, switchMatches, turns, revealedPokemons) {
       remainingHp: 100,
       nonVolatileStatus: "",
       stats: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+      tera: { type: "", active: false }
     };
 
     revealedPokemons[player].push(pokemon);
@@ -495,6 +503,27 @@ function processBoost(actualTurn, boostMatch, turns, revealedPokemons) {
   revealedPokemons[player] = revealedPokemons[player].map((p) =>
     p.name === pokemonName ? { ...p, stats: pokemon.stats } : p
   );
+}
+
+// Process the terastallize effect
+function processTerastallize(actualTurn, teraMatch, turns, revealedPokemons) {
+  const player = teraMatch[1].startsWith("p1") ? "player1" : "player2";
+  const pokemonName = teraMatch[2];
+  const type = teraMatch[3];
+
+  // Update the terastallize effect of the Pokémon in revealedPokemons
+  revealedPokemons[player] = revealedPokemons[player].map((p) =>
+    p.name === pokemonName ? { ...p, tera: { type: type, active: true } } : p
+  );
+
+  // Update the terastallize effect of the Pokémon in endsWith
+  const pokemon = turns[actualTurn].endsWith[player].find(
+    (p) => p && p.name === pokemonName
+  );
+
+  if (pokemon) {
+    pokemon.tera = { type: type, active: true };
+  }
 }
 
 // Obtain the winner of the match
