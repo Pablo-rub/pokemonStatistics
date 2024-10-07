@@ -98,7 +98,7 @@ app.post("/replays", async (req, res) => {
     let faintedPokemons = { player1: [], player2: [] };
     let turns = [];
     //console.log("Empty initial turns: ", turns);
-
+    
     // Initialize the first turn
     let actualTurn = 0;
     turns.push({
@@ -112,39 +112,18 @@ app.post("/replays", async (req, res) => {
         player2: [],
       },
     });
-
+    
     for (let line of log) {
       //console.log("Looking at line");
 
-      // Detect new turn
       const turnMatch = line.match(/\|turn\|(\d+)/);
-      if (turnMatch) {
-        actualTurn = parseInt(turnMatch[1]);
-        turns = processTurn(actualTurn, turns);
-        //console.log("Start of turn", turnMatch[1]);
-      }
-
-      // Detect active Pokémon switches and update revealed Pokémon if necessary
       const switchMatchesG = line.match(
         /\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)(?:, ([MF])\|)?(\d+)\/(\d+)/
       );
       const switchMatchesNG = line.match(
         /\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)\|(\d+)\/(\d+)/
       );
-
       let switchMatches = switchMatchesG || switchMatchesNG;
-      if (switchMatches) {
-        //console.log("Switch detected");
-        const [newTurns, newRevealedPokemons] = processSwitch(
-          actualTurn,
-          switchMatches,
-          turns,
-          revealedPokemons
-        );
-        //console.log("Turn processed");
-      }
-
-      // Detect the usage of an item in different formats
       const itemMatchActivate = line.match(
         /\|-activate\|(p1[ab]|p2[ab]): (.+?)\|item: (.+?)\|/
       );
@@ -160,43 +139,57 @@ app.post("/replays", async (req, res) => {
       const itemMatchBoost = line.match(
         /\|-boost\|(p1[ab]|p2[ab]): (.+?)\|.+?\[from\] item: (.+)/
       );
-
       let itemMatch =
         itemMatchActivate ||
         itemMatchStatus ||
         itemMatchDamage ||
         itemMatchEnd ||
         itemMatchBoost;
-      if (itemMatch) {
-        processItem(actualTurn, itemMatch, turns, revealedPokemons);
-      }
-
-      // Detect the end of an item effect
       let endItemMatch = line.match(/\|-enditem\|(p1[ab]|p2[ab]): (.+?)\|(.+)/);
-      if (endItemMatch) {
-        //console.log(endItemMatch);
-        processItem(actualTurn, endItemMatch, turns, revealedPokemons);
-      }
-
-      // Detect the usage of an ability
       let abilityMatch = line.match(
         /\|-ability\|(p1[ab]|p2[ab]): (.+)\|(.+)\|(.+)/
       );
-      if (abilityMatch) {
-        processAbility(actualTurn, abilityMatch, turns, revealedPokemons);
-      }
-
-      // Detect the usage of a move
       let moveMatch = line.match(
         /\|move\|(p1[ab]|p2[ab]): (.+)\|(.+?)\|(p1[ab]|p2[ab]): (.+)/
       );
-      if (moveMatch) {
-        processMove(actualTurn, moveMatch, turns, revealedPokemons);
-      }
-
-      // Update the remaining HP of a Pokémon in each turn
       let damageMatch = line.match(/\|-damage\|(p1[ab]|p2[ab]): (.+?)\|(.+)/);
-      if (damageMatch) {
+      const healMatch = line.match(
+        /\|-heal\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(?:\[from\] (.+?))?(?:\|\[of\] (.+?))?/
+      );
+      const statusMatch = line.match(
+        /\|-status\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(.+)/
+      );
+      const boostMatch = line.match(
+        /\|-boost\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(.+)/
+      );
+      const unBoostMatch = line.match(
+        /\|-unboost\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(.+)/
+      );
+      
+      // Detect new turn
+      if (turnMatch) {
+        actualTurn = parseInt(turnMatch[1]);
+        turns = processTurn(actualTurn, turns);
+        //console.log("Start of turn", turnMatch[1]);
+      } else if (switchMatches) { // Detect active Pokémon switches and update revealed Pokémon if necessary
+        //console.log("Switch detected");
+        const [newTurns, newRevealedPokemons] = processSwitch(
+          actualTurn,
+          switchMatches,
+          turns,
+          revealedPokemons
+        );
+        //console.log("Turn processed");
+      } else if (itemMatch) { // Detect the usage of an item in different formats
+        processItem(actualTurn, itemMatch, turns, revealedPokemons);
+      } else if (endItemMatch) { // Detect the end of an item effect
+        //console.log(endItemMatch);
+        processItem(actualTurn, endItemMatch, turns, revealedPokemons);
+      } else if (abilityMatch) { // Detect the usage of an ability
+        processAbility(actualTurn, abilityMatch, turns, revealedPokemons);
+      } else if (moveMatch) { // Detect the usage of a move
+        processMove(actualTurn, moveMatch, turns, revealedPokemons);
+      } else if (damageMatch) { // Update the remaining HP of a Pokémon in each turn
         //console.log(damageMatch);
         processDamage(
           actualTurn,
@@ -205,31 +198,7 @@ app.post("/replays", async (req, res) => {
           revealedPokemons,
           faintedPokemons
         );
-      }
-
-      // Detect the effect of a status condition
-      const statusMatch = line.match(
-        /\|-status\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(.+)/
-      );
-      if (statusMatch) {
-        //console.log(statusMatch);
-        processStatus(actualTurn, statusMatch, turns, revealedPokemons);
-      }
-
-      // Detect the effect of a boost
-      const boostMatch = line.match(
-        /\|-boost\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(.+)/
-      );
-      if (boostMatch) {
-        //console.log(boostMatch);
-        processBoost(actualTurn, boostMatch, turns, revealedPokemons);
-      }
-
-      // Detect the healing of a Pokémon
-      const healMatch = line.match(
-        /\|-heal\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(?:\[from\] (.+?))?(?:\|\[of\] (.+?))?/
-      );
-      if (healMatch) {
+      } else if (healMatch) { // Detect the healing of a Pokémon
         console.log("heal detected");
         processDamage(
           actualTurn,
@@ -238,6 +207,14 @@ app.post("/replays", async (req, res) => {
           revealedPokemons,
           faintedPokemons
         );
+      } else if (statusMatch) { // Detect the effect of a status condition
+        //console.log(statusMatch);
+        processStatus(actualTurn, statusMatch, turns, revealedPokemons);
+      } else if (boostMatch) { // Detect the effect of a boost
+        //console.log(boostMatch);
+        processBoost(actualTurn, boostMatch, turns, revealedPokemons);
+      } else if (unBoostMatch) { // Detect the effect of an unboost
+
       }
     }
 
