@@ -214,7 +214,8 @@ app.post("/replays", async (req, res) => {
         //console.log(boostMatch);
         processBoost(actualTurn, boostMatch, turns, revealedPokemons);
       } else if (unBoostMatch) { // Detect the effect of an unboost
-
+        //console.log(unBoostMatch);
+        processBoost(actualTurn, unBoostMatch, turns, revealedPokemons);
       }
     }
 
@@ -470,7 +471,12 @@ function processBoost(actualTurn, boostMatch, turns, revealedPokemons) {
     (p) => p && p.name === pokemonName
   );
 
-  pokemon.stats[statBoosted] += boost;
+  if (boostMatch[0].startsWith("|-boost")) {
+    pokemon.stats[statBoosted] += boost;
+  } else if (boostMatch[0].startsWith("|-unboost")) {
+    pokemon.stats[statBoosted] -= boost;
+  }
+
   //console.log("new stats", pokemon.stats);
 
   // Update the boosts of the Pokémon in revealedPokemons
