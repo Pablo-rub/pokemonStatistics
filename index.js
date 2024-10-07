@@ -159,6 +159,9 @@ app.post("/replays", async (req, res) => {
       const statusMatch = line.match(
         /\|-status\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(.+)/
       );
+      const cureStatusMatch = line.match(
+        /\|-curestatus\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(.+)/
+      );
       const boostMatch = line.match(
         /\|-boost\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(.+)/
       );
@@ -210,6 +213,9 @@ app.post("/replays", async (req, res) => {
       } else if (statusMatch) { // Detect the effect of a status condition
         //console.log(statusMatch);
         processStatus(actualTurn, statusMatch, turns, revealedPokemons);
+      } else if (cureStatusMatch) { // Detect the cure of a status condition
+        //console.log(cureStatusMatch);
+        processStatus(actualTurn, cureStatusMatch, turns, revealedPokemons);
       } else if (boostMatch) { // Detect the effect of a boost
         //console.log(boostMatch);
         processBoost(actualTurn, boostMatch, turns, revealedPokemons);
@@ -442,7 +448,13 @@ function processDamage(
 function processStatus(actualTurn, statusMatch, turns, revealedPokemons) {
   const player = statusMatch[1].startsWith("p1") ? "player1" : "player2";
   const pokemonName = statusMatch[2];
-  const status = statusMatch[3];
+  let status;
+
+  if (statusMatch[0].startsWith("|-curestatus")) {
+    status = "";
+  } else {
+   status = statusMatch[3];
+  }
 
   // Update the status of the Pokémon in revealedPokemons
   revealedPokemons[player] = revealedPokemons[player].map((p) =>
