@@ -224,6 +224,21 @@ app.post("/replays", async (req, res) => {
         //console.log(boostMatch);
         processBoost(actualTurn, boostMatch, turns, revealedPokemons);
       }
+
+      // Detect the healing of a Pokémon
+      const healMatch = line.match(
+        /\|-heal\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(?:\[from\] (.+?))?(?:\|\[of\] (.+?))?/
+      );
+      if (healMatch) {
+        console.log("heal detected");
+        processDamage(
+          actualTurn,
+          healMatch,
+          turns,
+          revealedPokemons,
+          faintedPokemons
+        );
+      }
     }
 
     // Create the new entry in the database
@@ -410,7 +425,7 @@ function processDamage(
   const pokemonName = damageMatch[2];
   const damageInfo = damageMatch[3];
   //console.log("Damage info", damageInfo);
-
+  
   let remainingHp;
   if (damageInfo === "0 fnt") {
     // Update the faintedPokemons
@@ -423,6 +438,9 @@ function processDamage(
   } else {
     // Update the remaining HP of the Pokémon in revealedPokemons
     remainingHp = parseInt(damageInfo.split("/")[0]);
+    if (damageMatch[0].startsWith("|-heal")) {
+      //console.log("Healing", pokemonName, "for", remainingHp, "HP");
+    }
   }
 
   // Update the remaining HP of the Pokémon in endsWith
