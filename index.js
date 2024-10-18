@@ -186,32 +186,27 @@ app.post("/replays", async (req, res) => {
       }
     }
 
-    console.log("e");
-    app.post("/replays", async (req, res) => {
-      console.log("e1");
-      try {
-        const replayData = {
-          player1: req.body.player1,
-          player2: req.body.player2,
-          winner: req.body.winner,
-          loser: req.body.loser,
-          date: req.body.date,
-          turns: req.body.turns,
-        };
+    try {
+      const replayData = {
+        player1: req.body.player1,
+        player2: req.body.player2,
+        winner: req.body.winner,
+        loser: req.body.loser,
+        date: req.body.date,
+        turns: req.body.turns,
+      };
     
-        // Insertar en la tabla `replays`
-        await bigQuery
-          .dataset('pokemon_replays')
-          .table('replays')
-          .insert(replayData);
+      // Insertar en la tabla `replays`
+      await bigQuery
+        .dataset('pokemon_replays')
+        .table('replays')
+        .insert(replayData);
     
-        res.status(201).send("Replay saved successfully!");
-      } catch (error) {
-        console.error("Error saving replay", error);
-        res.status(500).send("Error saving replay");
-      }
-    });
-    
+      res.status(201).send("Replay saved successfully!");
+    } catch (error) {
+      console.error("Error saving replay", error);
+      res.status(500).send("Error saving replay");
+    }
   } catch (error) {
     console.error("Error obtaining the data from the replay: ", error);
     res.status(400).send(error);
