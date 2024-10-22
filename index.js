@@ -4,7 +4,7 @@ const axios = require("axios");
 
 // Initialize the BigQuery client
 const bigQuery = new BigQuery();
-console.log(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+//console.log(process.env.GOOGLE_APPLICATION_CREDENTIALS);
 
 //Initialize the express app
 const app = express();
@@ -31,22 +31,22 @@ app.post("/replays", async (req, res) => {
 
     //Defining the variables to store the data
     const player1 = players[0];
-    console.log("Player 1: ", player1);
+    //console.log("Player 1: ", player1);
     const player2 = players[1];
-    console.log("Player 2: ", player2);
+    //console.log("Player 2: ", player2);
     const winner = processWinner(log);
-    console.log("Winner of the match is:", winner);
+    //console.log("Winner of the match is:", winner);
     const loser = winner === player1 ? player2 : player1;
-    console.log("Loser of the match is:", loser);
+    //console.log("Loser of the match is:", loser);
     const date = new Date(uploadtime * 1000);
-    console.log("Date of the match is:", date);
+    //console.log("Date of the match is:", date);
     let turns = [];
-    console.log("Empty initial turns: ", turns);
+    //console.log("Empty initial turns: ", turns);
     
     // Initialize the first turn
     let currentTurn = 0;
     turns.push({
-      turnNumber: currentTurn,
+      turn_number: currentTurn,
       startsWith: {
         player1: [],
         player2: [],
@@ -59,18 +59,18 @@ app.post("/replays", async (req, res) => {
         terrain: "",
         duration: 0,
       },
-      revealedPokemons: {
+      revealedPokemon: {
         player1: [],
         player2: [],
       },
-      faintedPokemons: { 
+      faintedPokemon: { 
         player1: [], 
         player2: [],
       }
     });
     
     for (let line of log) {
-      console.log("Looking at line");
+      //console.log("Looking at line");
 
       const turnMatch = line.match(/\|turn\|(\d+)/);
       const switchMatchesG = line.match(
@@ -87,8 +87,8 @@ app.post("/replays", async (req, res) => {
         /\|-status\|(p1[ab]|p2[ab]): (.+?)\|.+?\[from\] item: (.+)/
       );
       const itemMatchDamage = line.match(
-        /\|-damage\|(p1[ab]|p2[ab]): (.+?)\|.+?\[from\] item: (.+)/
-      );
+        /\|-damage\|(p1[ab]|p2[ab]): (.+?)\|(\d+\/\d+|0 fnt)\s*(?:\|.+?\[from\] item: (.+))?/
+      );    
       const itemMatchEnd = line.match(
         /\|-enditem\|(p1[ab]|p2[ab]): (.+?)\|(.+)/
       );
@@ -133,80 +133,109 @@ app.post("/replays", async (req, res) => {
       if (turnMatch) {
         currentTurn = parseInt(turnMatch[1]);
         turns = processTurn(currentTurn, turns);
-        console.log("Start of turn", turnMatch[1]);
-      } else if (switchMatches) { // Detect active Pokémon switches and update revealed Pokémon if necessary
-        console.log("Switch detected");
+        //console.log("Start of turn", turnMatch[1]);
+      } 
+      if (switchMatches) { // Detect active Pokémon switches and update revealed Pokémon if necessary
+        //console.log("Switch detected");
         processSwitch(
           currentTurn,
           switchMatches,
           turns
         );
-        console.log("Turn processed");
-      } else if (itemMatch) { // Detect the usage of an item in different formats
+        //console.log("Turn processed");
+      } 
+      if (itemMatch) { // Detect the usage of an item in different formats
         processItem(currentTurn, itemMatch, turns);
-      } else if (endItemMatch) { // Detect the end of an item effect
-        console.log(endItemMatch);
+      } 
+      if (endItemMatch) { // Detect the end of an item effect
+        //console.log(endItemMatch);
         processItem(currentTurn, endItemMatch, turns);
-      } else if (abilityMatch) { // Detect the usage of an ability
+      } 
+      if (abilityMatch) { // Detect the usage of an ability
         processAbility(currentTurn, abilityMatch, turns);
-      } else if (moveMatch) { // Detect the usage of a move
+      } 
+      if (moveMatch) { // Detect the usage of a move
         processMove(currentTurn, moveMatch, turns);
-      } else if (damageMatch) { // Update the remaining HP of a Pokémon in each turn
-        console.log(damageMatch);
+      } 
+      if (damageMatch) { // Update the remaining HP of a Pokémon in each turn
+        //console.log(damageMatch);
         processDamage(
           currentTurn,
           damageMatch,
           turns
         );
-      } else if (healMatch) { // Detect the healing of a Pokémon
-        console.log("heal detected");
+      } 
+      if (healMatch) { // Detect the healing of a Pokémon
+        //console.log("heal detected");
         processDamage(
           currentTurn,
           healMatch,
           turns
         );
-      } else if (statusMatch) { // Detect the effect of a status condition
-        console.log(statusMatch);
+      } 
+      if (statusMatch) { // Detect the effect of a status condition
+        //console.log(statusMatch);
         processStatus(currentTurn, statusMatch, turns);
-      } else if (cureStatusMatch) { // Detect the cure of a status condition
-        console.log(cureStatusMatch);
+      } 
+      if (cureStatusMatch) { // Detect the cure of a status condition
+        //console.log(cureStatusMatch);
         processStatus(currentTurn, cureStatusMatch, turns);
-      } else if (boostMatch) { // Detect the effect of a boost
-        console.log(boostMatch);
+      } 
+      if (boostMatch) { // Detect the effect of a boost
+        //console.log(boostMatch);
         processBoost(currentTurn, boostMatch, turns);
-      } else if (unBoostMatch) { // Detect the effect of an unboost
-        console.log(unBoostMatch);
+      } 
+      if (unBoostMatch) { // Detect the effect of an unboost
+        //console.log(unBoostMatch);
         processBoost(currentTurn, unBoostMatch, turns);
-      } else if (teraMatch) { // Detect the terastallize effect
-        console.log(teraMatch);
+      } 
+      if (teraMatch) { // Detect the terastallize effect
+        //console.log(teraMatch);
         processTerastallize(currentTurn, teraMatch, turns);
-      } else if (fieldMatch) { // Detect the start of a field effect
-        console.log(fieldMatch);
+      } 
+      if (fieldMatch) { // Detect the start of a field effect
+        //console.log(fieldMatch);
         turns[currentTurn].field = { terrain: fieldMatch[1], duration: 5 };
       }
     }
 
     try {
+      // Save the replay data in BigQuery
       const replayData = {
-        player1: req.body.player1,
-        player2: req.body.player2,
-        winner: req.body.winner,
-        loser: req.body.loser,
-        date: req.body.date,
-        turns: req.body.turns,
+        replay_id: id,
+        format: format,
+        views: views,
+        rating: rating,
+        player1: player1,
+        player2: player2,
+        winner: winner,
+        loser: loser,
+        date: date,
+        turns: turns,
       };
+
+      //console.log(turns[5].startsWith.player1);
+      //console.log(turns[5].startsWith.player2);
+      //console.log(turns[5].endsWith.player1);
+      //console.log(turns[5].endsWith.player2);
+      //console.log(turns[5].revealedPokemon.player1);
+      //console.log(turns[5].revealedPokemon.player2);
+      //console.log(turns[5].faintedPokemon.player1);
+      //console.log(turns[5].faintedPokemon.player2);
+
+      // Rename the names of the variables to match the BigQuery schema
+      const snakeCaseData = toSnakeCase(replayData);
+      //console.log("Replay in snake case", snakeCaseData);
+      //console.log(snakeCaseData.turns[4].revealed_pokemon.player1);
     
-      // Insertar en la tabla `replays`
-      await bigQuery
-        .dataset('pokemon_replays')
-        .table('replays')
-        .insert(replayData);
-    
-      res.status(201).send("Replay saved successfully!");
+      // Save the replay data in BigQuery
+      saveReplay(snakeCaseData);
+
     } catch (error) {
       console.error("Error saving replay", error);
       res.status(500).send("Error saving replay");
     }
+  
   } catch (error) {
     console.error("Error obtaining the data from the replay: ", error);
     res.status(400).send(error);
@@ -232,22 +261,22 @@ function processTurn(currentTurn, turns) {
         terrain: "",
         duration: 0,
       },
-      revealedPokemons: {
+      revealedPokemon: {
         player1: [],
         player2: [],
       },
-      faintedPokemons: { 
+      faintedPokemon: { 
         player1: [], 
         player2: [],
       }
     });
   } else {
     // Copy the active Pokémon from the previous turn
-    console.log("Previous turn", turns[currentTurn - 1]);
+    //console.log("Previous turn", turns[currentTurn - 1]);
     const previousTurn = turns[currentTurn - 1];
-    console.log(previousTurn.field.duration, previousTurn.field.terrain);
+    //console.log(previousTurn.field.duration, previousTurn.field.terrain);
     const previousTerrainEnds = (previousTurn.field.duration - 1) > 1;
-    console.log(previousTerrainEnds);
+    //console.log(previousTerrainEnds);
 
     // Create a new object for the current turn
     turns.push({
@@ -264,13 +293,13 @@ function processTurn(currentTurn, turns) {
         terrain: previousTerrainEnds ? previousTurn.field.terrain : "",
         duration: previousTerrainEnds ? previousTurn.field.duration - 1 : 0,
       },
-      revealedPokemons: {
-        player1: JSON.parse(JSON.stringify(previousTurn.revealedPokemons.player1)), // Deep copy
-        player2: JSON.parse(JSON.stringify(previousTurn.revealedPokemons.player2)), // Deep copy
+      revealedPokemon: {
+        player1: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player1)), // Deep copy
+        player2: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player2)), // Deep copy
       },
-      faintedPokemons: {
-        player1: JSON.parse(JSON.stringify(previousTurn.faintedPokemons.player1)), // Deep copy
-        player2: JSON.parse(JSON.stringify(previousTurn.faintedPokemons.player2)), // Deep copy
+      faintedPokemon: {
+        player1: JSON.parse(JSON.stringify(previousTurn.faintedPokemon.player1)), // Deep copy
+        player2: JSON.parse(JSON.stringify(previousTurn.faintedPokemon.player2)), // Deep copy
       }
     });
   }
@@ -282,15 +311,15 @@ function processTurn(currentTurn, turns) {
 function processSwitch(currentTurn, switchMatches, turns) {
   const player = switchMatches[1].startsWith("p1") ? "player1" : "player2";
   const pokemonName = switchMatches[2];
-  console.log(pokemonName, "entered the battle");
+  //console.log(pokemonName, "entered the battle");
   const slot = switchMatches[1].endsWith("a") ? 0 : 1; // 'a' -> slot 0, 'b' -> slot 1
-  console.log("In the slot", slot);
+  //console.log("In the slot", slot);
 
-  // Add Pokémon to revealedPokemons if it hasn't been revealed yet
-  const isRevealed = turns[currentTurn].revealedPokemons[player].some(
+  // Add Pokémon to revealedPokemon if it hasn't been revealed yet
+  const isRevealed = turns[currentTurn].revealedPokemon[player].some(
     (p) => p.name === pokemonName
   );
-  console.log("Is revealed?", isRevealed);
+  //console.log("Is revealed?", isRevealed);
   
   let pokemon;
 
@@ -301,16 +330,17 @@ function processSwitch(currentTurn, switchMatches, turns) {
       ability: "",
       item: "",
       remainingHp: 100,
+      volatileStatus: "",
       nonVolatileStatus: "",
       stats: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 },
       tera: { type: "", active: false }
     };
 
-    turns[currentTurn].revealedPokemons[player].push(pokemon);
-    console.log(pokemonName, "was revealed");
+    turns[currentTurn].revealedPokemon[player].push(pokemon);
+    //console.log(pokemonName, "was revealed");
   } else {
-    // Load the info of the Pokémon from revealedPokemons, but the stats boosts return to 0
-    pokemon = turns[currentTurn].revealedPokemons[player].find((p) => p.name === pokemonName);
+    // Load the info of the Pokémon from revealedPokemon, but the stats boosts return to 0
+    pokemon = turns[currentTurn].revealedPokemon[player].find((p) => p.name === pokemonName);
 
     // make all the pokemons that are not active have 0 stats
     const activePokemons = [
@@ -324,7 +354,7 @@ function processSwitch(currentTurn, switchMatches, turns) {
       }
     ];
 
-    turns[currentTurn].revealedPokemons[player] = turns[currentTurn].revealedPokemons[player].map((p) => {
+    turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) => {
       // Si el Pokémon no está activo, se le asignan stats a 0
       if (!activePokemons[slot].includes(p.name)) {
         return { ...p, atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 };
@@ -333,11 +363,11 @@ function processSwitch(currentTurn, switchMatches, turns) {
       return p;
     });
 
-    console.log("Pokemon loaded", pokemon);
+    //console.log("Pokemon loaded", pokemon);
   }
 
   // Update active Pokémons
-  console.log(turns[currentTurn]);
+  //console.log(turns[currentTurn]);
   turns[currentTurn].endsWith[player][slot] = pokemon.name;
 
   return [turns];
@@ -353,12 +383,12 @@ function processItem(currentTurn, itemMatch, turns) {
     item = "none";
   }
 
-  // Update the item of the Pokémon in revealedPokemons
-  turns[currentTurn].revealedPokemons[player] = turns[currentTurn].revealedPokemons[player].map((p) =>
+  // Update the item of the Pokémon in revealedPokemon
+  turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
     p.name === pokemonName ? { ...p, item: item } : p
   );
 
-  console.log(pokemonName, "used the item", item);
+  //console.log(pokemonName, "used the item", item);
 }
 
 // Process the usage of an ability
@@ -367,21 +397,21 @@ function processAbility(currentTurn, abilityMatch, turns) {
   const pokemonName = abilityMatch[2];
   const ability = abilityMatch[3];
 
-  // Update the ability of the Pokémon in revealedPokemons
-  turns[currentTurn].revealedPokemons[player] = turns[currentTurn].revealedPokemons[player].map((p) =>
+  // Update the ability of the Pokémon in revealedPokemon
+  turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
     p.name === pokemonName ? { ...p, ability: ability } : p
   );
 }
 
 // Process the usage of a move
-function processMove(currentTurn, moveMatch, turns, revealedPokemons) {
+function processMove(currentTurn, moveMatch, turns, revealedPokemon) {
   const player = moveMatch[1].startsWith("p1") ? "player1" : "player2";
   const pokemonName = moveMatch[2];
   const move = moveMatch[3];
   const target = moveMatch[5];
 
-  // Update the moves of the Pokémon in revealedPokemons
-  turns[currentTurn].revealedPokemons[player] = turns[currentTurn].revealedPokemons[player].map((p) =>
+  // Update the moves of the Pokémon in revealedPokemon
+  turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
     p.name === pokemonName
       ? { ...p, moves: [...new Set([...p.moves, move])] }
       : p
@@ -401,28 +431,24 @@ function processDamage(
   
   let remainingHp;
   if (damageInfo === "0 fnt") {
-    // Update the faintedPokemons
-    turns[currentTurn].
-    faintedPokemons[player].push({
-      name: pokemonName,
-      turnFainted: currentTurn,
-    });
+    // Update the faintedPokemon array
+    turns[currentTurn].faintedPokemon[player].push(pokemonName);
     remainingHp = 0;
-    console.log(pokemonName, "fainted");
+    //console.log(pokemonName, "fainted");
   } else {
-    // Update the remaining HP of the Pokémon in revealedPokemons
+    // Update the remaining HP of the Pokémon in revealedPokemon
     remainingHp = parseInt(damageInfo.split("/")[0]);
     if (damageMatch[0].startsWith("|-heal")) {
-      console.log("Healing", pokemonName, "for", remainingHp, "HP");
+      //console.log("Healing", pokemonName, "for", remainingHp, "HP");
     }
   }
 
-  // Update the remaining HP of the Pokémon in revealedPokemons
-  turns[currentTurn].revealedPokemons[player] = turns[currentTurn].revealedPokemons[player].map((p) =>
+  // Update the remaining HP of the Pokémon in revealedPokemon
+  turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
     p.name === pokemonName ? { ...p, remainingHp: remainingHp } : p
   );
 
-  console.log(pokemonName, "received", damageInfo, "damage");
+  console.log(pokemonName, "status:", damageInfo);
 }
 
 // Process the effect of a status condition
@@ -437,8 +463,8 @@ function processStatus(currentTurn, statusMatch, turns) {
    status = statusMatch[3];
   }
 
-  // Update the status of the Pokémon in revealedPokemons
-  turns[currentTurn].revealedPokemons[player] = turns[currentTurn].revealedPokemons[player].map((p) =>
+  // Update the status of the Pokémon in revealedPokemon
+  turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
     p.name === pokemonName ? { ...p, nonVolatileStatus: status } : p
   );
 }
@@ -450,8 +476,8 @@ function processBoost(currentTurn, boostMatch, turns) {
   const statBoosted = boostMatch[3];
   const boost = parseInt(boostMatch[4]);
 
-  // Update the boosts of the Pokémon in revealedPokemons
-  const pokemon = turns[currentTurn].revealedPokemons[player].find(
+  // Update the boosts of the Pokémon in revealedPokemon
+  const pokemon = turns[currentTurn].revealedPokemon[player].find(
     (p) => p && p.name === pokemonName
   );
 
@@ -461,7 +487,7 @@ function processBoost(currentTurn, boostMatch, turns) {
     pokemon.stats[statBoosted] -= boost;
   }
 
-  console.log("new stats", pokemon.stats);
+  //console.log("new stats", pokemon.stats);
 }
 
 // Process the terastallize effect
@@ -470,8 +496,8 @@ function processTerastallize(currentTurn, teraMatch, turns) {
   const pokemonName = teraMatch[2];
   const type = teraMatch[3];
 
-  // Update the terastallize effect of the Pokémon in revealedPokemons
-  turns[currentTurn].revealedPokemons[player] = turns[currentTurn].revealedPokemons[player].map((p) =>
+  // Update the terastallize effect of the Pokémon in revealedPokemon
+  turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
     p.name === pokemonName ? { ...p, tera: { type: type, active: true } } : p
   );
 }
@@ -488,15 +514,49 @@ function processWinner(log) {
 
 async function run() {
   try {
-    console.log("BigQuery initialized", bigQuery);
+    //console.log("BigQuery initialized", bigQuery);
 
     //Initialize express server
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+      //console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
-    console.error("Error connecting to MongoDB: ", error);
+    //console.error("Error connecting to MongoDB: ", error);
+  }
+}
+
+// Function to convert camelCase to snake_case
+function toSnakeCase(data) {
+  if (Array.isArray(data)) {
+    return data.map(v => toSnakeCase(v));
+  } else if (data !== null && data.constructor === Object) {
+    return Object.keys(data).reduce((result, key) => {
+      const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      result[snakeKey] = toSnakeCase(data[key]);
+      return result;
+    }, {});
+  }
+  return data;
+}
+
+// Function to save the replay data in BigQuery and receive more info from problems
+async function saveReplay(data) {
+  const dataset = bigQuery.dataset('pokemon_replays');
+  const table = dataset.table('replays');
+
+  try {
+    await table.insert(data);
+    console.log('Replay saved successfully');
+  } catch (error) {
+    console.error('Error saving replay:', error);
+
+    if (error.errors) {
+        error.errors.forEach(err => {
+            console.error('Row with error:', err.row);
+            console.error('Details of the error:', err.errors);
+        });
+    }
   }
 }
 
