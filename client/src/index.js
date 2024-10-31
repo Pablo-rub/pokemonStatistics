@@ -6,7 +6,9 @@ import reportWebVitals from './reportWebVitals';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 
 import HomePage from "./Pages/HomePage";
-import Partidas from "./Pages/Partidas";
+import TurnAssistantPage from "./Pages/TurnAssistantPage";
+import GamesPage from "./Pages/GamesPage";
+import RankingsPage from "./Pages/RankingsPage";
 
 const router = createBrowserRouter(
   [
@@ -15,7 +17,10 @@ const router = createBrowserRouter(
       element: <App />,
       children: [
         { path: "/", element: <HomePage /> },
-        { path: "/partidas", element: <Partidas />}
+        { path: "/turn-assistant", element: <TurnAssistantPage />},
+        { path: "/my-games", element: <GamesPage />},
+        { path: "/public-games", element: <GamesPage />},
+        { path : "/rankings", element: <RankingsPage /> },
       ],
     }
   ],
