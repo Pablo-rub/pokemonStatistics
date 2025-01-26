@@ -386,23 +386,24 @@ function processSwitch(currentTurn, switchMatches, turns) {
   if (!isRevealed) {
     pokemon = {
       name: pokemonName,
-      moves: [],
-      ability: "",
-      item: "",
+      moves: teams[player].find((p) => p.name === pokemonName).moves,
+      ability: teams[player].find((p) => p.name === pokemonName).ability,
+      item: teams[player].find((p) => p.name === pokemonName).item,
       remainingHp: 100,
       volatileStatus: "",
       nonVolatileStatus: "",
       stats: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 },
-      tera: { type: "", active: false }
+      tera: { type: teams[player].find((p) => p.name === pokemonName).teraType, active: false },
+      consecutiveProtects: 0
     };
 
     turns[currentTurn].revealedPokemon[player].push(pokemon);
     //console.log(pokemonName, "was revealed");
   } else {
-    // Load the info of the Pokémon from revealedPokemon, but the stats boosts return to 0
+    // Load the info of the Pokémon from revealedPokemon, but the stats boosts and consecutiveProtects return to 0
     pokemon = turns[currentTurn].revealedPokemon[player].find((p) => p.name === pokemonName);
 
-    // make all the pokemons that are not active have 0 stats
+    // make all the pokemons that are not active have 0 stats and 0 consecutiveProtects
     const activePokemons = [
       player1 = {
         "p1a": turns[currentTurn].startsWith.player1[0],
@@ -415,10 +416,9 @@ function processSwitch(currentTurn, switchMatches, turns) {
     ];
 
     turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) => {
-      // Si el Pokémon no está activo, se le asignan stats a 0
       if (activePokemons[player] && !Object.values(activePokemons[player]).includes(p.name)) {
         // Si el Pokémon no está activo, se le asignan stats a 0
-        return { ...p, stats: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 } };
+        return { ...p, stats: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 }, consecutiveProtects: 0};
       }
       // Si está activo, se devuelve tal cual
       return p;
@@ -442,12 +442,14 @@ function processItem(currentTurn, itemMatch, turns) {
   
   if (itemMatch[0].startsWith("|-enditem")) {
     item = "none";
+  
+    // Update the item of the Pokémon in revealedPokemon
+    turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
+      p.name === pokemonName ? { ...p, item: item } : p
+    );
   }
 
-  // Update the item of the Pokémon in revealedPokemon
-  turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
-    p.name === pokemonName ? { ...p, item: item } : p
-  );
+  //TODO: moves like trick, switcheroo, etc.
 
   //console.log(pokemonName, "used the item", item);
 }
@@ -458,25 +460,31 @@ function processAbility(currentTurn, abilityMatch, turns) {
   const pokemonName = abilityMatch[2];
   const ability = abilityMatch[3];
 
+  //TODO: moves like role play, skill swap, etc.
+
   // Update the ability of the Pokémon in revealedPokemon
-  turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
-    p.name === pokemonName ? { ...p, ability: ability } : p
-  );
+  //turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
+  //  p.name === pokemonName ? { ...p, ability: ability } : p
+  //);
 }
 
 // Process the usage of a move
-function processMove(currentTurn, moveMatch, turns, revealedPokemon) {
+function processMove(currentTurn, moveMatch, turns) {
   const player = moveMatch[1].startsWith("p1") ? "player1" : "player2";
   const pokemonName = moveMatch[2];
   const move = moveMatch[3];
-  const target = moveMatch[5];
+
+  //TODO: moves like encore, disable, etc.
+  //TODO: moves like protect, detect, etc.
 
   // Update the moves of the Pokémon in revealedPokemon
-  turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
-    p.name === pokemonName
-      ? { ...p, moves: [...new Set([...p.moves, move])] }
-      : p
-  );
+  turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) => {
+    if (p.name === pokemonName) {
+      const consecutiveProtects = move === "Protect" && moveMatch[0].includes("|-singleturn|") ? p.consecutiveProtects + 1 : 0;
+      return { ...p, consecutiveProtects };
+    }
+    return p;
+  });
 }
 
 // Process the damage received by a Pokémon
