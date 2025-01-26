@@ -15,8 +15,10 @@ app.use(cors());
 // Enable parsing of JSON bodies
 app.use(express.json());
 
-// Initialize BigQuery
-const bigquery = new BigQuery();
+const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
+
+// Initialize the BigQuery client
+const bigQuery = new BigQuery({keyFilename});
 
 // Show when server is running
 app.get('/', (req, res) => {
@@ -33,7 +35,7 @@ app.listen(PORT, () => {
 app.get('/api/public-games', async (req, res) => {
     try {
         const query = 'SELECT * FROM `pokemon-statistics.pokemon_replays.replays`';
-        const [rows] = await bigquery.query(query);
+        const [rows] = await bigQuery.query(query);
         res.json(rows);
     } catch (error) {
         console.error("Error fetching data from BigQuery:", error);
@@ -41,11 +43,25 @@ app.get('/api/public-games', async (req, res) => {
     }
 });
 
+// Endpoint that returns if a replay is already in the database
+app.get('/api/games/:gameId', async (req, res) => {
+    const { gameId } = req.params;
+
+    try {
+        const query = `SELECT * FROM \`pokemon-statistics.pokemon_replays.replays\` WHERE replay_id = '${gameId}'`;
+        const [rows] = await bigQuery.query(query);
+        res.json({ exists: rows.length > 0 });
+    } catch (error) {
+        console.error("Error fetching data from BigQuery:", error);
+        res.status(500).send("Error checking if game exists");
+    }
+});
+
 // Endpoint to get the total number of games
 app.get('/api/games/count', async (req, res) => {
     try {
         const query = 'SELECT COUNT(*) AS number_games FROM `pokemon-statistics.pokemon_replays.replays`';
-        const [rows] = await bigquery.query(query);
+        const [rows] = await bigQuery.query(query);
         res.json({ numGames: rows[0].number_games });
     } catch (error) {
         console.error("Error fetching data from BigQuery:", error);

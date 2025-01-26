@@ -7,9 +7,8 @@ function TurnAssistantPage() {
     useEffect(() => {
         const fetchPokemon = async () => {
             try {
-                // Aquí defines un array con los Pokémon de ejemplo
                 const examplePokemon = ["None", "Charizard", "Blastoise", "Venusaur", "Pikachu"];
-                setPokemon(examplePokemon); // Establece el estado con los ejemplos
+                setPokemon(examplePokemon);
             } catch (error) {
                 console.error("Error fetching Pokemon:", error);
             }

@@ -2,9 +2,10 @@ const {BigQuery} = require('@google-cloud/bigquery');
 const express = require("express");
 const axios = require("axios");
 
+const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
+
 // Initialize the BigQuery client
-const bigQuery = new BigQuery();
-//console.log(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+const bigQuery = new BigQuery({keyFilename});
 
 //Initialize the express app
 const app = express();
@@ -19,6 +20,14 @@ app.post("/replays", async (req, res) => {
 
     // Extracting the data from the replay
     const id = replayData.id;
+
+    // Check if the replay is already in the database
+    const checkResponse = await axios.get(`http://localhost:5000/api/games/${id}`);
+    if (checkResponse.data.exists) {
+      res.status(200).send("Replay already exists in the database");
+      return;
+    }
+
     const format = replayData.format;
     const players = replayData.players;
     const log = replayData.log.split("\n");
@@ -38,8 +47,10 @@ app.post("/replays", async (req, res) => {
     //console.log("Winner of the match is:", winner);
     const loser = winner === player1 ? player2 : player1;
     //console.log("Loser of the match is:", loser);
-    const date = new Date(uploadtime * 1000);
+    const date = new Date(uploadtime * 1000).toISOString();
     //console.log("Date of the match is:", date);
+    let teams = processShowteam(log);
+    console.log("Initial teams: ", teams);
     let turns = [];
     //console.log("Empty initial turns: ", turns);
     
@@ -61,10 +72,6 @@ app.post("/replays", async (req, res) => {
       },
       revealedPokemon: {
         player1: [],
-        player2: [],
-      },
-      faintedPokemon: { 
-        player1: [], 
         player2: [],
       }
     });
@@ -134,7 +141,7 @@ app.post("/replays", async (req, res) => {
         currentTurn = parseInt(turnMatch[1]);
         turns = processTurn(currentTurn, turns);
         //console.log("Start of turn", turnMatch[1]);
-      } 
+      }
       if (switchMatches) { // Detect active Pokémon switches and update revealed Pokémon if necessary
         //console.log("Switch detected");
         processSwitch(
@@ -211,6 +218,7 @@ app.post("/replays", async (req, res) => {
         winner: winner,
         loser: loser,
         date: date,
+        teams: teams,
         turns: turns,
       };
 
@@ -220,8 +228,6 @@ app.post("/replays", async (req, res) => {
       //console.log(turns[5].endsWith.player2);
       //console.log(turns[5].revealedPokemon.player1);
       //console.log(turns[5].revealedPokemon.player2);
-      //console.log(turns[5].faintedPokemon.player1);
-      //console.log(turns[5].faintedPokemon.player2);
 
       // Rename the names of the variables to match the BigQuery schema
       const snakeCaseData = toSnakeCase(replayData);
@@ -230,6 +236,7 @@ app.post("/replays", async (req, res) => {
     
       // Save the replay data in BigQuery
       saveReplay(snakeCaseData);
+      res.status(200).send("Replay saved successfully");
 
     } catch (error) {
       console.error("Error saving replay", error);
@@ -264,10 +271,6 @@ function processTurn(currentTurn, turns) {
       revealedPokemon: {
         player1: [],
         player2: [],
-      },
-      faintedPokemon: { 
-        player1: [], 
-        player2: [],
       }
     });
   } else {
@@ -296,15 +299,72 @@ function processTurn(currentTurn, turns) {
       revealedPokemon: {
         player1: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player1)), // Deep copy
         player2: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player2)), // Deep copy
-      },
-      faintedPokemon: {
-        player1: JSON.parse(JSON.stringify(previousTurn.faintedPokemon.player1)), // Deep copy
-        player2: JSON.parse(JSON.stringify(previousTurn.faintedPokemon.player2)), // Deep copy
       }
     });
   }
 
   return turns;
+}
+
+// Process showteam
+function processShowteam(log) {
+  const teams = {
+    p1: [],
+    p2: [],
+  };
+
+  let p1Processed = false;
+  let p2Processed = false;
+  let index = 0;
+
+  while (index < log.length && (!p1Processed || !p2Processed)) {
+    const line = log[index];
+    const showteamMatch = line.match(/\|showteam\|(p1|p2)\|(.+)/);
+    if (showteamMatch) {
+      const player = showteamMatch[1];
+      const teamData = showteamMatch[2];
+
+      // Split into Pokémon blocks by "]"
+      const rawPokemonBlocks = teamData.split(']').filter((b) => b.trim() !== '');
+
+      const parsedPokemons = rawPokemonBlocks.map((block) => {
+        const parts = block.split('|');
+        const name = parts[0]?.trim() || '';
+        const item = parts[2]?.trim() || '';
+        const ability = parts[3]?.trim() || '';
+        const moves = parts[4] ? parts[4].split(',').map((m) => m.trim()) : [];
+        const level = parts[10]?.trim() || '';
+        let teraType = '';
+        if (parts[11]) {
+          const splitted = parts[11].split(',').filter(Boolean);
+          teraType = splitted[splitted.length - 1] || '';
+        }
+
+        return {
+          name,
+          item,
+          ability,
+          moves,
+          level,
+          teraType,
+        };
+      });
+
+      // Store Pokémon info in 'teams'
+      parsedPokemons.forEach((poke) => {
+        teams[player].push(poke);
+      });
+
+      if (player === 'p1') {
+        p1Processed = true;
+      } else if (player === 'p2') {
+        p2Processed = true;
+      }
+    }
+    index++;
+  }
+
+  return teams;
 }
 
 // Process the switch of a Pokémon
@@ -356,8 +416,9 @@ function processSwitch(currentTurn, switchMatches, turns) {
 
     turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) => {
       // Si el Pokémon no está activo, se le asignan stats a 0
-      if (!activePokemons[slot].includes(p.name)) {
-        return { ...p, atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 };
+      if (activePokemons[player] && !Object.values(activePokemons[player]).includes(p.name)) {
+        // Si el Pokémon no está activo, se le asignan stats a 0
+        return { ...p, stats: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 } };
       }
       // Si está activo, se devuelve tal cual
       return p;
@@ -429,10 +490,9 @@ function processDamage(
   const damageInfo = damageMatch[3];
   console.log("Damage info", damageInfo);
   
-  let remainingHp;
+  let remainingHp, newFightingStatus;
   if (damageInfo === "0 fnt") {
-    // Update the faintedPokemon array
-    turns[currentTurn].faintedPokemon[player].push(pokemonName);
+    newFightingStatus = "fainted";
     remainingHp = 0;
     //console.log(pokemonName, "fainted");
   } else {
@@ -445,7 +505,7 @@ function processDamage(
 
   // Update the remaining HP of the Pokémon in revealedPokemon
   turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
-    p.name === pokemonName ? { ...p, remainingHp: remainingHp } : p
+    p.name === pokemonName ? { ...p, remainingHp: remainingHp, fightingStatus: newFightingStatus, } : p
   );
 
   console.log(pokemonName, "status:", damageInfo);
@@ -481,10 +541,14 @@ function processBoost(currentTurn, boostMatch, turns) {
     (p) => p && p.name === pokemonName
   );
 
-  if (boostMatch[0].startsWith("|-boost")) {
-    pokemon.stats[statBoosted] += boost;
-  } else if (boostMatch[0].startsWith("|-unboost")) {
-    pokemon.stats[statBoosted] -= boost;
+  if (pokemon) {
+    if (boostMatch[0].startsWith("|-boost")) {
+      pokemon.stats[statBoosted] += boost;
+    } else if (boostMatch[0].startsWith("|-unboost")) {
+      pokemon.stats[statBoosted] -= boost;
+    }
+  } else {
+    console.log("Stats not updated because the Pokémon is not found:", pokemonName);
   }
 
   //console.log("new stats", pokemon.stats);
@@ -530,7 +594,7 @@ async function run() {
 function toSnakeCase(data) {
   if (Array.isArray(data)) {
     return data.map(v => toSnakeCase(v));
-  } else if (data !== null && data.constructor === Object) {
+  } else if (data !== null && typeof data === 'object') {
     return Object.keys(data).reduce((result, key) => {
       const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
       result[snakeKey] = toSnakeCase(data[key]);
