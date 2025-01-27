@@ -4,10 +4,11 @@ import Sidebar from "../components/Sidebar";
 
 function MainLayout() {
   return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
+    <Box sx={{ position: "relative", minHeight: "100vh" }}>
       <CssBaseline />
       <Sidebar />
-      <Box sx={{ flexGrow: 1, p: 3 }}>
+      {/* Give pages enough left margin so they never overlap the sidebar */}
+      <Box sx={{ marginLeft: "10vw", p: 3 }}>
         <Outlet />
       </Box>
     </Box>
