@@ -2,12 +2,12 @@ import { createTheme } from "@mui/material/styles";
 
 const theme = createTheme({
   palette: {
-    mode: "main",
+    mode: "light",
     primary: {
       main: "#221FC7"
     },
     secondary: {
-      main: "#C7ADBE"
+      main: "#1A1896"
     },
     error: {
       main: "#E9A5A5",
@@ -20,6 +20,15 @@ const theme = createTheme({
     },
     background: {
       default: "#2B2828"
+    },
+    text: {
+      primary: "#ffffff", // Set the primary text color to white
+      secondary: "#ffffff", // Set the secondary text color to white
+    },
+  },
+  typography: {
+    allVariants: {
+      color: "#ffffff", // Set the default text color to white
     },
   },
   components: {
