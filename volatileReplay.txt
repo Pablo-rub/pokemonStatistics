@@ -1,0 +1,248 @@
+|j|☆pokemonStatistics1
+|j|☆pokemonStatistics2
+|t:|1738064286
+|gametype|doubles
+|player|p1|pokemonStatistics1|1|
+|player|p2|pokemonStatistics2|101|
+|teamsize|p1|2
+|teamsize|p2|6
+|gen|9
+|tier|[Gen 9] Doubles Custom Game
+|bigerror|Warning: One player isn't adhering to a 510 EV limit, and the other player is.
+|clearpoke
+|poke|p1|Pelipper, L50, M|
+|poke|p1|Whimsicott, L50, M|
+|poke|p2|Miraidon, L50|
+|poke|p2|Urshifu-*, L50, F|
+|poke|p2|Iron Hands, L50|
+|poke|p2|Iron Moth, L50|
+|poke|p2|Farigiraf, L50, F|
+|poke|p2|Incineroar, L50, M|
+|teampreview
+|inactive|Battle timer is ON: inactive players will automatically lose when time's up. (requested by pokemonStatistics1)
+|inactive|pokemonStatistics2 also wants the timer to be on.
+|
+|t:|1738064301
+|start
+|switch|p1a: Pelipper|Pelipper, L50, M|167/167
+|switch|p1b: Whimsicott|Whimsicott, L50, M|167/167
+|switch|p2a: Miraidon|Miraidon, L50|201/201
+|switch|p2b: Incineroar|Incineroar, L50, M|202/202
+|-fieldstart|move: Electric Terrain|[from] ability: Hadron Engine|[of] p2a: Miraidon
+|-weather|RainDance|[from] ability: Drizzle|[of] p1a: Pelipper
+|-ability|p2b: Incineroar|Intimidate|boost
+|-unboost|p1a: Pelipper|atk|1
+|-unboost|p1b: Whimsicott|atk|1
+|turn|1
+|inactive|pokemonStatistics2 has 270 seconds left.
+|
+|t:|1738064339
+|switch|p2a: Iron Hands|Iron Hands, L50|239/239
+|-activate|p2a: Iron Hands|ability: Quark Drive
+|-start|p2a: Iron Hands|quarkdriveatk
+|switch|p2b: Farigiraf|Farigiraf, L50, F|227/227
+|-enditem|p2b: Farigiraf|Electric Seed
+|-boost|p2b: Farigiraf|def|1|[from] item: Electric Seed
+|move|p1b: Whimsicott|Taunt||[still]
+|cant|p2b: Farigiraf|ability: Armor Tail|Taunt|[of] p1b: Whimsicott
+|move|p1a: Pelipper|Hurricane|p2a: Iron Hands
+|-damage|p2a: Iron Hands|190/239
+|-start|p2a: Iron Hands|confusion
+|
+|-weather|RainDance|[upkeep]
+|upkeep
+|turn|2
+|inactive|pokemonStatistics2 has 270 seconds left.
+|
+|t:|1738064370
+|move|p2b: Farigiraf|Helping Hand|p2a: Iron Hands
+|-singleturn|p2a: Iron Hands|Helping Hand|[of] p2b: Farigiraf
+|-activate|p2a: Iron Hands|confusion
+|move|p2a: Iron Hands|Fake Out|p1a: Pelipper
+|debug|Boosting from Helping Hand: 1.5
+|debug|Quark Drive atk boost
+|-damage|p1a: Pelipper|124/167
+|move|p1b: Whimsicott|Taunt||[still]
+|cant|p2b: Farigiraf|ability: Armor Tail|Taunt|[of] p1b: Whimsicott
+|cant|p1a: Pelipper|flinch
+|
+|-weather|RainDance|[upkeep]
+|upkeep
+|turn|3
+|inactive|pokemonStatistics2 has 270 seconds left.
+|
+|t:|1738064396
+|move|p2b: Farigiraf|Helping Hand|p2a: Iron Hands
+|-singleturn|p2a: Iron Hands|Helping Hand|[of] p2b: Farigiraf
+|move|p1b: Whimsicott|Encore||[still]
+|cant|p2b: Farigiraf|ability: Armor Tail|Encore|[of] p1b: Whimsicott
+|move|p1a: Pelipper|Hurricane|p2b: Farigiraf
+|-damage|p2b: Farigiraf|146/227
+|-start|p2b: Farigiraf|confusion
+|-activate|p2a: Iron Hands|confusion
+|move|p2a: Iron Hands|Low Kick|p2b: Farigiraf
+|debug|BP: 100
+|debug|Boosting from Helping Hand: 1.5
+|debug|Quark Drive atk boost
+|-damage|p2b: Farigiraf|4/227
+|
+|-weather|RainDance|[upkeep]
+|upkeep
+|turn|4
+|inactive|pokemonStatistics2 has 270 seconds left.
+|
+|t:|1738064413
+|-activate|p2b: Farigiraf|confusion
+|move|p2b: Farigiraf|Helping Hand|p2a: Iron Hands
+|-singleturn|p2a: Iron Hands|Helping Hand|[of] p2b: Farigiraf
+|-activate|p2a: Iron Hands|confusion
+|move|p2a: Iron Hands|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2a: Iron Hands
+|move|p1b: Whimsicott|Taunt||[still]
+|cant|p2b: Farigiraf|ability: Armor Tail|Taunt|[of] p1b: Whimsicott
+|move|p1a: Pelipper|Hurricane|p2b: Farigiraf
+|-damage|p2b: Farigiraf|0 fnt
+|faint|p2b: Farigiraf
+|
+|-weather|RainDance|[upkeep]
+|upkeep
+|inactive|pokemonStatistics2 has 270 seconds left.
+|
+|t:|1738064420
+|switch|p2b: Incineroar|Incineroar, L50, M|202/202
+|-ability|p2b: Incineroar|Intimidate|boost
+|-unboost|p1a: Pelipper|atk|1
+|-unboost|p1b: Whimsicott|atk|1
+|turn|5
+|
+|t:|1738064440
+|move|p2b: Incineroar|Fake Out|p2a: Iron Hands
+|-damage|p2a: Iron Hands|172/239
+|cant|p2a: Iron Hands|flinch
+|move|p1b: Whimsicott|Encore|p2a: Iron Hands
+|-start|p2a: Iron Hands|Encore
+|move|p1a: Pelipper|Hurricane|p2b: Incineroar
+|-damage|p2b: Incineroar|132/202
+|-start|p2b: Incineroar|confusion
+|
+|-weather|none
+|-fieldend|move: Electric Terrain
+|-end|p2a: Iron Hands|Quark Drive
+|upkeep
+|turn|6
+|
+|t:|1738064458
+|-activate|p2b: Incineroar|confusion
+|move|p2b: Incineroar|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2b: Incineroar
+|-end|p2a: Iron Hands|confusion
+|move|p2a: Iron Hands|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2a: Iron Hands
+|move|p1b: Whimsicott|Taunt|p2a: Iron Hands
+|-start|p2a: Iron Hands|move: Taunt
+|move|p1a: Pelipper|Hurricane|p2b: Incineroar|[miss]
+|-miss|p1a: Pelipper|p2b: Incineroar
+|
+|upkeep
+|turn|7
+|
+|t:|1738064470
+|-activate|p2b: Incineroar|confusion
+|move|p2b: Incineroar|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2b: Incineroar
+|move|p2a: Iron Hands|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2a: Iron Hands
+|move|p1b: Whimsicott|Disable|p2a: Iron Hands
+|-start|p2a: Iron Hands|Disable|Fake Out
+|move|p1a: Pelipper|Hurricane|p2b: Incineroar|[miss]
+|-miss|p1a: Pelipper|p2b: Incineroar
+|
+|upkeep
+|turn|8
+|
+|t:|1738064482
+|-activate|p2b: Incineroar|confusion
+|move|p2b: Incineroar|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2b: Incineroar
+|move|p1b: Whimsicott|Taunt|p2b: Incineroar
+|debug|natural prankster immunity
+|-hint|Since gen 7, Dark is immune to Prankster moves.
+|-immune|p2b: Incineroar
+|move|p1a: Pelipper|Hurricane|p2b: Incineroar|[miss]
+|-miss|p1a: Pelipper|p2b: Incineroar
+|-activate|p2a: Iron Hands|move: Struggle
+|move|p2a: Iron Hands|Struggle|p1a: Pelipper
+|-damage|p1a: Pelipper|95/167
+|-damage|p2a: Iron Hands|112/239|[from] recoil
+|
+|-end|p2a: Iron Hands|Encore
+|upkeep
+|turn|9
+|
+|t:|1738064500
+|-end|p2b: Incineroar|confusion
+|move|p2b: Incineroar|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2b: Incineroar
+|move|p1b: Whimsicott|Taunt|p2b: Incineroar
+|debug|natural prankster immunity
+|-hint|Since gen 7, Dark is immune to Prankster moves.
+|-immune|p2b: Incineroar
+|move|p1a: Pelipper|Hurricane|p2b: Incineroar|[miss]
+|-miss|p1a: Pelipper|p2b: Incineroar
+|move|p2a: Iron Hands|Low Kick|p1b: Whimsicott
+|debug|BP: 20
+|-resisted|p1b: Whimsicott
+|-damage|p1b: Whimsicott|158/167
+|
+|-end|p2a: Iron Hands|move: Taunt
+|upkeep
+|turn|10
+|
+|t:|1738064513
+|move|p2b: Incineroar|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2b: Incineroar
+|move|p1b: Whimsicott|Taunt|p2b: Incineroar
+|debug|natural prankster immunity
+|-hint|Since gen 7, Dark is immune to Prankster moves.
+|-immune|p2b: Incineroar
+|move|p1a: Pelipper|Hurricane|p2b: Incineroar|[miss]
+|-miss|p1a: Pelipper|p2b: Incineroar
+|move|p2a: Iron Hands|Low Kick|p1b: Whimsicott
+|debug|BP: 20
+|-resisted|p1b: Whimsicott
+|-damage|p1b: Whimsicott|149/167
+|
+|upkeep
+|turn|11
+|
+|t:|1738064528
+|move|p2b: Incineroar|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2b: Incineroar
+|move|p1b: Whimsicott|Taunt|p2b: Incineroar
+|debug|natural prankster immunity
+|-hint|Since gen 7, Dark is immune to Prankster moves.
+|-immune|p2b: Incineroar
+|move|p1a: Pelipper|Hurricane|p2b: Incineroar
+|-damage|p2b: Incineroar|60/202
+|-start|p2b: Incineroar|confusion
+|move|p2a: Iron Hands|Wild Charge|p2b: Incineroar
+|-damage|p2b: Incineroar|0 fnt
+|-damage|p2a: Iron Hands|73/239|[from] item: Rocky Helmet|[of] p2b: Incineroar
+|faint|p2b: Incineroar
+|-damage|p2a: Iron Hands|58/239|[from] Recoil
+|
+|-end|p2a: Iron Hands|Disable
+|upkeep
+|c|☆pokemonStatistics1|//ff
+|-message|pokemonStatistics1 forfeited.
+|
+|win|pokemonStatistics2
