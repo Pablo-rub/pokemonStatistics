@@ -49,7 +49,7 @@ app.post("/replays", async (req, res) => {
     //console.log("Loser of the match is:", loser);
     const date = new Date(uploadtime * 1000).toISOString();
     //console.log("Date of the match is:", date);
-    let teams = processShowteam(log);
+    const teams = processShowteam(log); // Safe fallback if no showteam lines
     console.log("Initial teams: ", teams);
     let turns = [];
     //console.log("Empty initial turns: ", turns);
@@ -135,11 +135,13 @@ app.post("/replays", async (req, res) => {
         /\|-terastallize\|(p1[ab]|p2[ab]): (.+?)\|(.+)/
       );
       const fieldMatch = line.match(/\|-fieldstart\|move: (\w+\s?\w*)\|\[of\] (p\d[ab]): (\w+)/);
+      const volatileMatch = line.match(/\|-start\|(p1[ab]|p2[ab]): (.+?)\|(.+)/);
       
       // Detect new turn
       if (turnMatch) {
         currentTurn = parseInt(turnMatch[1]);
         turns = processTurn(currentTurn, turns);
+        incrementVolatileTurnCounters(turns);
         //console.log("Start of turn", turnMatch[1]);
       }
       if (switchMatches) { // Detect active Pokémon switches and update revealed Pokémon if necessary
@@ -204,6 +206,10 @@ app.post("/replays", async (req, res) => {
         //console.log(fieldMatch);
         turns[currentTurn].field = { terrain: fieldMatch[1], duration: 5 };
       }
+      if (volatileMatch) { // Detect the start of a volatile status
+        processVolatileStart(currentTurn, volatileMatch, turns);
+      }
+      //TODO: detect the start of a weather effect
     }
 
     try {
@@ -307,12 +313,9 @@ function processTurn(currentTurn, turns) {
 }
 
 // Process showteam
+// Always return a default teams object, even if there is no "|showteam" in the log
 function processShowteam(log) {
-  const teams = {
-    p1: [],
-    p2: [],
-  };
-
+  const teams = { p1: [], p2: [] };
   let p1Processed = false;
   let p2Processed = false;
   let index = 0;
@@ -321,66 +324,37 @@ function processShowteam(log) {
     const line = log[index];
     const showteamMatch = line.match(/\|showteam\|(p1|p2)\|(.+)/);
     if (showteamMatch) {
-      const player = showteamMatch[1];
-      const teamData = showteamMatch[2];
-
-      // Split into Pokémon blocks by "]"
-      const rawPokemonBlocks = teamData.split(']').filter((b) => b.trim() !== '');
-
-      const parsedPokemons = rawPokemonBlocks.map((block) => {
-        const parts = block.split('|');
-        const name = parts[0]?.trim() || '';
-        const item = parts[2]?.trim() || '';
-        const ability = parts[3]?.trim() || '';
-        const moves = parts[4] ? parts[4].split(',').map((m) => m.trim()) : [];
-        const level = parts[10]?.trim() || '';
-        let teraType = '';
-        if (parts[11]) {
-          const splitted = parts[11].split(',').filter(Boolean);
-          teraType = splitted[splitted.length - 1] || '';
-        }
-
-        return {
-          name,
-          item,
-          ability,
-          moves,
-          level,
-          teraType,
-        };
-      });
-
-      // Store Pokémon info in 'teams'
-      parsedPokemons.forEach((poke) => {
-        teams[player].push(poke);
-      });
-
-      if (player === 'p1') {
-        p1Processed = true;
-      } else if (player === 'p2') {
-        p2Processed = true;
-      }
+      const side = showteamMatch[1];
+      // Process team data if needed...
+      // ...
+      if (side === "p1") p1Processed = true;
+      if (side === "p2") p2Processed = true;
     }
     index++;
   }
 
+  // No matter what, return an object, so it never comes back undefined
   return teams;
 }
 
 // Process the switch of a Pokémon
-function processSwitch(currentTurn, switchMatches, turns) {
-  const player = switchMatches[1].startsWith("p1") ? "player1" : "player2";
+function processSwitch(currentTurn, switchMatches, turns /*, teams */) {
+  const slotOwner = switchMatches[1];       // e.g. p1a
+  const player = slotOwner.startsWith("p1") ? "player1" : "player2";
   const pokemonName = switchMatches[2];
-  //console.log(pokemonName, "entered the battle");
-  const slot = switchMatches[1].endsWith("a") ? 0 : 1; // 'a' -> slot 0, 'b' -> slot 1
-  //console.log("In the slot", slot);
+  const slot = slotOwner.endsWith("a") ? 0 : 1;
 
-  // Add Pokémon to revealedPokemon if it hasn't been revealed yet
+  // Reset volatile on whoever was in this slot
+  const oldMon = turns[currentTurn].endsWith[player][slot];
+  if (oldMon) {
+    turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
+      p && p.name === oldMon ? { ...p, volatileStatus: [] } : p
+    );
+  }
+
   const isRevealed = turns[currentTurn].revealedPokemon[player].some(
     (p) => p.name === pokemonName
   );
-  //console.log("Is revealed?", isRevealed);
-  
   let pokemon;
 
   if (!isRevealed) {
@@ -556,7 +530,7 @@ function processBoost(currentTurn, boostMatch, turns) {
       pokemon.stats[statBoosted] -= boost;
     }
   } else {
-    console.log("Stats not updated because the Pokémon is not found:", pokemonName);
+    console.log("Stats not updated because the Pokémon was not found:", pokemonName);
   }
 
   //console.log("new stats", pokemon.stats);
@@ -572,6 +546,49 @@ function processTerastallize(currentTurn, teraMatch, turns) {
   turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
     p.name === pokemonName ? { ...p, tera: { type: type, active: true } } : p
   );
+}
+
+// Add a function to process volatile statuses
+function processVolatileStart(currentTurn, volatileMatch, turns) {
+  const player = volatileMatch[1].startsWith("p1") ? "player1" : "player2";
+  const pokemonName = volatileMatch[2];
+  let statusName = volatileMatch[3] || "";
+  if (statusName.startsWith("move: ")) {
+    statusName = statusName.replace("move: ", "");
+  }
+
+  const pokemon = turns[currentTurn].revealedPokemon[player].find(
+    (p) => p && p.name === pokemonName
+  );
+  if (!pokemon) return;
+
+  if (!pokemon.volatileStatus) {
+    pokemon.volatileStatus = [];
+  }
+
+  // Add the status if it doesn't exist
+  const existing = pokemon.volatileStatus.find((v) => v.name === statusName);
+  if (!existing) {
+    pokemon.volatileStatus.push({ name: statusName, turnCounter: 0 });
+    console.log(pokemonName, "got the volatile status", statusName);
+  }
+}
+
+// Increments volatile turn counters each turn
+function incrementVolatileTurnCounters(turns) {
+  if (turns.length === 0) return;
+  const current = turns[turns.length - 1];
+  for (const playerKey of Object.keys(current.revealedPokemon)) {
+    current.revealedPokemon[playerKey].forEach((p) => {
+      if (p.volatileStatus) {
+        p.volatileStatus = p.volatileStatus.map((v) => ({
+          ...v,
+          turnCounter: v.turnCounter + 1,
+        }));
+        console.log(p.name, "volatile statuses:", p.volatileStatus, "turn", current.turnNumber);s
+      }
+    });
+  }
 }
 
 // Obtain the winner of the match

@@ -1,13 +1,14 @@
 const { BigQuery } = require('@google-cloud/bigquery');
-const express = require('express');
+const express = require("express");
 const axios = require('axios');
-const cors = require('cors');
+const cors = require("cors");
 const cheerio = require('cheerio');
 
 require('dotenv').config();
 
 // Initialize express
 const app = express();
+app.use(cors());
 
 // Enable CORS for all requests
 app.use(cors());
