@@ -149,7 +149,8 @@ app.post("/replays", async (req, res) => {
         processSwitch(
           currentTurn,
           switchMatches,
-          turns
+          turns,
+          teams
         );
         //console.log("Turn processed");
       } 
@@ -324,21 +325,54 @@ function processShowteam(log) {
     const line = log[index];
     const showteamMatch = line.match(/\|showteam\|(p1|p2)\|(.+)/);
     if (showteamMatch) {
-      const side = showteamMatch[1];
-      // Process team data if needed...
-      // ...
-      if (side === "p1") p1Processed = true;
-      if (side === "p2") p2Processed = true;
+      const player = showteamMatch[1];
+      const teamData = showteamMatch[2];
+
+      // Split into Pokémon blocks by "]"
+      const rawPokemonBlocks = teamData.split(']').filter((b) => b.trim() !== '');
+
+      const parsedPokemons = rawPokemonBlocks.map((block) => {
+        const parts = block.split('|');
+        const name = parts[0]?.trim() || '';
+        const item = parts[2]?.trim() || '';
+        const ability = parts[3]?.trim() || '';
+        const moves = parts[4] ? parts[4].split(',').map((m) => m.trim()) : [];
+        const level = parts[10]?.trim() || '';
+        let teraType = '';
+        if (parts[11]) {
+          const splitted = parts[11].split(',').filter(Boolean);
+          teraType = splitted[splitted.length - 1] || '';
+        }
+
+        return {
+          name,
+          item,
+          ability,
+          moves,
+          level,
+          teraType,
+        };
+      });
+
+      // Store Pokémon info in 'teams'
+      parsedPokemons.forEach((poke) => {
+        teams[player].push(poke);
+      });
+
+      if (player === 'p1') {
+        p1Processed = true;
+      } else if (player === 'p2') {
+        p2Processed = true;
+      }
     }
     index++;
   }
 
-  // No matter what, return an object, so it never comes back undefined
   return teams;
 }
 
 // Process the switch of a Pokémon
-function processSwitch(currentTurn, switchMatches, turns /*, teams */) {
+function processSwitch(currentTurn, switchMatches, turns, teams) {
   const slotOwner = switchMatches[1];       // e.g. p1a
   const player = slotOwner.startsWith("p1") ? "player1" : "player2";
   const pokemonName = switchMatches[2];
@@ -347,65 +381,56 @@ function processSwitch(currentTurn, switchMatches, turns /*, teams */) {
   // Reset volatile on whoever was in this slot
   const oldMon = turns[currentTurn].endsWith[player][slot];
   if (oldMon) {
-    turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
-      p && p.name === oldMon ? { ...p, volatileStatus: [] } : p
-    );
+    turns[currentTurn].revealedPokemon[player] =
+      turns[currentTurn].revealedPokemon[player].map((p) =>
+        p && p.name === oldMon ? { ...p, volatileStatus: [] } : p
+      );
   }
 
+  // Check if this Pokémon is already revealed
   const isRevealed = turns[currentTurn].revealedPokemon[player].some(
     (p) => p.name === pokemonName
   );
-  let pokemon;
 
+  let pokemon;
   if (!isRevealed) {
+    // Safely retrieve a matching Pokémon record from teams if it exists
+    let pInfo = undefined;
+    if (teams && teams[player]) {
+      pInfo = teams[player].find((m) => m.name === pokemonName);
+    }
+
+    // Fallback to default values if not found
     pokemon = {
       name: pokemonName,
-      moves: teams[player].find((p) => p.name === pokemonName).moves,
-      ability: teams[player].find((p) => p.name === pokemonName).ability,
-      item: teams[player].find((p) => p.name === pokemonName).item,
+      moves: pInfo?.moves || [],
+      ability: pInfo?.ability || "",
+      item: pInfo?.item || "",
       remainingHp: 100,
-      volatileStatus: "",
+      volatileStatus: [],
       nonVolatileStatus: "",
       stats: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 },
-      tera: { type: teams[player].find((p) => p.name === pokemonName).teraType, active: false },
-      consecutiveProtects: 0
+      tera: { type: pInfo?.tera_type || "", active: false },
+      fightingStatus: "",
+      consecutiveProtectCounter: 0,
+      abilitySuppressed: false,
+      lastMoveUsed: "",
+      mimicUsed: false,
+      copiedMove: "",
+      transformed: false
     };
 
     turns[currentTurn].revealedPokemon[player].push(pokemon);
-    //console.log(pokemonName, "was revealed");
   } else {
-    // Load the info of the Pokémon from revealedPokemon, but the stats boosts and consecutiveProtects return to 0
-    pokemon = turns[currentTurn].revealedPokemon[player].find((p) => p.name === pokemonName);
-
-    // make all the pokemons that are not active have 0 stats and 0 consecutiveProtects
-    const activePokemons = [
-      player1 = {
-        "p1a": turns[currentTurn].startsWith.player1[0],
-        "p1b": turns[currentTurn].startsWith.player1[1]
-      },
-      player2 = {
-        "p2a": turns[currentTurn].startsWith.player2[0],
-        "p2b": turns[currentTurn].startsWith.player2[1]
-      }
-    ];
-
-    turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) => {
-      if (activePokemons[player] && !Object.values(activePokemons[player]).includes(p.name)) {
-        // Si el Pokémon no está activo, se le asignan stats a 0
-        return { ...p, stats: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 }, consecutiveProtects: 0};
-      }
-      // Si está activo, se devuelve tal cual
-      return p;
-    });
-
-    //console.log("Pokemon loaded", pokemon);
+    // Already known, just find it
+    pokemon = turns[currentTurn].revealedPokemon[player].find(
+      (p) => p && p.name === pokemonName
+    );
   }
 
-  // Update active Pokémons
-  //console.log(turns[currentTurn]);
+  // Update active Pokémon in endsWith
   turns[currentTurn].endsWith[player][slot] = pokemon.name;
-
-  return [turns];
+  return turns;
 }
 
 // Process the usage of an item
@@ -440,50 +465,6 @@ function processAbility(currentTurn, abilityMatch, turns) {
   //turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
   //  p.name === pokemonName ? { ...p, ability: ability } : p
   //);
-}
-
-// Process the usage of a move
-function processMove(currentTurn, moveMatch, turns) {
-  const protectMoves = [
-    "baneful bunker",
-    "burning bulwark",
-    "detect",
-    "king's shield",
-    "max guard",
-    "obstruct",
-    "protect",
-    "silk trap",
-    "spiky shield",
-    "crafty shield",
-    "mat block",
-    "quick guard",
-    "wide guard",
-  ];
-
-  const player = moveMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = moveMatch[2];
-  const moveUsed = moveMatch[3].toLowerCase();
-
-  // Find the Pokémon in revealedPokemon
-  const pokemon = turns[currentTurn].revealedPokemon[player].find(
-    (p) => p && p.name === pokemonName
-  );
-  if (pokemon) {
-    // Ensure there's a consecutiveProtectCounter field
-    if (pokemon.consecutiveProtectCounter === undefined) {
-      pokemon.consecutiveProtectCounter = 0;
-    }
-
-    // If the move is a protect-type move, increment the counter
-    if (protectMoves.includes(moveUsed)) {
-      pokemon.consecutiveProtectCounter += 1;
-    } else {
-      // Otherwise reset the counter
-      pokemon.consecutiveProtectCounter = 0;
-    }
-  }
-
-  // ...existing code to update the Pokémon's moves, if needed...
 }
 
 // Process the damage received by a Pokémon
@@ -601,16 +582,18 @@ function processVolatileStart(currentTurn, volatileMatch, turns) {
 
 // Increments volatile turn counters each turn
 function incrementVolatileTurnCounters(turns) {
-  if (turns.length === 0) return;
+  if (!turns.length) return;
   const current = turns[turns.length - 1];
-  for (const playerKey of Object.keys(current.revealedPokemon)) {
+  for (const playerKey in current.revealedPokemon) {
     current.revealedPokemon[playerKey].forEach((p) => {
-      if (p.volatileStatus) {
-        p.volatileStatus = p.volatileStatus.map((v) => ({
-          ...v,
-          turnCounter: v.turnCounter + 1,
-        }));
-        console.log(p.name, "volatile statuses:", p.volatileStatus, "turn", current.turnNumber);s
+      if (p.volatileStatus && p.volatileStatus.length) {
+        p.volatileStatus.forEach((v) => {
+          v.turnCounter++;
+        });
+      }
+      
+      if (p.consecutiveProtectCounter !== undefined) {
+        p.consecutiveProtectCounter++;
       }
     });
   }
@@ -671,6 +654,129 @@ async function saveReplay(data) {
             console.error('Details of the error:', err.errors);
         });
     }
+  }
+}
+
+// Whenever a Pokémon uses a move, track that as its lastMoveUsed:
+function processMove(currentTurn, moveMatch, turns) {
+  const protectMoves = [
+    "baneful bunker",
+    "burning bulwark",
+    "detect",
+    "king's shield",
+    "max guard",
+    "obstruct",
+    "protect",
+    "silk trap",
+    "spiky shield",
+    "crafty shield",
+    "mat block",
+    "quick guard",
+    "wide guard",
+  ];
+
+  const player = moveMatch[1].startsWith("p1") ? "player1" : "player2";
+  const pokemonName = moveMatch[2];
+  const moveUsed = moveMatch[3];
+
+  // Find the attacking Pokémon
+  const userPokemon = turns[currentTurn].revealedPokemon[player].find(
+    (p) => p && p.name === pokemonName
+  );
+  if (!userPokemon) return;
+
+  // Initialize protect counter
+  if (userPokemon.consecutiveProtectCounter === undefined) {
+    userPokemon.consecutiveProtectCounter = 0;
+  }
+
+  // Increment or reset protect counter
+  if (protectMoves.includes(moveUsed.toLowerCase())) {
+    userPokemon.consecutiveProtectCounter += 1;
+  } else {
+    userPokemon.consecutiveProtectCounter = 0;
+  }
+
+  // Record the last move used by userPokemon
+  userPokemon.lastMoveUsed = moveUsed;
+
+  // Identify the target (simplified to the opponent's first slot)
+  const opponent = player === "player1" ? "player2" : "player1";
+  const targetName = turns[currentTurn].endsWith[opponent][0];
+  const targetPokemon =
+    turns[currentTurn].revealedPokemon[opponent].find((p) => p && p.name === targetName) || {};
+
+  // Now handle moves that change abilities, moves, etc.
+  handleObjectChangingMoves(currentTurn, userPokemon, targetPokemon, moveUsed, turns);
+}
+
+// Implement the moves that change abilities/moves/etc.
+function handleObjectChangingMoves(currentTurn, userPokemon, targetPokemon, moveUsed, turns) {
+  const move = moveUsed.toLowerCase();
+
+  switch (move) {
+    case "doodle":
+      // Doodle copies the Ability of the target
+      userPokemon.ability = targetPokemon.ability;
+      break;
+
+    case "entrainment":
+      // Entrainment changes the target's Ability to match the user's
+      targetPokemon.ability = userPokemon.ability;
+      break;
+
+    case "role play":
+      // Role Play copies the target's Ability onto the user
+      userPokemon.ability = targetPokemon.ability;
+      break;
+
+    case "simple beam":
+      // Simple Beam changes the target's Ability to Simple
+      targetPokemon.ability = "Simple";
+      break;
+
+    case "skill swap":
+      // Skill Swap swaps the Abilities of the user and target
+      const temp = userPokemon.ability;
+      userPokemon.ability = targetPokemon.ability;
+      targetPokemon.ability = temp;
+      break;
+
+    case "worry seed":
+      // Worry Seed changes the target's Ability to Insomnia
+      targetPokemon.ability = "Insomnia";
+      break;
+
+    case "gastro acid":
+      // Gastro Acid suppresses the target's Ability
+      targetPokemon.abilitySuppressed = true;
+      break;
+
+    case "mimic":
+      // Mimic copies the target's last used move, if available
+      if (targetPokemon.lastMoveUsed) {
+        userPokemon.mimicUsed = true;
+        userPokemon.copiedMove = targetPokemon.lastMoveUsed;
+      } else {
+        // No last move for target
+        userPokemon.mimicUsed = false;
+      }
+      break;
+
+    case "substitute":
+      // Add a 'substitute' volatile status to the user if they don't already have it
+      if (!userPokemon.volatileStatus) {
+        userPokemon.volatileStatus = [];
+      }
+      const existingSubst = userPokemon.volatileStatus.find((v) => v.name === "substitute");
+      if (!existingSubst) {
+        userPokemon.volatileStatus.push({ name: "substitute", turnCounter: 0 });
+        userPokemon.remainingHp -= Math.floor(userPokemon.maxHp / 4);
+      }
+      break;
+
+    default:
+      break;
   }
 }
 
