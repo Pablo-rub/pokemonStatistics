@@ -1,0 +1,240 @@
+|j|☆dominicex
+|j|☆Introv4l
+|html|<table width="100%"><tr><td align="left">dominicex</td><td align="right">Introv4l</tr><tr><td align="left"><i class="fa fa-circle"></i> <i class="fa fa-circle-o"></i> </td><td align="right"><i class="fa fa-circle-o"></i> <i class="fa fa-circle"></i> </tr></table>
+|uhtml|bestof|<h2><strong>Game 3</strong> of <a href="/game-bestof3-gen9vgc2025reggbo3-2287639200">a best-of-3</a></h2>
+|t:|1737761083
+|gametype|doubles
+|player|p1|dominicex|pokemonranger-gen4|1604
+|player|p2|Introv4l|miku-flying|1507
+|teamsize|p1|6
+|teamsize|p2|6
+|gen|9
+|tier|[Gen 9] VGC 2025 Reg G (Bo3)
+|rated|
+|rule|Species Clause: Limit one of each Pokémon
+|rule|Item Clause: Limit 1 of each item
+|clearpoke
+|poke|p1|Calyrex-Ice, L50|
+|poke|p1|Urshifu-*, L50, M|
+|poke|p1|Rillaboom, L50, M|
+|poke|p1|Ogerpon-Cornerstone, L50, F|
+|poke|p1|Raging Bolt, L50|
+|poke|p1|Chi-Yu, L50|
+|poke|p2|Ogerpon-Hearthflame, L50, F|
+|poke|p2|Groudon, L50|
+|poke|p2|Urshifu-*, L50, M|
+|poke|p2|Incineroar, L50, M|
+|poke|p2|Jumpluff, L50, F|
+|poke|p2|Raging Bolt, L50|
+|teampreview|4
+|showteam|p1|Calyrex-Ice||ClearAmulet|AsOneGlastrier|GlacialLance,HighHorsepower,TrickRoom,Protect||||||50|,,,,,Fairy]Urshifu-Rapid-Strike||FocusSash|UnseenFist|SurgingStrikes,CloseCombat,AquaJet,Detect|||M|||50|,,,,,Stellar]Rillaboom||AssaultVest|GrassySurge|FakeOut,GrassyGlide,WoodHammer,Uturn|||M|||50|,,,,,Fire]Ogerpon-Cornerstone||CornerstoneMask|Sturdy|IvyCudgel,HornLeech,FollowMe,SpikyShield|||F|||50|,,,,,Rock]Raging Bolt||BoosterEnergy|Protosynthesis|Thunderclap,Thunderbolt,DracoMeteor,Protect||||||50|,,,,,Fairy]Chi-Yu||ChoiceScarf|BeadsofRuin|HeatWave,Overheat,DarkPulse,Snarl||||||50|,,,,,Ghost
+|showteam|p2|Ogerpon-Hearthflame||HearthflameMask|MoldBreaker|FollowMe,IvyCudgel,HornLeech,SpikyShield|||F|||50|,,,,,Fire]Groudon||ClearAmulet|Drought|PrecipiceBlades,HeatCrash,BulkUp,Protect||||||50|,,,,,Fire]Urshifu||FocusSash|UnseenFist|WickedBlow,CloseCombat,SuckerPunch,Detect|||M|||50|,,,,,Dark]Incineroar||SafetyGoggles|Intimidate|FakeOut,KnockOff,PartingShot,Taunt|||M|||50|,,,,,Ghost]Jumpluff||CovertCloak|Chlorophyll|SleepPowder,RagePowder,Encore,Tailwind|||F|||50|,,,,,Dark]Raging Bolt||AssaultVest|Protosynthesis|DracoMeteor,VoltSwitch,Thunderclap,Electroweb||||||50|,,,,,Water
+|
+|t:|1737761112
+|start
+|switch|p1a: Rillaboom|Rillaboom, L50, M|100/100
+|switch|p1b: Raging Bolt|Raging Bolt, L50|100/100
+|switch|p2a: Potemkin|Groudon, L50|100/100
+|switch|p2b: Sol Badguy|Incineroar, L50, M|100/100
+|-weather|SunnyDay|[from] ability: Drought|[of] p2a: Potemkin
+|-activate|p1b: Raging Bolt|ability: Protosynthesis
+|-start|p1b: Raging Bolt|protosynthesisspa
+|-fieldstart|move: Grassy Terrain|[from] ability: Grassy Surge|[of] p1a: Rillaboom
+|-ability|p2b: Sol Badguy|Intimidate|boost
+|-unboost|p1a: Rillaboom|atk|1
+|-unboost|p1b: Raging Bolt|atk|1
+|turn|1
+|
+|t:|1737761136
+|move|p1a: Rillaboom|Fake Out|p2a: Potemkin
+|-damage|p2a: Potemkin|94/100
+|move|p2b: Sol Badguy|Fake Out|p1b: Raging Bolt
+|-damage|p1b: Raging Bolt|92/100
+|cant|p2a: Potemkin|flinch
+|cant|p1b: Raging Bolt|flinch
+|
+|-weather|SunnyDay|[upkeep]
+|-heal|p2a: Potemkin|99/100|[from] Grassy Terrain
+|-heal|p1b: Raging Bolt|98/100|[from] Grassy Terrain
+|upkeep
+|turn|2
+|
+|t:|1737761169
+|-terastallize|p1b: Raging Bolt|Fairy
+|move|p2a: Potemkin|Protect|p2a: Potemkin
+|-singleturn|p2a: Potemkin|Protect
+|move|p1a: Rillaboom|Wood Hammer|p2a: Potemkin
+|-activate|p2a: Potemkin|move: Protect
+|move|p1b: Raging Bolt|Thunderbolt|p2b: Sol Badguy
+|-damage|p2b: Sol Badguy|34/100
+|move|p2b: Sol Badguy|Parting Shot|p1a: Rillaboom
+|-unboost|p1a: Rillaboom|atk|1
+|-unboost|p1a: Rillaboom|spa|1
+|
+|t:|1737761176
+|switch|p2b: Bridget|Jumpluff, L50, F|100/100|[from] Parting Shot
+|
+|-weather|SunnyDay|[upkeep]
+|-heal|p2a: Potemkin|100/100|[from] Grassy Terrain
+|-heal|p1b: Raging Bolt|100/100|[from] Grassy Terrain
+|upkeep
+|turn|3
+|
+|t:|1737761204
+|-end|p1b: Raging Bolt|Protosynthesis|[silent]
+|switch|p1b: Ogerpon|Ogerpon-Cornerstone, L50, F|100/100
+|-terastallize|p2a: Potemkin|Fire
+|move|p2b: Bridget|Sleep Powder|p1b: Ogerpon
+|-immune|p1b: Ogerpon
+|move|p2a: Potemkin|Bulk Up|p2a: Potemkin
+|-boost|p2a: Potemkin|atk|1
+|-boost|p2a: Potemkin|def|1
+|move|p1a: Rillaboom|U-turn|p2b: Bridget
+|-damage|p2b: Bridget|85/100
+|
+|t:|1737761215
+|switch|p1a: Calyrex|Calyrex-Ice, L50|100/100|[from] U-turn
+|-ability|p1a: Calyrex|As One
+|-ability|p1a: Calyrex|Unnerve
+|
+|-weather|SunnyDay|[upkeep]
+|upkeep
+|turn|4
+|
+|t:|1737761285
+|move|p1a: Calyrex|Protect|p1a: Calyrex
+|-singleturn|p1a: Calyrex|Protect
+|move|p2b: Bridget|Tailwind|p2b: Bridget
+|-sidestart|p2: Introv4l|move: Tailwind
+|move|p2a: Potemkin|Bulk Up|p2a: Potemkin
+|-boost|p2a: Potemkin|atk|1
+|-boost|p2a: Potemkin|def|1
+|move|p1b: Ogerpon|Ivy Cudgel|p2b: Bridget|[anim] Ivy Cudgel Rock
+|-supereffective|p2b: Bridget
+|-damage|p2b: Bridget|0 fnt
+|faint|p2b: Bridget
+|
+|-weather|SunnyDay|[upkeep]
+|upkeep
+|
+|t:|1737761288
+|switch|p2b: Sol Badguy|Incineroar, L50, M|34/100
+|-ability|p2b: Sol Badguy|Intimidate|boost
+|-fail|p1a: Calyrex|unboost|[from] item: Clear Amulet|[of] p1a: Calyrex
+|-unboost|p1b: Ogerpon|atk|1
+|turn|5
+|
+|t:|1737761336
+|move|p2b: Sol Badguy|Fake Out|p1a: Calyrex
+|-damage|p1a: Calyrex|94/100
+|move|p2a: Potemkin|Precipice Blades|p1b: Ogerpon|[spread] p1a,p1b
+|-crit|p1a: Calyrex
+|-damage|p1a: Calyrex|5/100
+|-ability|p1b: Ogerpon|Sturdy
+|-damage|p1b: Ogerpon|1/100
+|move|p1b: Ogerpon|Ivy Cudgel|p2b: Sol Badguy|[anim] Ivy Cudgel Rock
+|-supereffective|p2b: Sol Badguy
+|-damage|p2b: Sol Badguy|0 fnt
+|faint|p2b: Sol Badguy
+|cant|p1a: Calyrex|flinch
+|
+|-weather|none
+|-heal|p1b: Ogerpon|7/100|[from] Grassy Terrain
+|-heal|p1a: Calyrex|11/100|[from] Grassy Terrain
+|-fieldend|move: Grassy Terrain
+|upkeep
+|
+|t:|1737761346
+|switch|p2b: Ky Kiske|Raging Bolt, L50|100/100
+|turn|6
+|
+|t:|1737761372
+|move|p1b: Ogerpon|Spiky Shield|p1b: Ogerpon
+|-singleturn|p1b: Ogerpon|move: Protect
+|move|p1a: Calyrex|Protect|p1a: Calyrex
+|-singleturn|p1a: Calyrex|Protect
+|move|p2a: Potemkin|Heat Crash|p1b: Ogerpon
+|-activate|p1b: Ogerpon|move: Protect
+|-damage|p2a: Potemkin|88/100|[from] Spiky Shield|[of] p1b: Ogerpon
+|move|p2b: Ky Kiske|Electroweb|p1a: Calyrex|[spread] 
+|-activate|p1a: Calyrex|move: Protect
+|-activate|p1b: Ogerpon|move: Protect
+|
+|upkeep
+|turn|7
+|
+|t:|1737761420
+|switch|p1b: Rillaboom|Rillaboom, L50, M|100/100
+|-fieldstart|move: Grassy Terrain|[from] ability: Grassy Surge|[of] p1b: Rillaboom
+|move|p1a: Calyrex|Protect||[still]
+|-fail|p1a: Calyrex
+|move|p2a: Potemkin|Precipice Blades|p1a: Calyrex|[spread] p1b
+|-miss|p2a: Potemkin|p1a: Calyrex
+|-resisted|p1b: Rillaboom
+|-crit|p1b: Rillaboom
+|-damage|p1b: Rillaboom|31/100
+|move|p2b: Ky Kiske|Electroweb|p1b: Rillaboom|[spread] p1a,p1b
+|-resisted|p1b: Rillaboom
+|-crit|p1b: Rillaboom
+|-damage|p1a: Calyrex|0 fnt
+|-damage|p1b: Rillaboom|18/100
+|-unboost|p1b: Rillaboom|spe|1
+|faint|p1a: Calyrex
+|
+|-heal|p2a: Potemkin|94/100|[from] Grassy Terrain
+|-heal|p1b: Rillaboom|24/100|[from] Grassy Terrain
+|-sideend|p2: Introv4l|move: Tailwind
+|upkeep
+|
+|t:|1737761437
+|switch|p1a: Ogerpon|Ogerpon-Cornerstone, L50, F|7/100
+|turn|8
+|
+|t:|1737761442
+|move|p1b: Rillaboom|Fake Out|p2b: Ky Kiske
+|-damage|p2b: Ky Kiske|89/100
+|move|p1a: Ogerpon|Ivy Cudgel|p2b: Ky Kiske|[anim] Ivy Cudgel Rock
+|-damage|p2b: Ky Kiske|45/100
+|move|p2a: Potemkin|Precipice Blades|p1a: Ogerpon|[spread] p1a,p1b
+|-resisted|p1b: Rillaboom
+|-damage|p1a: Ogerpon|0 fnt
+|-damage|p1b: Rillaboom|0 fnt
+|faint|p1a: Ogerpon
+|faint|p1b: Rillaboom
+|cant|p2b: Ky Kiske|flinch
+|
+|-heal|p2a: Potemkin|99/100|[from] Grassy Terrain
+|-heal|p2b: Ky Kiske|51/100|[from] Grassy Terrain
+|upkeep
+|
+|t:|1737761451
+|switch|p1b: Raging Bolt|Raging Bolt, L50, tera:Fairy|100/100
+|-enditem|p1b: Raging Bolt|Booster Energy
+|-activate|p1b: Raging Bolt|ability: Protosynthesis|[fromitem]
+|-start|p1b: Raging Bolt|protosynthesisspa
+|turn|9
+|
+|t:|1737761464
+|move|p2a: Potemkin|Protect|p2a: Potemkin
+|-singleturn|p2a: Potemkin|Protect
+|move|p1b: Raging Bolt|Protect|p1b: Raging Bolt
+|-singleturn|p1b: Raging Bolt|Protect
+|move|p2b: Ky Kiske|Electroweb|p1b: Raging Bolt
+|-activate|p1b: Raging Bolt|move: Protect
+|
+|-heal|p2a: Potemkin|100/100|[from] Grassy Terrain
+|-heal|p2b: Ky Kiske|57/100|[from] Grassy Terrain
+|upkeep
+|turn|10
+|
+|t:|1737761475
+|move|p2a: Potemkin|Precipice Blades|p1b: Raging Bolt
+|-damage|p1b: Raging Bolt|0 fnt
+|faint|p1b: Raging Bolt
+|-end|p1b: Raging Bolt|Protosynthesis|[silent]
+|
+|win|Introv4l
+|raw|dominicex's rating: 1604 &rarr; <strong>1579</strong><br />(-25 for losing)
+|raw|Introv4l's rating: 1507 &rarr; <strong>1532</strong><br />(+25 for winning)
+|l|☆dominicex
+|player|p1|

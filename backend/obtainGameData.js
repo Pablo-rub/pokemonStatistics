@@ -5,6 +5,8 @@ const axios = require("axios");
 const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
 
 //todo: trick room (fieldstart), tailwind (sidestart)
+//todo: pokemon name instead of random names random|pokemon
+//todo: rooms, screens, etc.
 
 // Initialize the BigQuery client
 const bigQuery = new BigQuery({keyFilename});
@@ -24,11 +26,11 @@ app.post("/replays", async (req, res) => {
     const id = replayData.id;
 
     // Check if the replay is already in the database
-    const checkResponse = await axios.get(`http://localhost:5000/api/games/${id}`);
+    /*const checkResponse = await axios.get(`http://localhost:5000/api/games/${id}`);
     if (checkResponse.data.exists) {
       res.status(200).send("Replay already exists in the database");
       return;
-    }
+    }*/
 
     const format = replayData.format;
     const players = replayData.players;
@@ -167,9 +169,6 @@ app.post("/replays", async (req, res) => {
       if (endItemMatch) { // Detect the end of an item effect
         //console.log(endItemMatch);
         processItem(currentTurn, endItemMatch, turns);
-      } 
-      if (abilityMatch) { // Detect the usage of an ability
-        processAbility(currentTurn, abilityMatch, turns);
       } 
       if (moveMatch) { // Detect the usage of a move
         processMove(currentTurn, moveMatch, turns);
@@ -592,24 +591,6 @@ function processItem(currentTurn, itemMatch, turns) {
       p.name === pokemonName ? { ...p, item: item } : p
     );
   }
-
-  //TODO: moves like trick, switcheroo, etc.
-
-  //console.log(pokemonName, "used the item", item);
-}
-
-// Process the usage of an ability
-function processAbility(currentTurn, abilityMatch, turns) {
-  const player = abilityMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = abilityMatch[2];
-  const ability = abilityMatch[3];
-
-  //TODO: moves like role play, skill swap, etc.
-
-  // Update the ability of the Pokémon in revealedPokemon
-  //turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
-  //  p.name === pokemonName ? { ...p, ability: ability } : p
-  //);
 }
 
 // Process the damage received by a Pokémon
@@ -925,76 +906,19 @@ function handleObjectChangingMoves(currentTurn, userPokemon, targetPokemon, move
   }
 }
 
-// Adjust field and weather durations so they don't decrement prematurely if introduced at turn 0
-
-function createNewTurn(currentTurn, turns) {
-  const previousTurn = turns[currentTurn - 1];
-
-  // Clone weather
-  let newWeather = null;
-  if (previousTurn.weather && previousTurn.weather.duration > 0) {
-    // Only decrement if previousTurn is >= 1 (playable)
-    const duration = (previousTurn.turn_number >= 1)
-      ? previousTurn.weather.duration - 1
-      : previousTurn.weather.duration;
-
-    newWeather = {
-      condition: previousTurn.weather.condition,
-      duration
-    };
-    if (newWeather.duration <= 0) {
-      console.log(`Weather ${newWeather.condition} ended.`);
-      newWeather = null;
-    }
-  }
-
-  // Clone field
-  let newField = { ...previousTurn.field };
-  if (newField.duration > 0) {
-    // Only decrement if previousTurn is >= 1 (playable)
-    newField.duration = (previousTurn.turn_number >= 1)
-      ? newField.duration - 1
-      : newField.duration;
-    if (newField.duration <= 0) {
-      console.log(`Field ${newField.terrain} ended.`);
-      newField = { terrain: newField.terrain, duration: 0 };
-    }
-  }
-
-  turns.push({
-    turn_number: currentTurn,
-    starts_with: {
-      player1: JSON.parse(JSON.stringify(previousTurn.ends_with.player1)),
-      player2: JSON.parse(JSON.stringify(previousTurn.ends_with.player2)),
-    },
-    ends_with: {
-      player1: [],
-      player2: [],
-    },
-    field: newField,
-    weather: newWeather,
-    revealed_pokemon: {
-      player1: [],
-      player2: [],
-    },
-  });
-
-  console.log(`Start of turn ${currentTurn}`);
-  if (newWeather) console.log(`Weather left: ${newWeather.duration}`);
-  else console.log("No active weather.");
-}
-
 // If weather or field introduced at turn 0, initialize it with duration=5 (or 6 to compensate turn 0)
 function processWeather(currentTurn, weatherMatch, turns, line) {
   if (weatherMatch && !line.includes("[upkeep]")) {
-    const previousWeather = turns[currentTurn].weather;
     const newCondition = weatherMatch[1];
     const initialDuration = (currentTurn === 0) ? 6 : 5;
+    
+    // Always replace existing weather with new weather
     turns[currentTurn].weather = {
       condition: newCondition,
       duration: initialDuration
     };
-    console.log("Weather detected:", newCondition, "Duration:", initialDuration);
+    
+    console.log(`Weather changed to: ${newCondition} with duration: ${initialDuration}`);
   }
 }
 
@@ -1002,11 +926,14 @@ function processField(currentTurn, fieldMatch, turns) {
   if (fieldMatch) {
     const terrain = fieldMatch[1];
     const initialDuration = (currentTurn === 0) ? 6 : 5;
+    
+    // Always replace existing terrain with new terrain
     turns[currentTurn].field = {
       terrain: terrain,
       duration: initialDuration
     };
-    console.log("Field detected:", terrain, "Duration:", initialDuration);
+    
+    console.log(`Terrain changed to: ${terrain} with duration: ${initialDuration}`);
   }
 }
 
