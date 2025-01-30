@@ -1,0 +1,7 @@
+burn
+freeze
+frostbite
+paralysis
+poison
+badly poisoned
+sleep

@@ -1,0 +1,51 @@
+moves:
+doodle
+entrainment
+role play
+simple beam
+skill swap
+transform
+worry seed
+gastro acid
+core enforcer
+sunsteel strike
+moongeist beam
+photon geyser
+mimic
+subtitute
+transform
+automatize
+foresight
+odor sleuth
+miracle eye
+minimize
+tar shot
+anchor shot
+block
+fairy lock
+jaw lock
+mean look
+no retreat
+octolock
+shadow hold
+spider web
+spirit shackle
+thousand waves
+
+abilities:
+imposter
+lingering aroma
+mummy
+power of alchemy
+receiver
+trace
+wandering spirit
+mold breaker
+teravolt
+turboblaze
+mycelium might
+neutralizing gas
+illusion
+arena trap
+magnet pull
+shadow tag
