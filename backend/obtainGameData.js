@@ -4,6 +4,8 @@ const axios = require("axios");
 
 const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
 
+//todo: trick room (fieldstart), tailwind (sidestart)
+
 // Initialize the BigQuery client
 const bigQuery = new BigQuery({keyFilename});
 
@@ -50,7 +52,7 @@ app.post("/replays", async (req, res) => {
     const date = new Date(uploadtime * 1000).toISOString();
     //console.log("Date of the match is:", date);
     const teams = processShowteam(log); // Safe fallback if no showteam lines
-    console.log("Initial teams: ", teams);
+    //console.log("Initial teams: ", teams);
     let turns = [];
     //console.log("Empty initial turns: ", turns);
     
@@ -68,6 +70,10 @@ app.post("/replays", async (req, res) => {
       },
       field: {
         terrain: "",
+        duration: 0,
+      },
+      weather: {
+        condition: "",
         duration: 0,
       },
       revealedPokemon: {
@@ -134,7 +140,8 @@ app.post("/replays", async (req, res) => {
       const teraMatch = line.match(
         /\|-terastallize\|(p1[ab]|p2[ab]): (.+?)\|(.+)/
       );
-      const fieldMatch = line.match(/\|-fieldstart\|move: (\w+\s?\w*)\|\[of\] (p\d[ab]): (\w+)/);
+      const fieldMatch = line.match(/\|-fieldstart\|move: ([\w\s]+)\|(?:\[from\] [^\|]+\|)?\[of\] (p\d[ab]): ([\w\s]+)/);
+      const weatherMatch = line.match(/\|-weather\|(.+?)\|(.+)/);
       const volatileMatch = line.match(/\|-start\|(p1[ab]|p2[ab]): (.+?)\|(.+)/);
       
       // Detect new turn
@@ -142,10 +149,10 @@ app.post("/replays", async (req, res) => {
         currentTurn = parseInt(turnMatch[1]);
         turns = processTurn(currentTurn, turns);
         incrementVolatileTurnCounters(turns);
-        //console.log("Start of turn", turnMatch[1]);
+        console.log("Start of turn", turnMatch[1]);
       }
       if (switchMatches) { // Detect active Pokémon switches and update revealed Pokémon if necessary
-        //console.log("Switch detected");
+        console.log("Switch detected");
         processSwitch(
           currentTurn,
           switchMatches,
@@ -204,13 +211,14 @@ app.post("/replays", async (req, res) => {
         processTerastallize(currentTurn, teraMatch, turns);
       } 
       if (fieldMatch) { // Detect the start of a field effect
-        //console.log(fieldMatch);
-        turns[currentTurn].field = { terrain: fieldMatch[1], duration: 5 };
+        processField(currentTurn, fieldMatch, turns);
+      }
+      if (weatherMatch && !line.includes("[upkeep]")) { // Only set or reset weather if line doesn't have [upkeep]
+        processWeather(currentTurn, weatherMatch, turns, line);
       }
       if (volatileMatch) { // Detect the start of a volatile status
         processVolatileStart(currentTurn, volatileMatch, turns);
       }
-      //TODO: detect the start of a weather effect
     }
 
     try {
@@ -272,7 +280,11 @@ function processTurn(currentTurn, turns) {
         player2: [],
       },
       field: {
-        terrain: "",
+        terrain: "none",
+        duration: 0,
+      },
+      weather: {
+        condition: "none",
         duration: 0,
       },
       revealedPokemon: {
@@ -280,13 +292,45 @@ function processTurn(currentTurn, turns) {
         player2: [],
       }
     });
+
   } else {
-    // Copy the active Pokémon from the previous turn
+    
     //console.log("Previous turn", turns[currentTurn - 1]);
     const previousTurn = turns[currentTurn - 1];
-    //console.log(previousTurn.field.duration, previousTurn.field.terrain);
-    const previousTerrainEnds = (previousTurn.field.duration - 1) > 1;
-    //console.log(previousTerrainEnds);
+    
+    const previousTerrainEnds = (previousTurn.field.duration) > 1;
+    console.log("Turns of terrain left: ", previousTurn.field.duration);
+    
+    const previousWeatherEnds = (previousTurn.weather.duration) > 1;
+    console.log("Turns of weather left: ", previousTurn.weather.duration);
+
+    let newTerrain;
+    let newFieldDuration;
+    let newWeather;
+    let newWeatherDuration;
+
+    if (previousTerrainEnds) {
+      newTerrain = previousTurn.field.terrain;
+      newFieldDuration = previousTurn.field.duration - 1;
+    } else if (previousTurn.terrain != "none" && previousTurn.turnNumber == 1) {
+      newTerrain = previousTurn.field.terrain;
+      newFieldDuration = previousTurn.field.duration;
+      console.log("Field in turn: ", previousTurn.turnNumber);
+    } else {
+      newTerrain = "none";
+      newFieldDuration = 0;
+    }
+
+    if (previousWeatherEnds) {
+      newWeather = previousTurn.weather.condition;
+      newWeatherDuration = previousTurn.weather.duration - 1;
+    } else if (previousTurn.weather != "none" && previousTurn.turnCounter == 1) {
+      newWeather = previousTurn.weather.condition;
+      newWeatherDuration = previousTurn.weather.duration;
+    } else {
+      newWeather = "none";
+      newWeatherDuration = 0;
+    }
 
     // Create a new object for the current turn
     turns.push({
@@ -300,8 +344,109 @@ function processTurn(currentTurn, turns) {
         player2: JSON.parse(JSON.stringify(previousTurn.endsWith.player2)), // Deep copy
       },
       field: {
-        terrain: previousTerrainEnds ? previousTurn.field.terrain : "",
-        duration: previousTerrainEnds ? previousTurn.field.duration - 1 : 0,
+        terrain: newTerrain,
+        duration: newFieldDuration,
+      },
+      weather: {
+        condition: newWeather,
+        duration: newWeatherDuration,
+      },
+      revealedPokemon: {
+        player1: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player1)), // Deep copy
+        player2: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player2)), // Deep copy
+      }
+    });
+  }
+
+  return turns;
+}
+
+// Process the turn
+function processTurn(currentTurn, turns) {
+  // Check if we are adding the first turn
+  if (turns.length === 0) {
+    // If no turns exist yet, initialize the first turn
+    turns.push({
+      turnNumber: currentTurn,
+      startsWith: {
+        player1: [],
+        player2: [],
+      },
+      endsWith: {
+        player1: [],
+        player2: [],
+      },
+      field: {
+        terrain: "none",
+        duration: 0,
+      },
+      weather: {
+        condition: "none",
+        duration: 0,
+      },
+      revealedPokemon: {
+        player1: [],
+        player2: [],
+      }
+    });
+
+  } else {
+    
+    //console.log("Previous turn", turns[currentTurn - 1]);
+    const previousTurn = turns[currentTurn - 1];
+    
+    const previousTerrainEnds = (previousTurn.field.duration) > 1;
+    console.log("Turns of terrain left: ", previousTurn.field.duration);
+    
+    const previousWeatherEnds = (previousTurn.weather.duration) > 1;
+    console.log("Turns of weather left: ", previousTurn.weather.duration);
+
+    let newTerrain;
+    let newFieldDuration;
+    let newWeather;
+    let newWeatherDuration;
+
+    if (previousTerrainEnds) {
+      newTerrain = previousTurn.field.terrain;
+      newFieldDuration = previousTurn.field.duration - 1;
+    } else if (previousTurn.terrain != "none" && previousTurn.turnNumber == 1) {
+      newTerrain = previousTurn.field.terrain;
+      newFieldDuration = previousTurn.field.duration;
+      console.log("Field in turn: ", previousTurn.turnNumber);
+    } else {
+      newTerrain = "none";
+      newFieldDuration = 0;
+    }
+
+    if (previousWeatherEnds) {
+      newWeather = previousTurn.weather.condition;
+      newWeatherDuration = previousTurn.weather.duration - 1;
+    } else if (previousTurn.weather != "none" && previousTurn.turnCounter == 1) {
+      newWeather = previousTurn.weather.condition;
+      newWeatherDuration = previousTurn.weather.duration;
+    } else {
+      newWeather = "none";
+      newWeatherDuration = 0;
+    }
+
+    // Create a new object for the current turn
+    turns.push({
+      turnNumber: currentTurn,
+      startsWith: {
+        player1: JSON.parse(JSON.stringify(previousTurn.endsWith.player1)), // Deep copy
+        player2: JSON.parse(JSON.stringify(previousTurn.endsWith.player2)), // Deep copy
+      },
+      endsWith: {
+        player1: JSON.parse(JSON.stringify(previousTurn.endsWith.player1)), // Deep copy
+        player2: JSON.parse(JSON.stringify(previousTurn.endsWith.player2)), // Deep copy
+      },
+      field: {
+        terrain: newTerrain,
+        duration: newFieldDuration,
+      },
+      weather: {
+        condition: newWeather,
+        duration: newWeatherDuration,
       },
       revealedPokemon: {
         player1: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player1)), // Deep copy
@@ -496,7 +641,7 @@ function processDamage(
     p.name === pokemonName ? { ...p, remainingHp: remainingHp, fightingStatus: newFightingStatus, } : p
   );
 
-  console.log(pokemonName, "status:", damageInfo);
+  //console.log(pokemonName, "status:", damageInfo);
 }
 
 // Process the effect of a status condition
@@ -576,7 +721,7 @@ function processVolatileStart(currentTurn, volatileMatch, turns) {
   const existing = pokemon.volatileStatus.find((v) => v.name === statusName);
   if (!existing) {
     pokemon.volatileStatus.push({ name: statusName, turnCounter: 0 });
-    console.log(pokemonName, "got the volatile status", statusName);
+    //console.log(pokemonName, "got the volatile status", statusName);
   }
 }
 
@@ -777,6 +922,91 @@ function handleObjectChangingMoves(currentTurn, userPokemon, targetPokemon, move
 
     default:
       break;
+  }
+}
+
+// Adjust field and weather durations so they don't decrement prematurely if introduced at turn 0
+
+function createNewTurn(currentTurn, turns) {
+  const previousTurn = turns[currentTurn - 1];
+
+  // Clone weather
+  let newWeather = null;
+  if (previousTurn.weather && previousTurn.weather.duration > 0) {
+    // Only decrement if previousTurn is >= 1 (playable)
+    const duration = (previousTurn.turn_number >= 1)
+      ? previousTurn.weather.duration - 1
+      : previousTurn.weather.duration;
+
+    newWeather = {
+      condition: previousTurn.weather.condition,
+      duration
+    };
+    if (newWeather.duration <= 0) {
+      console.log(`Weather ${newWeather.condition} ended.`);
+      newWeather = null;
+    }
+  }
+
+  // Clone field
+  let newField = { ...previousTurn.field };
+  if (newField.duration > 0) {
+    // Only decrement if previousTurn is >= 1 (playable)
+    newField.duration = (previousTurn.turn_number >= 1)
+      ? newField.duration - 1
+      : newField.duration;
+    if (newField.duration <= 0) {
+      console.log(`Field ${newField.terrain} ended.`);
+      newField = { terrain: newField.terrain, duration: 0 };
+    }
+  }
+
+  turns.push({
+    turn_number: currentTurn,
+    starts_with: {
+      player1: JSON.parse(JSON.stringify(previousTurn.ends_with.player1)),
+      player2: JSON.parse(JSON.stringify(previousTurn.ends_with.player2)),
+    },
+    ends_with: {
+      player1: [],
+      player2: [],
+    },
+    field: newField,
+    weather: newWeather,
+    revealed_pokemon: {
+      player1: [],
+      player2: [],
+    },
+  });
+
+  console.log(`Start of turn ${currentTurn}`);
+  if (newWeather) console.log(`Weather left: ${newWeather.duration}`);
+  else console.log("No active weather.");
+}
+
+// If weather or field introduced at turn 0, initialize it with duration=5 (or 6 to compensate turn 0)
+function processWeather(currentTurn, weatherMatch, turns, line) {
+  if (weatherMatch && !line.includes("[upkeep]")) {
+    const previousWeather = turns[currentTurn].weather;
+    const newCondition = weatherMatch[1];
+    const initialDuration = (currentTurn === 0) ? 6 : 5;
+    turns[currentTurn].weather = {
+      condition: newCondition,
+      duration: initialDuration
+    };
+    console.log("Weather detected:", newCondition, "Duration:", initialDuration);
+  }
+}
+
+function processField(currentTurn, fieldMatch, turns) {
+  if (fieldMatch) {
+    const terrain = fieldMatch[1];
+    const initialDuration = (currentTurn === 0) ? 6 : 5;
+    turns[currentTurn].field = {
+      terrain: terrain,
+      duration: initialDuration
+    };
+    console.log("Field detected:", terrain, "Duration:", initialDuration);
   }
 }
 
