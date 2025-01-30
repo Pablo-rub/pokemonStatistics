@@ -444,21 +444,46 @@ function processAbility(currentTurn, abilityMatch, turns) {
 
 // Process the usage of a move
 function processMove(currentTurn, moveMatch, turns) {
+  const protectMoves = [
+    "baneful bunker",
+    "burning bulwark",
+    "detect",
+    "king's shield",
+    "max guard",
+    "obstruct",
+    "protect",
+    "silk trap",
+    "spiky shield",
+    "crafty shield",
+    "mat block",
+    "quick guard",
+    "wide guard",
+  ];
+
   const player = moveMatch[1].startsWith("p1") ? "player1" : "player2";
   const pokemonName = moveMatch[2];
-  const move = moveMatch[3];
+  const moveUsed = moveMatch[3].toLowerCase();
 
-  //TODO: moves like encore, disable, etc.
-  //TODO: moves like protect, detect, etc.
-
-  // Update the moves of the Pokémon in revealedPokemon
-  turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) => {
-    if (p.name === pokemonName) {
-      const consecutiveProtects = move === "Protect" && moveMatch[0].includes("|-singleturn|") ? p.consecutiveProtects + 1 : 0;
-      return { ...p, consecutiveProtects };
+  // Find the Pokémon in revealedPokemon
+  const pokemon = turns[currentTurn].revealedPokemon[player].find(
+    (p) => p && p.name === pokemonName
+  );
+  if (pokemon) {
+    // Ensure there's a consecutiveProtectCounter field
+    if (pokemon.consecutiveProtectCounter === undefined) {
+      pokemon.consecutiveProtectCounter = 0;
     }
-    return p;
-  });
+
+    // If the move is a protect-type move, increment the counter
+    if (protectMoves.includes(moveUsed)) {
+      pokemon.consecutiveProtectCounter += 1;
+    } else {
+      // Otherwise reset the counter
+      pokemon.consecutiveProtectCounter = 0;
+    }
+  }
+
+  // ...existing code to update the Pokémon's moves, if needed...
 }
 
 // Process the damage received by a Pokémon

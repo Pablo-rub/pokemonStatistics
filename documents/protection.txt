@@ -1,0 +1,16 @@
+moves that protect only the user (cant consecutive):
+baneful bunker
+burning bulwark
+detect
+king's shield
+max guard
+obstruct
+protect
+silk trap
+spiky shield
+
+moves that protect the user's side of the field (can consecutive but not user):
+crafty shield
+mat block
+quick guard
+wide guard
