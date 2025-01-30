@@ -1,18 +1,18 @@
 moves:
-doodle
-entrainment
-role play
-simple beam
-skill swap
-transform
-worry seed
-gastro acid
+doodle - done
+entrainment - done
+role play - done
+simple beam - done
+skill swap - done
+transform - done
+worry seed - done
+gastro acid - done
 core enforcer
 sunsteel strike
 moongeist beam
 photon geyser
-mimic
-subtitute
+mimic - done
+substitute - done
 transform
 automatize
 foresight
