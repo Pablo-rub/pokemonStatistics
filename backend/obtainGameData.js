@@ -6,7 +6,7 @@ const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistic
 
 //todo: trick room (fieldstart), tailwind (sidestart)
 //todo: pokemon name instead of random names random|pokemon
-//todo: screens, etc.
+//todo: objects for weathers, terrains, rooms, screens, etc.
 
 // Initialize the BigQuery client
 const bigQuery = new BigQuery({keyFilename});
@@ -81,6 +81,12 @@ app.post("/replays", async (req, res) => {
       room: {
         condition: "",
         duration: 0,
+      },
+      // New screens property: reflect, light screen, aurora veil, each with two sides
+      screens: {
+        reflect: { player1: false, player2: false, duration1: 0, duration2: 0 },
+        lightscreen: { player1: false, player2: false, duration1: 0, duration2: 0 },
+        auroraveil: { player1: false, player2: false, duration1: 0, duration2: 0 }
       },
       revealedPokemon: {
         player1: [],
@@ -300,6 +306,11 @@ function processTurn(currentTurn, turns) {
         condition: "none",
         duration: 0,
       },
+      screens: {
+        reflect: { player1: false, player2: false, duration1: 0, duration2: 0 },
+        lightscreen: { player1: false, player2: false, duration1: 0, duration2: 0 },
+        auroraveil: { player1: false, player2: false, duration1: 0, duration2: 0 }
+      },
       revealedPokemon: {
         player1: [],
         player2: [],
@@ -360,6 +371,46 @@ function processTurn(currentTurn, turns) {
       }
     }
 
+    // Decrement screens per player for each screen type
+    let newScreens = {
+      reflect: { 
+        player1: previousTurn.screens.reflect.player1, 
+        player2: previousTurn.screens.reflect.player2,
+        duration1: 0,
+        duration2: 0
+      },
+      lightscreen: { 
+        player1: previousTurn.screens.lightscreen.player1, 
+        player2: previousTurn.screens.lightscreen.player2,
+        duration1: 0,
+        duration2: 0
+      },
+      auroraveil: { 
+        player1: previousTurn.screens.auroraveil.player1, 
+        player2: previousTurn.screens.auroraveil.player2,
+        duration1: 0,
+        duration2: 0
+      }
+    };
+
+    // For each screen type and for each player, decrement the duration
+    ['reflect', 'lightscreen', 'auroraveil'].forEach(screen => {
+      ['player1', 'player2'].forEach(player => {
+        let durationKey = "duration" + (player === "player1" ? "1" : "2");
+        let prevDuration = previousTurn.screens[screen][durationKey];
+        if (prevDuration && prevDuration > 0) {
+          let newDuration = (previousTurn.turn_number >= 1) ? prevDuration - 1 : prevDuration;
+          newScreens[screen][durationKey] = newDuration > 0 ? newDuration : 0;
+          // If duration drops to 0, set the screen to false
+          if (newDuration <= 0) {
+            newScreens[screen][player] = false;
+          } else {
+            newScreens[screen][player] = previousTurn.screens[screen][player];
+          }
+        }
+      });
+    });
+
     // Create a new object for the current turn
     turns.push({
       turnNumber: currentTurn,
@@ -380,6 +431,7 @@ function processTurn(currentTurn, turns) {
         duration: newWeatherDuration,
       },
       room: newRoom, // Include the room property
+      screens: newScreens,
       revealedPokemon: {
         player1: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player1)), // Deep copy
         player2: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player2)), // Deep copy
@@ -894,6 +946,30 @@ function processRoom(currentTurn, fieldMatch, turns, line) {
       }
     }
   }
+}
+
+// Processing functions for screens (for when a screen move is detected)
+// Each function accepts the current turn, the side (player1 or player2), and sets the relevant screen status
+function processReflect(currentTurn, side, turns, line) {
+  // Assuming a match has been detected for Reflect via a regex outside this function
+  const initialDuration = (currentTurn === 0) ? 6 : 5;
+  turns[currentTurn].screens.reflect[side] = true;
+  turns[currentTurn].screens.reflect["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
+  console.log(`Reflect set for ${side} with duration: ${initialDuration}`);
+}
+
+function processLightscreen(currentTurn, side, turns, line) {
+  const initialDuration = (currentTurn === 0) ? 6 : 5;
+  turns[currentTurn].screens.lightscreen[side] = true;
+  turns[currentTurn].screens.lightscreen["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
+  console.log(`Light Screen set for ${side} with duration: ${initialDuration}`);
+}
+
+function processAuroraVeil(currentTurn, side, turns, line) {
+  const initialDuration = (currentTurn === 0) ? 6 : 5;
+  turns[currentTurn].screens.auroraveil[side] = true;
+  turns[currentTurn].screens.auroraveil["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
+  console.log(`Aurora Veil set for ${side} with duration: ${initialDuration}`);
 }
 
 run().catch(console.dir);
