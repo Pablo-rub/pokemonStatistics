@@ -6,7 +6,7 @@ const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistic
 
 //todo: trick room (fieldstart), tailwind (sidestart)
 //todo: pokemon name instead of random names random|pokemon
-//todo: rooms, screens, etc.
+//todo: screens, etc.
 
 // Initialize the BigQuery client
 const bigQuery = new BigQuery({keyFilename});
@@ -75,6 +75,10 @@ app.post("/replays", async (req, res) => {
         duration: 0,
       },
       weather: {
+        condition: "",
+        duration: 0,
+      },
+      room: {
         condition: "",
         duration: 0,
       },
@@ -210,7 +214,13 @@ app.post("/replays", async (req, res) => {
         processTerastallize(currentTurn, teraMatch, turns);
       } 
       if (fieldMatch) { // Detect the start of a field effect
-        processField(currentTurn, fieldMatch, turns);
+        // If the effect is Trick Room, process it as a room effect.
+        if (roomEffects.includes(fieldMatch[1])) {
+          processRoom(currentTurn, fieldMatch, turns, line);
+        } else {
+          // Otherwise, process it as a normal terrain field effect.
+          processField(currentTurn, fieldMatch, turns);
+        }
       }
       if (weatherMatch && !line.includes("[upkeep]")) { // Only set or reset weather if line doesn't have [upkeep]
         processWeather(currentTurn, weatherMatch, turns, line);
@@ -286,100 +296,7 @@ function processTurn(currentTurn, turns) {
         condition: "none",
         duration: 0,
       },
-      revealedPokemon: {
-        player1: [],
-        player2: [],
-      }
-    });
-
-  } else {
-    
-    //console.log("Previous turn", turns[currentTurn - 1]);
-    const previousTurn = turns[currentTurn - 1];
-    
-    const previousTerrainEnds = (previousTurn.field.duration) > 1;
-    console.log("Turns of terrain left: ", previousTurn.field.duration);
-    
-    const previousWeatherEnds = (previousTurn.weather.duration) > 1;
-    console.log("Turns of weather left: ", previousTurn.weather.duration);
-
-    let newTerrain;
-    let newFieldDuration;
-    let newWeather;
-    let newWeatherDuration;
-
-    if (previousTerrainEnds) {
-      newTerrain = previousTurn.field.terrain;
-      newFieldDuration = previousTurn.field.duration - 1;
-    } else if (previousTurn.terrain != "none" && previousTurn.turnNumber == 1) {
-      newTerrain = previousTurn.field.terrain;
-      newFieldDuration = previousTurn.field.duration;
-      console.log("Field in turn: ", previousTurn.turnNumber);
-    } else {
-      newTerrain = "none";
-      newFieldDuration = 0;
-    }
-
-    if (previousWeatherEnds) {
-      newWeather = previousTurn.weather.condition;
-      newWeatherDuration = previousTurn.weather.duration - 1;
-    } else if (previousTurn.weather != "none" && previousTurn.turnCounter == 1) {
-      newWeather = previousTurn.weather.condition;
-      newWeatherDuration = previousTurn.weather.duration;
-    } else {
-      newWeather = "none";
-      newWeatherDuration = 0;
-    }
-
-    // Create a new object for the current turn
-    turns.push({
-      turnNumber: currentTurn,
-      startsWith: {
-        player1: JSON.parse(JSON.stringify(previousTurn.endsWith.player1)), // Deep copy
-        player2: JSON.parse(JSON.stringify(previousTurn.endsWith.player2)), // Deep copy
-      },
-      endsWith: {
-        player1: JSON.parse(JSON.stringify(previousTurn.endsWith.player1)), // Deep copy
-        player2: JSON.parse(JSON.stringify(previousTurn.endsWith.player2)), // Deep copy
-      },
-      field: {
-        terrain: newTerrain,
-        duration: newFieldDuration,
-      },
-      weather: {
-        condition: newWeather,
-        duration: newWeatherDuration,
-      },
-      revealedPokemon: {
-        player1: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player1)), // Deep copy
-        player2: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player2)), // Deep copy
-      }
-    });
-  }
-
-  return turns;
-}
-
-// Process the turn
-function processTurn(currentTurn, turns) {
-  // Check if we are adding the first turn
-  if (turns.length === 0) {
-    // If no turns exist yet, initialize the first turn
-    turns.push({
-      turnNumber: currentTurn,
-      startsWith: {
-        player1: [],
-        player2: [],
-      },
-      endsWith: {
-        player1: [],
-        player2: [],
-      },
-      field: {
-        terrain: "none",
-        duration: 0,
-      },
-      weather: {
+      room: {
         condition: "none",
         duration: 0,
       },
@@ -391,14 +308,17 @@ function processTurn(currentTurn, turns) {
 
   } else {
     
-    //console.log("Previous turn", turns[currentTurn - 1]);
     const previousTurn = turns[currentTurn - 1];
+    //console.log("Previous turn", previousTurn);
     
     const previousTerrainEnds = (previousTurn.field.duration) > 1;
     console.log("Turns of terrain left: ", previousTurn.field.duration);
     
     const previousWeatherEnds = (previousTurn.weather.duration) > 1;
     console.log("Turns of weather left: ", previousTurn.weather.duration);
+
+    const previousRoomEnds = (previousTurn.room.duration) > 1;
+    console.log("Turns of room left: ", previousTurn.room.duration);
 
     let newTerrain;
     let newFieldDuration;
@@ -411,7 +331,7 @@ function processTurn(currentTurn, turns) {
     } else if (previousTurn.terrain != "none" && previousTurn.turnNumber == 1) {
       newTerrain = previousTurn.field.terrain;
       newFieldDuration = previousTurn.field.duration;
-      console.log("Field in turn: ", previousTurn.turnNumber);
+      //console.log("Field in turn: ", previousTurn.turnNumber);
     } else {
       newTerrain = "none";
       newFieldDuration = 0;
@@ -426,6 +346,18 @@ function processTurn(currentTurn, turns) {
     } else {
       newWeather = "none";
       newWeatherDuration = 0;
+    }
+
+    // Decrement room duration
+    let newRoom = { ...previousTurn.room };
+    if (newRoom.duration > 0) {
+      newRoom.duration = (previousTurn.turn_number >= 1)
+        ? newRoom.duration - 1
+        : newRoom.duration;
+      if (newRoom.duration <= 0) {
+        console.log(`Room ${newRoom.condition} ended.`);
+        newRoom = { condition: "none", duration: 0 };
+      }
     }
 
     // Create a new object for the current turn
@@ -447,6 +379,7 @@ function processTurn(currentTurn, turns) {
         condition: newWeather,
         duration: newWeatherDuration,
       },
+      room: newRoom, // Include the room property
       revealedPokemon: {
         player1: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player1)), // Deep copy
         player2: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player2)), // Deep copy
@@ -934,6 +867,32 @@ function processField(currentTurn, fieldMatch, turns) {
     };
     
     console.log(`Terrain changed to: ${terrain} with duration: ${initialDuration}`);
+  }
+}
+
+// Allowed room effects
+const roomEffects = ["Trick Room", "Gravity", "Magic Room", "Wonder Room"];
+
+// Process room effects (moves that affect room property) using the same command (|-startfield|)
+function processRoom(currentTurn, fieldMatch, turns, line) {
+  if (fieldMatch && !line.includes("[upkeep]")) {
+    const effect = fieldMatch[1];
+    // Only process if the effect is one of the allowed room effects
+    if (roomEffects.includes(effect)) {
+      const initialDuration = (currentTurn === 0) ? 6 : 5;
+      // If the same room effect is already active, cancel (delete) it
+      if (turns[currentTurn].room.condition === effect) {
+        turns[currentTurn].room = { condition: "", duration: 0 };
+        console.log(`${effect} cancelled.`);
+      } else {
+        // Otherwise, override the previous room effect with the new one
+        turns[currentTurn].room = {
+          condition: effect,
+          duration: initialDuration
+        };
+        console.log(`Room effect set to: ${effect} with duration: ${initialDuration}`);
+      }
+    }
   }
 }
 
