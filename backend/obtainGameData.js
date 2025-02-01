@@ -4,7 +4,7 @@ const axios = require("axios");
 
 const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
 
-//todo: trick room (fieldstart), tailwind (sidestart)
+//todo: tailwind (sidestart)
 //todo: pokemon name instead of random names random|pokemon
 //todo: objects for weathers, terrains, rooms, screens, etc.
 
@@ -82,11 +82,16 @@ app.post("/replays", async (req, res) => {
         condition: "",
         duration: 0,
       },
-      // New screens property: reflect, light screen, aurora veil, each with two sides
       screens: {
         reflect: { player1: false, player2: false, duration1: 0, duration2: 0 },
         lightscreen: { player1: false, player2: false, duration1: 0, duration2: 0 },
         auroraveil: { player1: false, player2: false, duration1: 0, duration2: 0 }
+      },
+      tailwind: {
+        player1: false,
+        player2: false,
+        duration1: 0,
+        duration2: 0
       },
       revealedPokemon: {
         player1: [],
@@ -311,6 +316,12 @@ function processTurn(currentTurn, turns) {
         lightscreen: { player1: false, player2: false, duration1: 0, duration2: 0 },
         auroraveil: { player1: false, player2: false, duration1: 0, duration2: 0 }
       },
+      tailwind: {
+        player1: false,
+        player2: false,
+        duration1: 0,
+        duration2: 0
+      },
       revealedPokemon: {
         player1: [],
         player2: [],
@@ -411,6 +422,28 @@ function processTurn(currentTurn, turns) {
       });
     });
 
+    // Decrement tailwind durations per player
+    let newTailwind = {
+      player1: previousTurn.tailwind.player1,
+      player2: previousTurn.tailwind.player2,
+      duration1: 0,
+      duration2: 0
+    };
+
+    ['player1', 'player2'].forEach(player => {
+      let durationKey = "duration" + (player === "player1" ? "1" : "2");
+      let prevDuration = previousTurn.tailwind[durationKey];
+      if (prevDuration && prevDuration > 0) {
+        let newDuration = (previousTurn.turn_number >= 1) ? prevDuration - 1 : prevDuration;
+        newTailwind[durationKey] = newDuration > 0 ? newDuration : 0;
+        if (newDuration <= 0) {
+          newTailwind[player] = false;
+        } else {
+          newTailwind[player] = previousTurn.tailwind[player];
+        }
+      }
+    });
+
     // Create a new object for the current turn
     turns.push({
       turnNumber: currentTurn,
@@ -432,6 +465,7 @@ function processTurn(currentTurn, turns) {
       },
       room: newRoom, // Include the room property
       screens: newScreens,
+      tailwind: newTailwind,
       revealedPokemon: {
         player1: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player1)), // Deep copy
         player2: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player2)), // Deep copy
@@ -970,6 +1004,14 @@ function processAuroraVeil(currentTurn, side, turns, line) {
   turns[currentTurn].screens.auroraveil[side] = true;
   turns[currentTurn].screens.auroraveil["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
   console.log(`Aurora Veil set for ${side} with duration: ${initialDuration}`);
+}
+
+// Create a function to process tailwind effects for a given player side
+function processTailwind(currentTurn, side, turns, line) {
+  const initialDuration = (currentTurn === 0) ? 6 : 5;
+  turns[currentTurn].tailwind[side] = true;
+  turns[currentTurn].tailwind["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
+  console.log(`Tailwind set for ${side} with duration: ${initialDuration}`);
 }
 
 run().catch(console.dir);
