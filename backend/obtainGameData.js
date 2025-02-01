@@ -4,9 +4,8 @@ const axios = require("axios");
 
 const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
 
-//todo: tailwind (sidestart)
-//todo: pokemon name instead of random names random|pokemon
 //todo: objects for weathers, terrains, rooms, screens, etc.
+//todo: fieldend, sideend
 
 // Initialize the BigQuery client
 const bigQuery = new BigQuery({keyFilename});
@@ -238,6 +237,15 @@ app.post("/replays", async (req, res) => {
       }
       if (volatileMatch) { // Detect the start of a volatile status
         processVolatileStart(currentTurn, volatileMatch, turns);
+      }
+      // Process fieldend to clear terrain effect if found
+      if (line.includes("fieldend")) {
+        processFieldEnd(currentTurn, line, turns);
+      }
+      
+      // Process sideend to clear tailwind and screens if found
+      if (line.includes("sideend")) {
+        processSideEnd(currentTurn, line, turns);
       }
     }
 
@@ -536,9 +544,10 @@ function processShowteam(log) {
 
 // Process the switch of a Pokémon
 function processSwitch(currentTurn, switchMatches, turns, teams) {
-  const slotOwner = switchMatches[1];       // e.g. p1a
+  const slotOwner = switchMatches[1];
   const player = slotOwner.startsWith("p1") ? "player1" : "player2";
   const pokemonName = switchMatches[2];
+  console.log("Switching", pokemonName, "for", player);
   const slot = slotOwner.endsWith("a") ? 0 : 1;
 
   // Reset volatile on whoever was in this slot
@@ -1012,6 +1021,35 @@ function processTailwind(currentTurn, side, turns, line) {
   turns[currentTurn].tailwind[side] = true;
   turns[currentTurn].tailwind["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
   console.log(`Tailwind set for ${side} with duration: ${initialDuration}`);
+}
+
+// New function to process fieldend: clears terrain effects
+function processFieldEnd(currentTurn, line, turns) {
+  if (line.includes("fieldend") && !line.includes("[upkeep]")) {
+    turns[currentTurn].field = {
+      terrain: "",
+      duration: 0
+    };
+    console.log("Field ended (terrain cleared).");
+  }
+}
+
+// New function to process sideend: clears tailwind and screens effects
+function processSideEnd(currentTurn, line, turns) {
+  if (line.includes("sideend") && !line.includes("[upkeep]")) {
+    // Clear tailwind
+    turns[currentTurn].tailwind = {
+      player1: false,
+      player2: false,
+      duration1: 0,
+      duration2: 0
+    };
+    // Clear screens for both players
+    turns[currentTurn].screens.reflect = { player1: false, player2: false, duration1: 0, duration2: 0 };
+    turns[currentTurn].screens.lightscreen = { player1: false, player2: false, duration1: 0, duration2: 0 };
+    turns[currentTurn].screens.auroraveil = { player1: false, player2: false, duration1: 0, duration2: 0 };
+    console.log("Side effects ended (tailwind and screens cleared).");
+  }
 }
 
 run().catch(console.dir);
