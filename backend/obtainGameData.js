@@ -5,7 +5,6 @@ const axios = require("axios");
 const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
 
 //todo: objects for weathers, terrains, rooms, screens, etc.
-//todo: fieldend, sideend
 
 // Initialize the BigQuery client
 const bigQuery = new BigQuery({keyFilename});
@@ -158,6 +157,7 @@ app.post("/replays", async (req, res) => {
       );
       const fieldMatch = line.match(/\|-fieldstart\|move: ([\w\s]+)\|(?:\[from\] [^\|]+\|)?\[of\] (p\d[ab]): ([\w\s]+)/);
       const weatherMatch = line.match(/\|-weather\|(.+?)\|(.+)/);
+      const sideStartMatch = line.match(/^\|-sidestart\|(p1|p2):\s*([^|]+)\|move:\s*(.+)$/);
       const volatileMatch = line.match(/\|-start\|(p1[ab]|p2[ab]): (.+?)\|(.+)/);
       
       // Detect new turn
@@ -165,7 +165,7 @@ app.post("/replays", async (req, res) => {
         currentTurn = parseInt(turnMatch[1]);
         turns = processTurn(currentTurn, turns);
         incrementVolatileTurnCounters(turns);
-        console.log("Start of turn", turnMatch[1]);
+        //console.log("Start of turn", turnMatch[1]);
       }
       if (switchMatches) { // Detect active Pokémon switches and update revealed Pokémon if necessary
         console.log("Switch detected");
@@ -242,7 +242,9 @@ app.post("/replays", async (req, res) => {
       if (line.includes("fieldend")) {
         processFieldEnd(currentTurn, line, turns);
       }
-      
+      if (sideStartMatch) { // Detect the start of a side effect
+        processSideStart(currentTurn, sideStartMatch, turns);
+      }
       // Process sideend to clear tailwind and screens if found
       if (line.includes("sideend")) {
         processSideEnd(currentTurn, line, turns);
@@ -292,195 +294,121 @@ app.post("/replays", async (req, res) => {
   }
 });
 
-// Process the turn
+// In processTurn, add logging for the remaining turns of side effects (screens and tailwind)
+
 function processTurn(currentTurn, turns) {
-  // Check if we are adding the first turn
-  if (turns.length === 0) {
-    // If no turns exist yet, initialize the first turn
-    turns.push({
-      turnNumber: currentTurn,
-      startsWith: {
-        player1: [],
-        player2: [],
-      },
-      endsWith: {
-        player1: [],
-        player2: [],
-      },
-      field: {
-        terrain: "none",
-        duration: 0,
-      },
-      weather: {
-        condition: "none",
-        duration: 0,
-      },
-      room: {
-        condition: "none",
-        duration: 0,
-      },
-      screens: {
-        reflect: { player1: false, player2: false, duration1: 0, duration2: 0 },
-        lightscreen: { player1: false, player2: false, duration1: 0, duration2: 0 },
-        auroraveil: { player1: false, player2: false, duration1: 0, duration2: 0 }
-      },
-      tailwind: {
-        player1: false,
-        player2: false,
-        duration1: 0,
-        duration2: 0
-      },
-      revealedPokemon: {
-        player1: [],
-        player2: [],
-      }
-    });
-
-  } else {
-    
-    const previousTurn = turns[currentTurn - 1];
-    //console.log("Previous turn", previousTurn);
-    
-    const previousTerrainEnds = (previousTurn.field.duration) > 1;
-    console.log("Turns of terrain left: ", previousTurn.field.duration);
-    
-    const previousWeatherEnds = (previousTurn.weather.duration) > 1;
-    console.log("Turns of weather left: ", previousTurn.weather.duration);
-
-    const previousRoomEnds = (previousTurn.room.duration) > 1;
-    console.log("Turns of room left: ", previousTurn.room.duration);
-
-    let newTerrain;
-    let newFieldDuration;
-    let newWeather;
-    let newWeatherDuration;
-
-    if (previousTerrainEnds) {
-      newTerrain = previousTurn.field.terrain;
-      newFieldDuration = previousTurn.field.duration - 1;
-    } else if (previousTurn.terrain != "none" && previousTurn.turnNumber == 1) {
-      newTerrain = previousTurn.field.terrain;
-      newFieldDuration = previousTurn.field.duration;
-      //console.log("Field in turn: ", previousTurn.turnNumber);
-    } else {
-      newTerrain = "none";
-      newFieldDuration = 0;
-    }
-
-    if (previousWeatherEnds) {
-      newWeather = previousTurn.weather.condition;
-      newWeatherDuration = previousTurn.weather.duration - 1;
-    } else if (previousTurn.weather != "none" && previousTurn.turnCounter == 1) {
-      newWeather = previousTurn.weather.condition;
-      newWeatherDuration = previousTurn.weather.duration;
-    } else {
-      newWeather = "none";
-      newWeatherDuration = 0;
-    }
-
-    // Decrement room duration
-    let newRoom = { ...previousTurn.room };
-    if (newRoom.duration > 0) {
-      newRoom.duration = (previousTurn.turn_number >= 1)
-        ? newRoom.duration - 1
-        : newRoom.duration;
-      if (newRoom.duration <= 0) {
-        console.log(`Room ${newRoom.condition} ended.`);
-        newRoom = { condition: "none", duration: 0 };
-      }
-    }
-
-    // Decrement screens per player for each screen type
-    let newScreens = {
-      reflect: { 
-        player1: previousTurn.screens.reflect.player1, 
-        player2: previousTurn.screens.reflect.player2,
-        duration1: 0,
-        duration2: 0
-      },
-      lightscreen: { 
-        player1: previousTurn.screens.lightscreen.player1, 
-        player2: previousTurn.screens.lightscreen.player2,
-        duration1: 0,
-        duration2: 0
-      },
-      auroraveil: { 
-        player1: previousTurn.screens.auroraveil.player1, 
-        player2: previousTurn.screens.auroraveil.player2,
-        duration1: 0,
-        duration2: 0
-      }
+  const previousTurn = turns[currentTurn - 1];
+  
+  // Process weather update (existing code)
+  let newWeather = { condition: "", duration: 0 };
+  if (previousTurn.weather && previousTurn.weather.duration > 0) {
+    const weatherDuration = previousTurn.turn_number >= 1 ? previousTurn.weather.duration - 1 : previousTurn.weather.duration;
+    newWeather = {
+      condition: previousTurn.weather.condition,
+      duration: weatherDuration > 0 ? weatherDuration : 0
     };
-
-    // For each screen type and for each player, decrement the duration
-    ['reflect', 'lightscreen', 'auroraveil'].forEach(screen => {
-      ['player1', 'player2'].forEach(player => {
-        let durationKey = "duration" + (player === "player1" ? "1" : "2");
-        let prevDuration = previousTurn.screens[screen][durationKey];
-        if (prevDuration && prevDuration > 0) {
-          let newDuration = (previousTurn.turn_number >= 1) ? prevDuration - 1 : prevDuration;
-          newScreens[screen][durationKey] = newDuration > 0 ? newDuration : 0;
-          // If duration drops to 0, set the screen to false
-          if (newDuration <= 0) {
-            newScreens[screen][player] = false;
-          } else {
-            newScreens[screen][player] = previousTurn.screens[screen][player];
-          }
-        }
-      });
-    });
-
-    // Decrement tailwind durations per player
-    let newTailwind = {
-      player1: previousTurn.tailwind.player1,
-      player2: previousTurn.tailwind.player2,
-      duration1: 0,
-      duration2: 0
-    };
-
-    ['player1', 'player2'].forEach(player => {
-      let durationKey = "duration" + (player === "player1" ? "1" : "2");
-      let prevDuration = previousTurn.tailwind[durationKey];
-      if (prevDuration && prevDuration > 0) {
-        let newDuration = (previousTurn.turn_number >= 1) ? prevDuration - 1 : prevDuration;
-        newTailwind[durationKey] = newDuration > 0 ? newDuration : 0;
-        if (newDuration <= 0) {
-          newTailwind[player] = false;
-        } else {
-          newTailwind[player] = previousTurn.tailwind[player];
-        }
-      }
-    });
-
-    // Create a new object for the current turn
-    turns.push({
-      turnNumber: currentTurn,
-      startsWith: {
-        player1: JSON.parse(JSON.stringify(previousTurn.endsWith.player1)), // Deep copy
-        player2: JSON.parse(JSON.stringify(previousTurn.endsWith.player2)), // Deep copy
-      },
-      endsWith: {
-        player1: JSON.parse(JSON.stringify(previousTurn.endsWith.player1)), // Deep copy
-        player2: JSON.parse(JSON.stringify(previousTurn.endsWith.player2)), // Deep copy
-      },
-      field: {
-        terrain: newTerrain,
-        duration: newFieldDuration,
-      },
-      weather: {
-        condition: newWeather,
-        duration: newWeatherDuration,
-      },
-      room: newRoom, // Include the room property
-      screens: newScreens,
-      tailwind: newTailwind,
-      revealedPokemon: {
-        player1: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player1)), // Deep copy
-        player2: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player2)), // Deep copy
-      }
-    });
+    if (newWeather.duration === 0) console.log(`Weather ${newWeather.condition} ended.`);
   }
+  
+  // Process field update (existing code)
+  let newField = { terrain: "", duration: 0 };
+  if (previousTurn.field && previousTurn.field.duration > 0) {
+    const fieldDuration = previousTurn.turn_number >= 1 ? previousTurn.field.duration - 1 : previousTurn.field.duration;
+    newField = {
+      terrain: previousTurn.field.terrain,
+      duration: fieldDuration > 0 ? fieldDuration : 0
+    };
+    if (newField.duration === 0) console.log(`Terrain ${newField.terrain} ended.`);
+  }
+  
+  // Process room update (existing code)
+  let newRoom = { condition: "", duration: 0 };
+  if (previousTurn.room && previousTurn.room.duration > 0) {
+    const roomDuration = previousTurn.turn_number >= 1 ? previousTurn.room.duration - 1 : previousTurn.room.duration;
+    newRoom = {
+      condition: previousTurn.room.condition,
+      duration: roomDuration > 0 ? roomDuration : 0
+    };
+    if (newRoom.duration === 0) console.log(`Room ${newRoom.condition} ended.`);
+  }
+  
+  // Process screens update for each type and each player
+  let newScreens = {
+    reflect: { player1: previousTurn.screens.reflect.player1, player2: previousTurn.screens.reflect.player2, duration1: 0, duration2: 0 },
+    lightscreen: { player1: previousTurn.screens.lightscreen.player1, player2: previousTurn.screens.lightscreen.player2, duration1: 0, duration2: 0 },
+    auroraveil: { player1: previousTurn.screens.auroraveil.player1, player2: previousTurn.screens.auroraveil.player2, duration1: 0, duration2: 0 }
+  };
 
+  ['reflect', 'lightscreen', 'auroraveil'].forEach(screen => {
+    ['player1', 'player2'].forEach(player => {
+      const durationKey = "duration" + (player === "player1" ? "1" : "2");
+      const prevDuration = previousTurn.screens[screen][durationKey];
+      if (prevDuration && prevDuration > 0) {
+        const newDuration = previousTurn.turn_number >= 1 ? prevDuration - 1 : prevDuration;
+        newScreens[screen][durationKey] = newDuration > 0 ? newDuration : 0;
+        if (newDuration <= 0) {
+          newScreens[screen][player] = false;
+        } else {
+          newScreens[screen][player] = previousTurn.screens[screen][player];
+        }
+      }
+    });
+  });
+  
+  // Process tailwind update for each player
+  let newTailwind = {
+    player1: previousTurn.tailwind.player1,
+    player2: previousTurn.tailwind.player2,
+    duration1: 0,
+    duration2: 0
+  };
+
+  ['player1', 'player2'].forEach(player => {
+    const durationKey = "duration" + (player === "player1" ? "1" : "2");
+    const prevDuration = previousTurn.tailwind[durationKey];
+    if (prevDuration && prevDuration > 0) {
+      const newDuration = previousTurn.turn_number >= 1 ? prevDuration - 1 : prevDuration;
+      newTailwind[durationKey] = newDuration > 0 ? newDuration : 0;
+      if (newDuration <= 0) {
+        newTailwind[player] = false;
+      } else {
+        newTailwind[player] = previousTurn.tailwind[player];
+      }
+      console.log(`Tailwind on ${player} has ${newTailwind[durationKey]} turns left`);
+    }
+  });
+  
+  // Build new turn state incorporating updates
+  turns.push({
+    turn_number: currentTurn,
+    startsWith: {
+      player1: JSON.parse(JSON.stringify(previousTurn.endsWith.player1)),
+      player2: JSON.parse(JSON.stringify(previousTurn.endsWith.player2)),
+    },
+    endsWith: {
+      player1: [],
+      player2: [],
+    },
+    field: newField,
+    weather: newWeather,
+    room: newRoom,
+    screens: newScreens,
+    tailwind: newTailwind,
+    revealedPokemon: {
+      player1: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player1)),
+      player2: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player2)),
+    }
+  });
+  
+  console.log(`Start of turn ${currentTurn}`);
+  console.log(`Terrain left: ${newField.duration}`);
+  console.log(`Weather left: ${newWeather.duration}`);
+  console.log(`Room left: ${newRoom.duration}`);
+  console.log(`Reflect left: ${newScreens.reflect.duration1} ${newScreens.reflect.duration2}`);
+  console.log(`Lightscreen left: ${newScreens.lightscreen.duration1} ${newScreens.lightscreen.duration2}`);
+  console.log(`Auroraveil left: ${newScreens.auroraveil.duration1} ${newScreens.auroraveil.duration2}`);
+  console.log(`Tailwind left: ${newTailwind.duration1} ${newTailwind.duration2}`);
+  
   return turns;
 }
 
@@ -988,6 +916,30 @@ function processRoom(currentTurn, fieldMatch, turns, line) {
         console.log(`Room effect set to: ${effect} with duration: ${initialDuration}`);
       }
     }
+  }
+}
+
+function processSideStart(currentTurn, sideStartMatch, turns) {
+  const playerNumber = sideStartMatch[1];
+  //console.log("Player number:", playerNumber);
+  const playerName = sideStartMatch[2].trim();
+  //console.log("Player name:", playerName);
+  const effectName = sideStartMatch[3].trim().toLowerCase();
+  //console.log("Effect name:", effectName);
+  const side = playerNumber === "1" ? "player1" : "player2";
+
+  console.log(`Side start detected for ${side} (${playerName}), effect: ${effectName}`);
+
+  if (effectName === "light screen") {
+    processLightscreen(currentTurn, side, turns, sideStartMatch);
+  } else if (effectName === "reflect") {
+    processReflect(currentTurn, side, turns, sideStartMatch);
+  } else if (effectName === "aurora veil") {
+    processAuroraVeil(currentTurn, side, turns, sideStartMatch);
+  } else if (effectName === "tailwind") {
+    processTailwind(currentTurn, side, turns, sideStartMatch);
+  } else {
+    console.log("Unhandled sidestart effect:", effectName);
   }
 }
 
