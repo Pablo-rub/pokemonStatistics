@@ -384,12 +384,12 @@ function processTurn(currentTurn, turns) {
   turns.push({
     turn_number: currentTurn,
     startsWith: {
-      player1: JSON.parse(JSON.stringify(previousTurn.endsWith.player1)),
-      player2: JSON.parse(JSON.stringify(previousTurn.endsWith.player2)),
+      player1: Array.isArray(previousTurn.endsWith.player1) ? [...previousTurn.endsWith.player1] : ["none", "none"],
+      player2: Array.isArray(previousTurn.endsWith.player2) ? [...previousTurn.endsWith.player2] : ["none", "none"]
     },
     endsWith: {
-      player1: [],
-      player2: [],
+      player1: ["none", "none"],
+      player2: ["none", "none"]
     },
     field: newField,
     weather: newWeather,
