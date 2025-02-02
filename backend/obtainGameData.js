@@ -5,6 +5,7 @@ const axios = require("axios");
 const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
 
 //todo: objects for weathers, terrains, rooms, screens, etc.
+//todo: fix startswith
 
 // Initialize the BigQuery client
 const bigQuery = new BigQuery({keyFilename});
@@ -275,10 +276,12 @@ app.post("/replays", async (req, res) => {
 
       // Rename the names of the variables to match the BigQuery schema
       const snakeCaseData = toSnakeCase(replayData);
-      //console.log("Replay in snake case", snakeCaseData);
-      //console.log(snakeCaseData.turns[4].revealed_pokemon.player1);
-    
-      // Save the replay data in BigQuery
+      
+      // Add detailed logging of snakeCaseData
+      console.log("Full replay data after snake case conversion:");
+      console.log(JSON.stringify(snakeCaseData, null, 2));
+
+      // Save the replay data in BigQuery 
       saveReplay(snakeCaseData);
       res.status(200).send("Replay saved successfully");
 
@@ -399,7 +402,7 @@ function processTurn(currentTurn, turns) {
     }
   });
   
-  console.log(`Start of turn ${currentTurn}`);
+  //console.log(`Start of turn ${currentTurn}`);
   //console.log(`Terrain left: ${newField.duration}`);
   //console.log(`Weather left: ${newWeather.duration}`);
   //console.log(`Room left: ${newRoom.duration}`);
@@ -480,9 +483,9 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
   let oldMon = turns[currentTurn].endsWith[player][slot] || turns[currentTurn].startsWith[player][slot] || "none";
 
   if (oldMon !== "none") {
-  console.log("Switching out", oldMon, "for", pokemonName, "for", player);
+    //console.log("Switching out", oldMon, "for", pokemonName, "for", player);
   } else {
-  console.log("Switching", pokemonName, "for", player);
+    //console.log("Switching", pokemonName, "for", player);
   }
   
   // Reset volatile on whoever was in this slot
@@ -669,7 +672,7 @@ function processVolatileStart(currentTurn, volatileMatch, turns) {
   }
 }
 
-// Increments volatile turn counters each turn
+// Modify incrementVolatileTurnCounters to not increment protect counter automatically
 function incrementVolatileTurnCounters(turns) {
   if (!turns.length) return;
   const current = turns[turns.length - 1];
@@ -679,10 +682,6 @@ function incrementVolatileTurnCounters(turns) {
         p.volatileStatus.forEach((v) => {
           v.turnCounter++;
         });
-      }
-      
-      if (p.consecutiveProtectCounter !== undefined) {
-        p.consecutiveProtectCounter++;
       }
     });
   }
@@ -766,27 +765,27 @@ function processMove(currentTurn, moveMatch, turns) {
 
   const player = moveMatch[1].startsWith("p1") ? "player1" : "player2";
   const pokemonName = moveMatch[2];
-  const moveUsed = moveMatch[3];
+  const moveUsed = moveMatch[3].toLowerCase();
 
-  // Find the attacking Pokémon
+  // Find the Pokémon in the current turn's revealedPokemon
   const userPokemon = turns[currentTurn].revealedPokemon[player].find(
     (p) => p && p.name === pokemonName
   );
   if (!userPokemon) return;
 
-  // Initialize protect counter
+  // Initialize protect counter if undefined
   if (userPokemon.consecutiveProtectCounter === undefined) {
     userPokemon.consecutiveProtectCounter = 0;
   }
 
-  // Increment or reset protect counter
-  if (protectMoves.includes(moveUsed.toLowerCase())) {
-    userPokemon.consecutiveProtectCounter += 1;
+  // Update protect counter based on move used
+  if (protectMoves.includes(moveUsed)) {
+    userPokemon.consecutiveProtectCounter++;
   } else {
     userPokemon.consecutiveProtectCounter = 0;
   }
 
-  // Record the last move used by userPokemon
+  // Record the last move used
   userPokemon.lastMoveUsed = moveUsed;
 
   // Identify the target (simplified to the opponent's first slot)
