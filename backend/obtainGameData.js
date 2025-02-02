@@ -102,10 +102,10 @@ app.post("/replays", async (req, res) => {
 
       const turnMatch = line.match(/\|turn\|(\d+)/);
       const switchMatchesG = line.match(
-        /\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)(?:, ([MF])\|)?(\d+)\/(\d+)/
+        /\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)(?:, ([MF]))?(?:, shiny)?\|(\d+)\/(\d+)/
       );
       const switchMatchesNG = line.match(
-        /\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)\|(\d+)\/(\d+)/
+        /\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)(?:, shiny)?\|(\d+)\/(\d+)/
       );
       let switchMatches = switchMatchesG || switchMatchesNG;
       const itemMatchActivate = line.match(
@@ -165,10 +165,9 @@ app.post("/replays", async (req, res) => {
         currentTurn = parseInt(turnMatch[1]);
         turns = processTurn(currentTurn, turns);
         incrementVolatileTurnCounters(turns);
-        //console.log("Start of turn", turnMatch[1]);
       }
       if (switchMatches) { // Detect active Pokémon switches and update revealed Pokémon if necessary
-        console.log("Switch detected");
+        //console.log("Switch detected");
         processSwitch(
           currentTurn,
           switchMatches,
@@ -307,7 +306,7 @@ function processTurn(currentTurn, turns) {
       condition: previousTurn.weather.condition,
       duration: weatherDuration > 0 ? weatherDuration : 0
     };
-    if (newWeather.duration === 0) console.log(`Weather ${newWeather.condition} ended.`);
+    if (newWeather.duration === 0); //console.log(`Weather ${newWeather.condition} ended.`);
   }
   
   // Process field update (existing code)
@@ -318,7 +317,7 @@ function processTurn(currentTurn, turns) {
       terrain: previousTurn.field.terrain,
       duration: fieldDuration > 0 ? fieldDuration : 0
     };
-    if (newField.duration === 0) console.log(`Terrain ${newField.terrain} ended.`);
+    if (newField.duration === 0); //console.log(`Terrain ${newField.terrain} ended.`);
   }
   
   // Process room update (existing code)
@@ -329,7 +328,7 @@ function processTurn(currentTurn, turns) {
       condition: previousTurn.room.condition,
       duration: roomDuration > 0 ? roomDuration : 0
     };
-    if (newRoom.duration === 0) console.log(`Room ${newRoom.condition} ended.`);
+    if (newRoom.duration === 0); //console.log(`Room ${newRoom.condition} ended.`);
   }
   
   // Process screens update for each type and each player
@@ -374,7 +373,7 @@ function processTurn(currentTurn, turns) {
       } else {
         newTailwind[player] = previousTurn.tailwind[player];
       }
-      console.log(`Tailwind on ${player} has ${newTailwind[durationKey]} turns left`);
+      //console.log(`Tailwind on ${player} has ${newTailwind[durationKey]} turns left`);
     }
   });
   
@@ -401,13 +400,13 @@ function processTurn(currentTurn, turns) {
   });
   
   console.log(`Start of turn ${currentTurn}`);
-  console.log(`Terrain left: ${newField.duration}`);
-  console.log(`Weather left: ${newWeather.duration}`);
-  console.log(`Room left: ${newRoom.duration}`);
-  console.log(`Reflect left: ${newScreens.reflect.duration1} ${newScreens.reflect.duration2}`);
-  console.log(`Lightscreen left: ${newScreens.lightscreen.duration1} ${newScreens.lightscreen.duration2}`);
-  console.log(`Auroraveil left: ${newScreens.auroraveil.duration1} ${newScreens.auroraveil.duration2}`);
-  console.log(`Tailwind left: ${newTailwind.duration1} ${newTailwind.duration2}`);
+  //console.log(`Terrain left: ${newField.duration}`);
+  //console.log(`Weather left: ${newWeather.duration}`);
+  //console.log(`Room left: ${newRoom.duration}`);
+  //console.log(`Reflect left: ${newScreens.reflect.duration1} ${newScreens.reflect.duration2}`);
+  //console.log(`Lightscreen left: ${newScreens.lightscreen.duration1} ${newScreens.lightscreen.duration2}`);
+  //console.log(`Auroraveil left: ${newScreens.auroraveil.duration1} ${newScreens.auroraveil.duration2}`);
+  //console.log(`Tailwind left: ${newTailwind.duration1} ${newTailwind.duration2}`);
   
   return turns;
 }
@@ -475,11 +474,18 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
   const slotOwner = switchMatches[1];
   const player = slotOwner.startsWith("p1") ? "player1" : "player2";
   const pokemonName = switchMatches[2];
-  console.log("Switching", pokemonName, "for", player);
   const slot = slotOwner.endsWith("a") ? 0 : 1;
+  
+  // In processSwitch(), replace the oldMon assignment with the following:
+  let oldMon = turns[currentTurn].endsWith[player][slot] || turns[currentTurn].startsWith[player][slot] || "none";
 
+  if (oldMon !== "none") {
+  console.log("Switching out", oldMon, "for", pokemonName, "for", player);
+  } else {
+  console.log("Switching", pokemonName, "for", player);
+  }
+  
   // Reset volatile on whoever was in this slot
-  const oldMon = turns[currentTurn].endsWith[player][slot];
   if (oldMon) {
     turns[currentTurn].revealedPokemon[player] =
       turns[currentTurn].revealedPokemon[player].map((p) =>
@@ -508,15 +514,15 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
       item: pInfo?.item || "",
       remainingHp: 100,
       volatileStatus: [],
-      nonVolatileStatus: "",
+      nonVolatileStatus: "none",
       stats: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 },
       tera: { type: pInfo?.tera_type || "", active: false },
-      fightingStatus: "",
+      fightingStatus: "ok",
       consecutiveProtectCounter: 0,
       abilitySuppressed: false,
-      lastMoveUsed: "",
+      lastMoveUsed: "none",
       mimicUsed: false,
-      copiedMove: "",
+      copiedMove: "none",
       transformed: false
     };
 
@@ -530,6 +536,7 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
 
   // Update active Pokémon in endsWith
   turns[currentTurn].endsWith[player][slot] = pokemon.name;
+  //console.log(turns[currentTurn].endsWith[player][slot]);
   return turns;
 }
 
@@ -558,7 +565,7 @@ function processDamage(
   const player = damageMatch[1].startsWith("p1") ? "player1" : "player2";
   const pokemonName = damageMatch[2];
   const damageInfo = damageMatch[3];
-  console.log("Damage info", damageInfo);
+  //console.log("Damage info", damageInfo);
   
   let remainingHp, newFightingStatus;
   if (damageInfo === "0 fnt") {
@@ -874,7 +881,7 @@ function processWeather(currentTurn, weatherMatch, turns, line) {
       duration: initialDuration
     };
     
-    console.log(`Weather changed to: ${newCondition} with duration: ${initialDuration}`);
+    //console.log(`Weather changed to: ${newCondition} with duration: ${initialDuration}`);
   }
 }
 
@@ -889,7 +896,7 @@ function processField(currentTurn, fieldMatch, turns) {
       duration: initialDuration
     };
     
-    console.log(`Terrain changed to: ${terrain} with duration: ${initialDuration}`);
+    //console.log(`Terrain changed to: ${terrain} with duration: ${initialDuration}`);
   }
 }
 
@@ -906,14 +913,14 @@ function processRoom(currentTurn, fieldMatch, turns, line) {
       // If the same room effect is already active, cancel (delete) it
       if (turns[currentTurn].room.condition === effect) {
         turns[currentTurn].room = { condition: "", duration: 0 };
-        console.log(`${effect} cancelled.`);
+        //console.log(`${effect} cancelled.`);
       } else {
         // Otherwise, override the previous room effect with the new one
         turns[currentTurn].room = {
           condition: effect,
           duration: initialDuration
         };
-        console.log(`Room effect set to: ${effect} with duration: ${initialDuration}`);
+        //console.log(`Room effect set to: ${effect} with duration: ${initialDuration}`);
       }
     }
   }
@@ -928,7 +935,7 @@ function processSideStart(currentTurn, sideStartMatch, turns) {
   //console.log("Effect name:", effectName);
   const side = playerNumber === "1" ? "player1" : "player2";
 
-  console.log(`Side start detected for ${side} (${playerName}), effect: ${effectName}`);
+  //console.log(`Side start detected for ${side} (${playerName}), effect: ${effectName}`);
 
   if (effectName === "light screen") {
     processLightscreen(currentTurn, side, turns, sideStartMatch);
@@ -950,21 +957,21 @@ function processReflect(currentTurn, side, turns, line) {
   const initialDuration = (currentTurn === 0) ? 6 : 5;
   turns[currentTurn].screens.reflect[side] = true;
   turns[currentTurn].screens.reflect["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
-  console.log(`Reflect set for ${side} with duration: ${initialDuration}`);
+  //console.log(`Reflect set for ${side} with duration: ${initialDuration}`);
 }
 
 function processLightscreen(currentTurn, side, turns, line) {
   const initialDuration = (currentTurn === 0) ? 6 : 5;
   turns[currentTurn].screens.lightscreen[side] = true;
   turns[currentTurn].screens.lightscreen["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
-  console.log(`Light Screen set for ${side} with duration: ${initialDuration}`);
+  //console.log(`Light Screen set for ${side} with duration: ${initialDuration}`);
 }
 
 function processAuroraVeil(currentTurn, side, turns, line) {
   const initialDuration = (currentTurn === 0) ? 6 : 5;
   turns[currentTurn].screens.auroraveil[side] = true;
   turns[currentTurn].screens.auroraveil["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
-  console.log(`Aurora Veil set for ${side} with duration: ${initialDuration}`);
+  //console.log(`Aurora Veil set for ${side} with duration: ${initialDuration}`);
 }
 
 // Create a function to process tailwind effects for a given player side
@@ -972,7 +979,7 @@ function processTailwind(currentTurn, side, turns, line) {
   const initialDuration = (currentTurn === 0) ? 6 : 5;
   turns[currentTurn].tailwind[side] = true;
   turns[currentTurn].tailwind["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
-  console.log(`Tailwind set for ${side} with duration: ${initialDuration}`);
+  //console.log(`Tailwind set for ${side} with duration: ${initialDuration}`);
 }
 
 // New function to process fieldend: clears terrain effects
@@ -982,7 +989,7 @@ function processFieldEnd(currentTurn, line, turns) {
       terrain: "",
       duration: 0
     };
-    console.log("Field ended (terrain cleared).");
+    //console.log("Field ended (terrain cleared).");
   }
 }
 
@@ -1000,7 +1007,7 @@ function processSideEnd(currentTurn, line, turns) {
     turns[currentTurn].screens.reflect = { player1: false, player2: false, duration1: 0, duration2: 0 };
     turns[currentTurn].screens.lightscreen = { player1: false, player2: false, duration1: 0, duration2: 0 };
     turns[currentTurn].screens.auroraveil = { player1: false, player2: false, duration1: 0, duration2: 0 };
-    console.log("Side effects ended (tailwind and screens cleared).");
+    //console.log("Side effects ended (tailwind and screens cleared).");
   }
 }
 
