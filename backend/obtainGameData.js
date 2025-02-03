@@ -278,8 +278,8 @@ app.post("/replays", async (req, res) => {
       const snakeCaseData = toSnakeCase(replayData);
       
       // Add detailed logging of snakeCaseData
-      console.log("Full replay data after snake case conversion:");
-      console.log(JSON.stringify(snakeCaseData, null, 2));
+      //console.log("Full replay data after snake case conversion:");
+      //console.log(JSON.stringify(snakeCaseData, null, 2));
 
       // Save the replay data in BigQuery 
       saveReplay(snakeCaseData);
@@ -384,12 +384,24 @@ function processTurn(currentTurn, turns) {
   turns.push({
     turn_number: currentTurn,
     startsWith: {
-      player1: Array.isArray(previousTurn.endsWith.player1) ? [...previousTurn.endsWith.player1] : ["none", "none"],
-      player2: Array.isArray(previousTurn.endsWith.player2) ? [...previousTurn.endsWith.player2] : ["none", "none"]
+      player1: [
+        previousTurn.endsWith.player1[0] || "none",
+        previousTurn.endsWith.player1[1] || "none"
+      ],
+      player2: [
+        previousTurn.endsWith.player2[0] || "none", 
+        previousTurn.endsWith.player2[1] || "none"
+      ]
     },
     endsWith: {
-      player1: ["none", "none"],
-      player2: ["none", "none"]
+      player1: [
+        previousTurn.endsWith.player1[0] || "none",
+        previousTurn.endsWith.player1[1] || "none"
+      ],
+      player2: [
+        previousTurn.endsWith.player2[0] || "none", 
+        previousTurn.endsWith.player2[1] || "none"
+      ]
     },
     field: newField,
     weather: newWeather,
@@ -402,7 +414,7 @@ function processTurn(currentTurn, turns) {
     }
   });
   
-  //console.log(`Start of turn ${currentTurn}`);
+  console.log(`Start of turn ${currentTurn}`);
   //console.log(`Terrain left: ${newField.duration}`);
   //console.log(`Weather left: ${newWeather.duration}`);
   //console.log(`Room left: ${newRoom.duration}`);
@@ -411,6 +423,10 @@ function processTurn(currentTurn, turns) {
   //console.log(`Auroraveil left: ${newScreens.auroraveil.duration1} ${newScreens.auroraveil.duration2}`);
   //console.log(`Tailwind left: ${newTailwind.duration1} ${newTailwind.duration2}`);
   
+  // Log active Pokémon for debugging
+  console.log('startsWith p1:', turns[currentTurn].startsWith.player1);
+  console.log('startsWith p2:', turns[currentTurn].startsWith.player2);
+
   return turns;
 }
 
