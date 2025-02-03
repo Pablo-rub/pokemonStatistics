@@ -5,7 +5,7 @@ const axios = require("axios");
 const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
 
 //todo: objects for weathers, terrains, rooms, screens, etc.
-//todo: fix startswith
+//todo: new attribute moveDone for each pokemon in each turn
 
 // Initialize the BigQuery client
 const bigQuery = new BigQuery({keyFilename});
@@ -297,7 +297,6 @@ app.post("/replays", async (req, res) => {
 });
 
 // In processTurn, add logging for the remaining turns of side effects (screens and tailwind)
-
 function processTurn(currentTurn, turns) {
   const previousTurn = turns[currentTurn - 1];
   
@@ -413,6 +412,15 @@ function processTurn(currentTurn, turns) {
       player2: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player2)),
     }
   });
+
+  // Reset the moveDone attribute for each Pokémon
+  for (const player of ['player1', 'player2']) {
+    turns[currentTurn].revealedPokemon[player].forEach(p => {
+      if (p) {
+        p.moveDone = "none";
+      }
+    });
+  }
   
   console.log(`Start of turn ${currentTurn}`);
   //console.log(`Terrain left: ${newField.duration}`);
@@ -497,19 +505,16 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
   
   // In processSwitch(), replace the oldMon assignment with the following:
   let oldMon = turns[currentTurn].endsWith[player][slot] || turns[currentTurn].startsWith[player][slot] || "none";
+  oldMon.moveDone = "switch out to " + pokemonName;
 
   if (oldMon !== "none") {
-    //console.log("Switching out", oldMon, "for", pokemonName, "for", player);
-  } else {
-    //console.log("Switching", pokemonName, "for", player);
-  }
-  
-  // Reset volatile on whoever was in this slot
-  if (oldMon) {
     turns[currentTurn].revealedPokemon[player] =
       turns[currentTurn].revealedPokemon[player].map((p) =>
         p && p.name === oldMon ? { ...p, volatileStatus: [] } : p
       );
+    //console.log("Switching out", oldMon, "for", pokemonName, "for", player);
+  } else {
+    //console.log("Switching", pokemonName, "for", player);
   }
 
   // Check if this Pokémon is already revealed
@@ -542,7 +547,8 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
       lastMoveUsed: "none",
       mimicUsed: false,
       copiedMove: "none",
-      transformed: false
+      transformed: false,
+      moveDone: "none"
     };
 
     turns[currentTurn].revealedPokemon[player].push(pokemon);
@@ -788,6 +794,8 @@ function processMove(currentTurn, moveMatch, turns) {
     (p) => p && p.name === pokemonName
   );
   if (!userPokemon) return;
+
+  userPokemon.moveDone = moveUsed;
 
   // Initialize protect counter if undefined
   if (userPokemon.consecutiveProtectCounter === undefined) {
