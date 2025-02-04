@@ -141,9 +141,13 @@ app.post("/replays", async (req, res) => {
       let abilityMatch = line.match(
         /\|-ability\|(p1[ab]|p2[ab]): (.+)\|(.+)\|(.+)/
       );
-      let moveMatch = line.match(
+      let moveOkMatch = line.match(
         /\|move\|(p1[ab]|p2[ab]): (.+)\|(.+?)\|(p1[ab]|p2[ab]): (.+)/
       );
+      let moveFailMatch = line.match(
+        /\|move\|(p1[ab]|p2[ab]): (.+)\|(.+?)\|\[still\]/
+      );
+      let moveMatch = moveOkMatch || moveFailMatch;
       let damageMatch = line.match(/\|-damage\|(p1[ab]|p2[ab]): (.+?)\|(.+)/);
       const healMatch = line.match(
         /\|-heal\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(?:\[from\] (.+?))?(?:\|\[of\] (.+?))?/
@@ -176,12 +180,7 @@ app.post("/replays", async (req, res) => {
       }
       if (switchMatches) { // Detect active Pokémon switches and update revealed Pokémon if necessary
         console.log("Switch detected");
-        processSwitch(
-          currentTurn,
-          switchMatches,
-          turns,
-          teams
-        );
+        processSwitch(currentTurn, switchMatches, turns, teams);
         //console.log("Turn processed");
       } 
       if (itemMatch) { // Detect the usage of an item in different formats
@@ -191,7 +190,7 @@ app.post("/replays", async (req, res) => {
         //console.log(endItemMatch);
         processItem(currentTurn, endItemMatch, turns);
       } 
-      if (moveMatch) { // Detect the usage of a move
+      if (moveMatch || moveFailMatch) { // Detect the usage of a move
         processMove(currentTurn, moveMatch, turns);
       } 
       if (damageMatch) { // Update the remaining HP of a Pokémon in each turn
@@ -512,7 +511,7 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
     
   // Update movesDone for the switching-out Pokémon
   if (oldMonName && oldMonName !== "none") {
-    turns[currentTurn].movesDone[player][slot] = `Switch to ${newPokemonName}`;
+    turns[currentTurn].movesDone[player][slot] = `switch to ${newPokemonName}`;
     console.log(
       `Move done updated for ${player} slot ${slot}: ${turns[currentTurn].movesDone[player][slot]}`
     );
@@ -782,7 +781,7 @@ function processMove(currentTurn, moveMatch, turns) {
 
   const player = moveMatch[1].startsWith("p1") ? "player1" : "player2";
   const pokemonName = moveMatch[2];
-  const moveUsed = moveMatch[3].toLowerCase();
+  const moveUsed = moveMatch[3].toLowerCase().replace(/\|.*$/, ''); // Remove anything after a |
 
   // Find which slot the moving Pokémon occupies in the active (startsWith) array.
   const slot = turns[currentTurn].startsWith[player].indexOf(pokemonName);
