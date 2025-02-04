@@ -615,11 +615,7 @@ function processItem(currentTurn, itemMatch, turns) {
 }
 
 // Process the damage received by a Pokémon
-function processDamage(
-  currentTurn,
-  damageMatch,
-  turns
-) {
+function processDamage(currentTurn, damageMatch, turns) {
   const player = damageMatch[1].startsWith("p1") ? "player1" : "player2";
   const pokemonName = damageMatch[2];
   const damageInfo = damageMatch[3];
@@ -630,6 +626,17 @@ function processDamage(
     newFightingStatus = "fainted";
     remainingHp = 0;
     //console.log(pokemonName, "fainted");
+
+    // Find which slot this Pokemon occupies
+    const slot = turns[currentTurn].startsWith[player].indexOf(pokemonName);
+    if (slot !== -1) {
+      // If there's already a move recorded, append (fainted), otherwise just set to "fainted"
+      if (turns[currentTurn].movesDone[player][slot]) {
+        turns[currentTurn].movesDone[player][slot] += " (fainted)";
+      } else {
+        turns[currentTurn].movesDone[player][slot] = "fainted";
+      }
+    }
   } else {
     // Update the remaining HP of the Pokémon in revealedPokemon
     remainingHp = parseInt(damageInfo.split("/")[0]);
