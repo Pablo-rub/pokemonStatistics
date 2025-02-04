@@ -7,8 +7,6 @@ const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistic
 //todo: objects for weathers, terrains, rooms, screens, etc.
 //todo: u-turn be like: used move u-turn, switch to [pokemon];
 // if fainted, switch to [pokemon] (fainted)
-// if a move fails, still keep the move in the movesDone array
-// if a pokemon is asleep and do not switch, show: (continue sleeping)
 
 // Initialize the BigQuery client
 const bigQuery = new BigQuery({keyFilename});
@@ -436,6 +434,46 @@ function processTurn(currentTurn, turns) {
   //console.log('endsWith p1:', turns[currentTurn].endsWith.player1);
   //console.log('endsWith p2:', turns[currentTurn].endsWith.player2);
 
+  // After initializing the turn, check for sleeping Pokémon and update their movesDone
+  for (const player of ['player1', 'player2']) {
+    // Check each active slot (0 and 1)
+    for (let slot = 0; slot < 2; slot++) {
+      const pokemonName = turns[currentTurn].startsWith[player][slot];
+      if (pokemonName && pokemonName !== "none") {
+        const pokemon = turns[currentTurn].revealedPokemon[player].find(
+          p => p && p.name === pokemonName
+        );
+        
+        // If Pokémon exists, is sleeping, and hasn't made a move yet
+        if (pokemon && 
+            pokemon.nonVolatileStatus === "slp" && 
+            (!turns[currentTurn].movesDone[player][slot] || 
+             turns[currentTurn].movesDone[player][slot] === "")) {
+          turns[currentTurn].movesDone[player][slot] = "continue sleeping";
+        }
+      }
+    }
+  }
+
+  // Check for sleeping Pokémon at the start of each turn
+  for (const player of ['player1', 'player2']) {
+    // Check each active slot (0 and 1)
+    for (let slot = 0; slot < 2; slot++) {
+      const pokemonName = turns[currentTurn].startsWith[player][slot];
+      if (pokemonName && pokemonName !== "none") {
+        const pokemon = turns[currentTurn].revealedPokemon[player].find(
+          p => p && p.name === pokemonName
+        );
+        
+        // If Pokémon exists and is sleeping, mark it in movesDone
+        if (pokemon && pokemon.nonVolatileStatus === "slp") {
+          turns[currentTurn].movesDone[player][slot] = "sleeping";
+          console.log(`Move done updated for ${player} slot ${slot}: sleeping`);
+        }
+      }
+    }
+  }
+
   return turns;
 }
 
@@ -788,7 +826,7 @@ function processMove(currentTurn, moveMatch, turns) {
   if (slot === -1) return; // not active
   
   // Update movesDone for that Pokémon in the movesDone field.
-  turns[currentTurn].movesDone[player][slot] = `used ${moveUsed}`;
+  turns[currentTurn].movesDone[player][slot] = `${moveUsed}`;
   console.log(
     `Move done updated for ${player} slot ${slot}: ${turns[currentTurn].movesDone[player][slot]}`
   );
