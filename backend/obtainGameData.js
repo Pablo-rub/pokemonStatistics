@@ -5,7 +5,6 @@ const axios = require("axios");
 const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
 
 //todo: objects for weathers, terrains, rooms, screens, etc.
-// if fainted, switch to [pokemon] (fainted)
 
 // Initialize the BigQuery client
 const bigQuery = new BigQuery({keyFilename});
@@ -829,15 +828,29 @@ function processMove(currentTurn, moveMatch, turns) {
   const pokemonName = moveMatch[2];
   const moveUsed = moveMatch[3].toLowerCase().replace(/\|.*$/, ''); // Remove anything after a |
 
+  // Extract target info (for successful moves)
+  let targetInfo = "";
+  if (moveMatch.length > 4) {
+    const targetPlayer = moveMatch[4].startsWith("p1") ? "player1" : "player2";
+    const targetSlot = moveMatch[4].endsWith("a") ? 0 : 1;
+    // Get the original target from startsWith instead of the final Pokemon
+    const originalTarget = turns[currentTurn].startsWith[targetPlayer][targetSlot];
+    targetInfo = ` on ${originalTarget}`;
+  }
+
   // Find which slot the moving Pokémon occupies in the active (startsWith) array.
   const slot = turns[currentTurn].startsWith[player].indexOf(pokemonName);
   if (slot === -1) return; // not active
   
-  // Update movesDone for that Pokémon in the movesDone field.
-  turns[currentTurn].movesDone[player][slot] = `${moveUsed}`;
-  console.log(
-    `Move done updated for ${player} slot ${slot}: ${turns[currentTurn].movesDone[player][slot]}`
-  );
+  // Update movesDone with target info
+  if (moveMatch[0].includes("[spread]")) {
+    turns[currentTurn].movesDone[player][slot] = `${moveUsed} (spread)`;
+  } else if (moveMatch[0].includes("[still]")) {
+    turns[currentTurn].movesDone[player][slot] = `${moveUsed} (failed)`;
+  } else {
+    turns[currentTurn].movesDone[player][slot] = `${moveUsed}${targetInfo}`;
+  }
+  console.log(`Move done updated for ${player} slot ${slot}: ${turns[currentTurn].movesDone[player][slot]}`);
 
   // Find the Pokémon in the current turn's revealedPokemon
   const userPokemon = turns[currentTurn].revealedPokemon[player].find(
