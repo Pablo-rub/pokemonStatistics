@@ -5,7 +5,6 @@ const axios = require("axios");
 const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
 
 //todo: objects for weathers, terrains, rooms, screens, etc.
-//todo: u-turn be like: used move u-turn, switch to [pokemon];
 // if fainted, switch to [pokemon] (fainted)
 
 // Initialize the BigQuery client
@@ -445,10 +444,9 @@ function processTurn(currentTurn, turns) {
         );
         
         // If Pokémon exists, is sleeping, and hasn't made a move yet
-        if (pokemon && 
-            pokemon.nonVolatileStatus === "slp" && 
-            (!turns[currentTurn].movesDone[player][slot] || 
-             turns[currentTurn].movesDone[player][slot] === "")) {
+        if (pokemon && pokemon.nonVolatileStatus === "slp" && 
+            (!turns[currentTurn].movesDone[player][slot] 
+            || turns[currentTurn].movesDone[player][slot] === "")) {
           turns[currentTurn].movesDone[player][slot] = "continue sleeping";
         }
       }
@@ -549,10 +547,13 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
     
   // Update movesDone for the switching-out Pokémon
   if (oldMonName && oldMonName !== "none") {
-    turns[currentTurn].movesDone[player][slot] = `switch to ${newPokemonName}`;
-    console.log(
-      `Move done updated for ${player} slot ${slot}: ${turns[currentTurn].movesDone[player][slot]}`
-    );
+    if (turns[currentTurn].movesDone[player][slot] === "") {
+      turns[currentTurn].movesDone[player][slot] = `switch to ${newPokemonName}`;
+    } else {
+      turns[currentTurn].movesDone[player][slot] += `, switch to ${newPokemonName}`;
+    }
+
+    console.log(`Move done updated for ${player} slot ${slot}: ${turns[currentTurn].movesDone[player][slot]}`);
   }
   
   // Locate (or create) the new (switching-in) Pokémon.
