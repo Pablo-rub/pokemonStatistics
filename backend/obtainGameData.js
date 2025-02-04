@@ -168,7 +168,7 @@ app.post("/replays", async (req, res) => {
         incrementVolatileTurnCounters(turns);
       }
       if (switchMatches) { // Detect active Pokémon switches and update revealed Pokémon if necessary
-        //console.log("Switch detected");
+        console.log("Switch detected");
         processSwitch(
           currentTurn,
           switchMatches,
@@ -413,15 +413,18 @@ function processTurn(currentTurn, turns) {
     }
   });
 
-  // Reset the moveDone attribute for each Pokémon
+  // Reset moveDone only for active Pokemon
   for (const player of ['player1', 'player2']) {
-    turns[currentTurn].revealedPokemon[player].forEach(p => {
-      if (p) {
-        p.moveDone = "none";
+    turns[currentTurn].revealedPokemon[player].forEach(pokemon => {
+      if (pokemon) {
+        const isActive = turns[currentTurn].startsWith[player].includes(pokemon.name);
+        if (isActive) {
+          pokemon.moveDone = "none";
+        }
       }
     });
   }
-  
+
   console.log(`Start of turn ${currentTurn}`);
   //console.log(`Terrain left: ${newField.duration}`);
   //console.log(`Weather left: ${newWeather.duration}`);
@@ -430,10 +433,26 @@ function processTurn(currentTurn, turns) {
   //console.log(`Lightscreen left: ${newScreens.lightscreen.duration1} ${newScreens.lightscreen.duration2}`);
   //console.log(`Auroraveil left: ${newScreens.auroraveil.duration1} ${newScreens.auroraveil.duration2}`);
   //console.log(`Tailwind left: ${newTailwind.duration1} ${newTailwind.duration2}`);
-  
-  // Log active Pokémon for debugging
-  console.log('startsWith p1:', turns[currentTurn].startsWith.player1);
-  console.log('startsWith p2:', turns[currentTurn].startsWith.player2);
+  //console.log('startsWith p1:', turns[currentTurn].startsWith.player1);
+  //console.log('startsWith p2:', turns[currentTurn].startsWith.player2);
+  //console.log('endsWith p1:', turns[currentTurn].endsWith.player1);
+  //console.log('endsWith p2:', turns[currentTurn].endsWith.player2);
+  console.log(
+    'Move done set to:',
+    turns[currentTurn].startsWith.player1.map(name => {
+      const p = turns[currentTurn].revealedPokemon.player1.find(pokemon => pokemon.name === name);
+      return p ? p.moveDone : "unknown";
+    }),
+    'for player 1 because of the turn'
+  );
+  console.log(
+    'Move done set to:',
+    turns[currentTurn].startsWith.player2.map(name => {
+      const p = turns[currentTurn].revealedPokemon.player2.find(pokemon => pokemon.name === name);
+      return p ? p.moveDone : "unknown";
+    }),
+    'for player 2 because of the turn'
+  );
 
   return turns;
 }
@@ -498,49 +517,43 @@ function processShowteam(log) {
 
 // Process the switch of a Pokémon
 function processSwitch(currentTurn, switchMatches, turns, teams) {
-  const slotOwner = switchMatches[1];
+  const slotOwner = switchMatches[1]; // e.g., "p1a"
   const player = slotOwner.startsWith("p1") ? "player1" : "player2";
   const pokemonName = switchMatches[2];
   const slot = slotOwner.endsWith("a") ? 0 : 1;
-  
-  // In processSwitch(), replace the oldMon assignment with the following:
-  let oldMon = turns[currentTurn].endsWith[player][slot] || turns[currentTurn].startsWith[player][slot] || "none";
-  oldMon.moveDone = "switch out to " + pokemonName;
 
-  if (oldMon !== "none") {
-    turns[currentTurn].revealedPokemon[player] =
-      turns[currentTurn].revealedPokemon[player].map((p) =>
-        p && p.name === oldMon ? { ...p, volatileStatus: [] } : p
+  // Identify the old (switching-out) Pokémon from the active slot.
+  const oldMonName =
+    turns[currentTurn].endsWith[player][slot] ||
+    turns[currentTurn].startsWith[player][slot];
+  if (oldMonName && oldMonName !== "none") {
+    const oldPokemon = turns[currentTurn].revealedPokemon[player].find(
+      (p) => p && p.name === oldMonName
+    );
+    if (oldPokemon) {
+      oldPokemon.moveDone = `switched to ${pokemonName}`;
+      console.log(
+        `Move done set to: ${oldPokemon.moveDone} for ${oldPokemon.name} because of the switch`
       );
-    //console.log("Switching out", oldMon, "for", pokemonName, "for", player);
-  } else {
-    //console.log("Switching", pokemonName, "for", player);
+    }
   }
 
-  // Check if this Pokémon is already revealed
-  const isRevealed = turns[currentTurn].revealedPokemon[player].some(
-    (p) => p.name === pokemonName
+  // Locate (or create) the new (switching-in) Pokémon.
+  let newPokemon = turns[currentTurn].revealedPokemon[player].find(
+    (p) => p && p.name === pokemonName
   );
-
-  let pokemon;
-  if (!isRevealed) {
-    // Safely retrieve a matching Pokémon record from teams if it exists
-    let pInfo = undefined;
-    if (teams && teams[player]) {
-      pInfo = teams[player].find((m) => m.name === pokemonName);
-    }
-
-    // Fallback to default values if not found
-    pokemon = {
+  if (!newPokemon) {
+    // Create new Pokémon if not yet revealed.
+    newPokemon = {
       name: pokemonName,
-      moves: pInfo?.moves || [],
-      ability: pInfo?.ability || "",
-      item: pInfo?.item || "",
+      moves: [],
+      ability: "",
+      item: "",
       remainingHp: 100,
       volatileStatus: [],
       nonVolatileStatus: "none",
       stats: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 },
-      tera: { type: pInfo?.tera_type || "", active: false },
+      tera: { type: "", active: false },
       fightingStatus: "ok",
       consecutiveProtectCounter: 0,
       abilitySuppressed: false,
@@ -548,20 +561,19 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
       mimicUsed: false,
       copiedMove: "none",
       transformed: false,
-      moveDone: "none"
+      moveDone: "switched in"
     };
-
-    turns[currentTurn].revealedPokemon[player].push(pokemon);
+    turns[currentTurn].revealedPokemon[player].push(newPokemon);
+    console.log(`New Pokémon revealed: ${pokemonName}`);
+    console.log(`Move done set to: ${newPokemon.moveDone} for ${pokemonName} because of the entry`);
   } else {
-    // Already known, just find it
-    pokemon = turns[currentTurn].revealedPokemon[player].find(
-      (p) => p && p.name === pokemonName
-    );
+    // Update the new Pokémon's moveDone
+    newPokemon.moveDone = "switched in";
+    console.log(`Move done set to: ${newPokemon.moveDone} for ${pokemonName} because of the switch`);
   }
 
-  // Update active Pokémon in endsWith
-  turns[currentTurn].endsWith[player][slot] = pokemon.name;
-  //console.log(turns[currentTurn].endsWith[player][slot]);
+  // Update the active slot with the new Pokémon.
+  turns[currentTurn].endsWith[player][slot] = newPokemon.name;
   return turns;
 }
 
@@ -796,6 +808,7 @@ function processMove(currentTurn, moveMatch, turns) {
   if (!userPokemon) return;
 
   userPokemon.moveDone = moveUsed;
+  console.log("Move done set to:", userPokemon.moveDone, "for", userPokemon.name, "because of the move");
 
   // Initialize protect counter if undefined
   if (userPokemon.consecutiveProtectCounter === undefined) {
