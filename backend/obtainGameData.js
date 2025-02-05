@@ -4,8 +4,6 @@ const axios = require("axios");
 
 const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
 
-//todo: objects for weathers, terrains, rooms, screens, etc.
-
 // Initialize the BigQuery client
 const bigQuery = new BigQuery({keyFilename});
 
@@ -959,6 +957,31 @@ function processWeather(currentTurn, weatherMatch, turns, line) {
     const newCondition = weatherMatch[1];
     const initialDuration = (currentTurn === 0) ? 6 : 5;
     
+    // Check if the Pokemon setting the weather has a duration-extending item
+    const player = line.includes("p1") ? "player1" : "player2";
+    const pokemon = turns[currentTurn].revealedPokemon[player].find(p => {
+      return p.item === "Heat Rock" || p.item === "Damp Rock" || 
+             p.item === "Smooth Rock" || p.item === "Icy Rock";
+    });
+
+    // If Pokemon has relevant item, extend duration
+    if (pokemon) {
+      switch(pokemon.item) {
+        case "Damp Rock":
+          if (newCondition === "RainDance") initialDuration = currentTurn === 0 ? 9 : 8;
+          break;
+        case "Heat Rock":
+          if (newCondition === "SunnyDay") initialDuration = currentTurn === 0 ? 9 : 8;
+          break;
+        case "Smooth Rock":
+          if (newCondition === "Sandstorm") initialDuration = currentTurn === 0 ? 9 : 8;
+          break;
+        case "Icy Rock":
+          if (newCondition === "Hail") initialDuration = currentTurn === 0 ? 9 : 8;
+          break;
+      }
+    }
+
     // Always replace existing weather with new weather
     turns[currentTurn].weather = {
       condition: newCondition,
@@ -972,15 +995,20 @@ function processWeather(currentTurn, weatherMatch, turns, line) {
 function processField(currentTurn, fieldMatch, turns) {
   if (fieldMatch) {
     const terrain = fieldMatch[1];
-    const initialDuration = (currentTurn === 0) ? 6 : 5;
+    let initialDuration = (currentTurn === 0) ? 6 : 5;
+
+    // Check if any active Pokemon has Terrain Extender
+    const hasTerrainExtender = turns[currentTurn].revealedPokemon.player1.some(p => p.item === "Terrain Extender") ||
+                              turns[currentTurn].revealedPokemon.player2.some(p => p.item === "Terrain Extender");
+
+    if (hasTerrainExtender) {
+      initialDuration = currentTurn === 0 ? 9 : 8;
+    }
     
-    // Always replace existing terrain with new terrain
     turns[currentTurn].field = {
       terrain: terrain,
       duration: initialDuration
     };
-    
-    //console.log(`Terrain changed to: ${terrain} with duration: ${initialDuration}`);
   }
 }
 
@@ -1034,28 +1062,31 @@ function processSideStart(currentTurn, sideStartMatch, turns) {
   }
 }
 
-// Processing functions for screens (for when a screen move is detected)
-// Each function accepts the current turn, the side (player1 or player2), and sets the relevant screen status
+function processScreen(currentTurn, side, screenType, turns, line) {
+  let initialDuration = (currentTurn === 0) ? 6 : 5;
+  
+  // Check if setter has Light Clay
+  const player = side === "player1" ? "player1" : "player2";
+  const hasLightClay = turns[currentTurn].revealedPokemon[player].some(p => p.item === "Light Clay");
+  
+  if (hasLightClay) {
+    initialDuration = currentTurn === 0 ? 9 : 8;
+  }
+
+  turns[currentTurn].screens[screenType][side] = true;
+  turns[currentTurn].screens[screenType]["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
+}
+
 function processReflect(currentTurn, side, turns, line) {
-  // Assuming a match has been detected for Reflect via a regex outside this function
-  const initialDuration = (currentTurn === 0) ? 6 : 5;
-  turns[currentTurn].screens.reflect[side] = true;
-  turns[currentTurn].screens.reflect["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
-  //console.log(`Reflect set for ${side} with duration: ${initialDuration}`);
+  processScreen(currentTurn, side, "reflect", turns, line);
 }
 
 function processLightscreen(currentTurn, side, turns, line) {
-  const initialDuration = (currentTurn === 0) ? 6 : 5;
-  turns[currentTurn].screens.lightscreen[side] = true;
-  turns[currentTurn].screens.lightscreen["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
-  //console.log(`Light Screen set for ${side} with duration: ${initialDuration}`);
+  processScreen(currentTurn, side, "lightscreen", turns, line);
 }
 
 function processAuroraVeil(currentTurn, side, turns, line) {
-  const initialDuration = (currentTurn === 0) ? 6 : 5;
-  turns[currentTurn].screens.auroraveil[side] = true;
-  turns[currentTurn].screens.auroraveil["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
-  //console.log(`Aurora Veil set for ${side} with duration: ${initialDuration}`);
+  processScreen(currentTurn, side, "auroraveil", turns, line);
 }
 
 // Create a function to process tailwind effects for a given player side
