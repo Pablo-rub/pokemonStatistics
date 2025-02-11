@@ -22,11 +22,11 @@ app.post("/replays", async (req, res) => {
     const id = replayData.id;
 
     // Check if the replay is already in the database
-    /*const checkResponse = await axios.get(`http://localhost:5000/api/games/${id}`);
+    const checkResponse = await axios.get(`http://localhost:5000/api/games/${id}`);
     if (checkResponse.data.exists) {
       res.status(200).send("Replay already exists in the database");
       return;
-    }*/
+    }
 
     const format = replayData.format;
     const players = replayData.players;
