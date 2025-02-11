@@ -1,5 +1,6 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
+const puppeteer = require('puppeteer');
 
 async function getLatestFormat() {
     // it should has vgc and bo3
@@ -43,8 +44,9 @@ async function getReplaySearchUrl() {
 
       // Construct the URL
       const searchUrl = `https://replay.pokemonshowdown.com/?format=${format}`;
-      console.log("Using replay search URL:", searchUrl);
-      return searchUrl;
+      //console.log("Using replay search URL:", searchUrl);
+      
+      return { replaySearchUrl: searchUrl, format };
     } catch (error) {
       console.error(error);
     }
@@ -52,33 +54,36 @@ async function getReplaySearchUrl() {
 
   async function fetchReplayLinks() {
     try {
-      // Await the URL string returned by getReplaySearchUrl()
-      const replaySearchUrl = await getReplaySearchUrl();
-      // Fetch the HTML page from Pokemon Showdown replays
-      const response = await axios.get(replaySearchUrl);
-      const html = response.data;
-      const $ = cheerio.load(html);
-      const replayLinks = [];
+      const { replaySearchUrl, format } = await getReplaySearchUrl();
+      console.log("Fetching replays from:", replaySearchUrl);
+  
+      // Fetch the HTML page from Pokemon Showdown replays using Puppeteer
+      const browser = await puppeteer.launch();
+      const page = await browser.newPage();
+      await page.goto(replaySearchUrl, { waitUntil: 'networkidle0' });
       
-      // Assuming replay links are in <a> tags and hrefs start with "/"
-      $("a").each((index, element) => {
-        const href = $(element).attr("href");
-        if (href && href.startsWith("/")) {
-          const fullUrl = `https://replay.pokemonshowdown.com${href}`;
-          replayLinks.push(fullUrl);
-        }
-      });
+      // Scrape the replay links from the page
+      const replayLinks = await page.evaluate((format) => {
+        return Array.from(document.querySelectorAll('ul.linklist li a.blocklink'))
+          .map(a => a.getAttribute('href'))
+          .filter(href => href && href.startsWith(format))
+          .map(href => `https://replay.pokemonshowdown.com/${href}`);
+      }, format);
+      
+      console.log(replayLinks);
+      await browser.close();
+  
+      console.log(`Found ${replayLinks.length} replays matching format ${format}`);
       return replayLinks;
     } catch (error) {
       console.error("Error fetching replay links:", error);
       throw error;
     }
-}
+  }
 
 async function processReplays() {
   try {
     const replayLinks = await fetchReplayLinks();
-    console.log("Found replay links:", replayLinks);
 
     // For each replay, we can call obtainGameData (either by invoking its function or via HTTP POST).
     for (const url of replayLinks) {
