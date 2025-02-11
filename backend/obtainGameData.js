@@ -2,6 +2,8 @@ const { BigQuery } = require('@google-cloud/bigquery');
 const express = require("express");
 const axios = require("axios");
 
+// todo: pokemons name instead of names in some revealed_pokemon
+
 const router = express.Router();
 const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
 
@@ -534,9 +536,10 @@ function processShowteam(log) {
 
 // Process the switch of a Pokémon
 function processSwitch(currentTurn, switchMatches, turns, teams) {
-  const slotOwner = switchMatches[1]; // e.g., "p1a"
+  const slotOwner = switchMatches[1];
   const player = slotOwner.startsWith("p1") ? "player1" : "player2";
-  const newPokemonName = switchMatches[2];
+  const nickname = switchMatches[2];
+  const newPokemonName = switchMatches[3];
   const slot = slotOwner.endsWith("a") ? 0 : 1;
 
   // Identify the old (switching-out) Pokémon name from the active slot.
@@ -563,6 +566,7 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
   if (!newPokemon) {
     newPokemon = {
       name: newPokemonName,
+      nickname: nickname,
       moves: [],
       ability: "",
       item: "",
@@ -578,7 +582,6 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
       mimicUsed: false,
       copiedMove: "none",
       transformed: false
-      // Note: movesDone is now maintained at the turn level.
     };
     turns[currentTurn].revealedPokemon[player].push(newPokemon);
     console.log(`New Pokémon revealed: ${newPokemonName}`);
@@ -600,7 +603,8 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
 // Process the usage of an item
 function processItem(currentTurn, itemMatch, turns) {
   const player = itemMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = itemMatch[2];
+  let pokemonName = itemMatch[2];
+  pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
   let item = itemMatch[3];
   
   if (itemMatch[0].startsWith("|-enditem")) {
@@ -616,7 +620,8 @@ function processItem(currentTurn, itemMatch, turns) {
 // Process the damage received by a Pokémon
 function processDamage(currentTurn, damageMatch, turns) {
   const player = damageMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = damageMatch[2];
+  let pokemonName = damageMatch[2];
+  pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
   const damageInfo = damageMatch[3];
   //console.log("Damage info", damageInfo);
   
@@ -655,7 +660,8 @@ function processDamage(currentTurn, damageMatch, turns) {
 // Process the effect of a status condition
 function processStatus(currentTurn, statusMatch, turns) {
   const player = statusMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = statusMatch[2];
+  let pokemonName = statusMatch[2];
+  pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
   let status;
 
   if (statusMatch[0].startsWith("|-curestatus")) {
@@ -673,7 +679,8 @@ function processStatus(currentTurn, statusMatch, turns) {
 // Process the effect of a boost
 function processBoost(currentTurn, boostMatch, turns) {
   const player = boostMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = boostMatch[2];
+  let pokemonName = boostMatch[2];
+  pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
   const statBoosted = boostMatch[3];
   const boost = parseInt(boostMatch[4]);
 
@@ -698,7 +705,8 @@ function processBoost(currentTurn, boostMatch, turns) {
 // Process the terastallize effect
 function processTerastallize(currentTurn, teraMatch, turns) {
   const player = teraMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = teraMatch[2];
+  let pokemonName = teraMatch[2];
+  pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
   const type = teraMatch[3];
 
   // Update the terastallize effect of the Pokémon in revealedPokemon
@@ -710,7 +718,8 @@ function processTerastallize(currentTurn, teraMatch, turns) {
 // Add a function to process volatile statuses
 function processVolatileStart(currentTurn, volatileMatch, turns) {
   const player = volatileMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = volatileMatch[2];
+  let pokemonName = volatileMatch[2];
+  pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
   let statusName = volatileMatch[3] || "";
   if (statusName.startsWith("move: ")) {
     statusName = statusName.replace("move: ", "");
@@ -825,7 +834,8 @@ function processMove(currentTurn, moveMatch, turns) {
   ];
 
   const player = moveMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = moveMatch[2];
+  let pokemonName = moveMatch[2];
+  pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
   const moveUsed = moveMatch[3].toLowerCase().replace(/\|.*$/, ''); // Remove anything after a |
 
   // Extract target info (for successful moves)
@@ -1126,6 +1136,13 @@ function processSideEnd(currentTurn, line, turns) {
     turns[currentTurn].screens.auroraveil = { player1: false, player2: false, duration1: 0, duration2: 0 };
     //console.log("Side effects ended (tailwind and screens cleared).");
   }
+}
+
+// returns the original name of the pokemon given the alias
+function getPokemonName(nickname, player, turns, currentTurn) {
+  const revealedPokemon = turns[currentTurn].revealedPokemon[player];
+  const pokemon = revealedPokemon.find(p => p.nickname === nickname);
+  return pokemon.name;
 }
 
 run().catch(console.dir);
