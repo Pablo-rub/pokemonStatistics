@@ -1,18 +1,20 @@
-const {BigQuery} = require('@google-cloud/bigquery');
+const { BigQuery } = require('@google-cloud/bigquery');
 const express = require("express");
 const axios = require("axios");
 
+const router = express.Router();
 const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
 
 // Initialize the BigQuery client
-const bigQuery = new BigQuery({keyFilename});
+const bigQuery = new BigQuery({ keyFilename });
 
-//Initialize the express app
-const app = express();
-app.use(express.json());
-
-app.post("/replays", async (req, res) => {
+// POST endpoint to process a replay
+router.post("/", async (req, res) => {
   const replayUrl = req.body.url;
+  if (!replayUrl) {
+    return res.status(400).json({ error: 'Missing replay URL' });
+  }
+
   try {
     // Obtaining the data from the JSON file in the URL
     const response = await axios.get(`${replayUrl}.json`);
@@ -1127,3 +1129,5 @@ function processSideEnd(currentTurn, line, turns) {
 }
 
 run().catch(console.dir);
+
+module.exports = router;

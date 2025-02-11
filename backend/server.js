@@ -3,12 +3,14 @@ const express = require("express");
 const axios = require('axios');
 const cors = require("cors");
 const cheerio = require('cheerio');
+const obtainGameDataRouter = require('./obtainGameData');
 
 require('dotenv').config();
 
 // Initialize express
 const app = express();
 app.use(cors());
+app.use(express.json());
 
 // Enable CORS for all requests
 app.use(cors());
@@ -138,3 +140,6 @@ app.get('/api/rankings', async (req, res) => {
         res.status(500).send("Error al obtener datos de Smogon");
     }
 });
+
+// Mount the obtainGameData router on the /api/replays path
+app.use('/api/replays', obtainGameDataRouter);

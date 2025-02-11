@@ -87,7 +87,7 @@ async function processReplays() {
 
     // For each replay, we can call obtainGameData (either by invoking its function or via HTTP POST).
     for (const url of replayLinks) {
-      // await axios.post("http://localhost:5000/replays", { url });
+      await axios.post("http://localhost:5000/api/replays", { url });
       console.log("Would process replay:", url);
     }
   } catch (error) {
