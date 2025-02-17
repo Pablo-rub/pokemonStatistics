@@ -25,13 +25,6 @@ router.post("/", async (req, res) => {
     // Extracting the data from the replay
     const id = replayData.id;
 
-    // Check if the replay is already in the database
-    const checkResponse = await axios.get(`http://localhost:5000/api/games/${id}`);
-    if (checkResponse.data.exists) {
-      res.status(200).send("Replay already exists in the database");
-      return;
-    }
-
     const format = replayData.format;
     const players = replayData.players;
     const log = replayData.log.split("\n");
