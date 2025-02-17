@@ -2,8 +2,8 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const puppeteer = require('puppeteer');
 
-// hacer que pase de pagina
-// hacer que cuando detecte una url que ya esta en la base de datos, detenga el proceso
+// Set to true to process all replays, false to stop on first existing replay
+const CONTINUE_ON_EXISTING = false; 
 
 async function getLatestFormat() {
     // it should has vgc and bo3
@@ -60,6 +60,7 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// Modify fetchReplayLinks to stop when finding existing replays
 async function fetchReplayLinks() {
   try {
     const { replaySearchUrl, format } = await getReplaySearchUrl();
@@ -170,8 +171,16 @@ async function fetchReplayLinks() {
           hasReplays = false;
         } else {
           allReplayLinks.push(...replayLinks);
-          pageNumber++;
-          await delay(1000); // Esperar 1 segundo entre páginas exitosas
+          
+          // Process this batch of links
+          const foundExisting = await processReplays(replayLinks);
+          if (foundExisting) {
+            console.log("Found existing replay, stopping pagination...");
+            hasReplays = false;
+          } else {
+            pageNumber++;
+            await delay(1000);
+          }
         }
 
       } catch (browserError) {
@@ -200,34 +209,46 @@ async function fetchReplayLinks() {
   }
 }
 
-async function processReplays() {
+async function processReplays(replayLinks) {
   try {
-    const replayLinks = await fetchReplayLinks();
+    let foundExisting = false;
 
     for (const url of replayLinks) {
-      // Extract the replay ID from the URL.
       const parts = url.split('/');
-      let replayId = parts[parts.length - 1].replace('.json', ''); // Remove .json if present
+      let replayId = parts[parts.length - 1].replace('.json', '');
 
-      // Check if the replay already exists in the database.
+      // Check if the replay already exists in the database
       const checkResponse = await axios.get(`http://localhost:5000/api/games/${replayId}`);
       if (checkResponse.data.exists) {
         console.log(`Replay ${replayId} already exists in the database.`);
+        if (!CONTINUE_ON_EXISTING) {
+          console.log("Stopping process as existing replay found (CONTINUE_ON_EXISTING is false)");
+          foundExisting = true;
+          break;
+        }
+        console.log("Continuing to next replay (CONTINUE_ON_EXISTING is true)");
         continue;
       }
 
       try {
-        // Process replay by triggering obtainGameData via POST.
         await axios.post("http://localhost:5000/api/replays", { url });
         console.log("Processing replay:", url);
       } catch (postError) {
-        // Log the error and continue with the next replay.
         console.error(`Error processing replay ${replayId}:`, postError.message);
       }
     }
+
+    if (!foundExisting) {
+      console.log("Processed all replays in current page, continuing to next page...");
+    }
+    
+    return foundExisting;
   } catch (error) {
     console.error("Error processing replays:", error);
+    throw error;
   }
 }
 
-processReplays();
+fetchReplayLinks().catch(error => {
+  console.error('Error:', error);
+});
