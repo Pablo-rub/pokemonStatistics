@@ -2,8 +2,6 @@ const { BigQuery } = require('@google-cloud/bigquery');
 const express = require("express");
 const axios = require("axios");
 
-// todo: pokemons name instead of names in some revealed_pokemon
-
 const router = express.Router();
 const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
 
@@ -85,6 +83,18 @@ router.post("/", async (req, res) => {
         player2: false,
         duration1: 0,
         duration2: 0
+      },
+      spikes: {
+        player1: {
+          spikes: 0,
+          toxicSpikes: 0,
+          stealthRock: false
+        },
+        player2: {
+          spikes: 0,
+          toxicSpikes: 0,
+          stealthRock: false
+        }
       },
       movesDone: {
         player1: [ "", "" ],
@@ -404,6 +414,10 @@ function processTurn(currentTurn, turns) {
     room: newRoom,
     screens: newScreens,
     tailwind: newTailwind,
+    spikes: {
+      player1: { ...previousTurn.spikes.player1 },
+      player2: { ...previousTurn.spikes.player2 }
+    },
     movesDone: {
       player1: [ "", "" ],
       player2: [ "", "" ]
@@ -672,7 +686,8 @@ function processBoost(currentTurn, boostMatch, turns) {
   const player = boostMatch[1].startsWith("p1") ? "player1" : "player2";
   let pokemonName = boostMatch[2];
   pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
-  const statBoosted = boostMatch[3];
+  let statBoosted = boostMatch[3];
+  if (statBoosted === "accuracy") statBoosted = "acc";
   const boost = parseInt(boostMatch[4]);
 
   // Update the boosts of the Pokémon in revealedPokemon
@@ -1060,6 +1075,12 @@ function processSideStart(currentTurn, sideStartMatch, turns) {
     processAuroraVeil(currentTurn, side, turns, sideStartMatch);
   } else if (effectName === "tailwind") {
     processTailwind(currentTurn, side, turns, sideStartMatch);
+  } else if (effectName === "spikes") {
+    turns[currentTurn].spikes[side].spikes = Math.min((turns[currentTurn].spikes[side].spikes || 0) + 1, 3);
+  } else if (effectName === "toxic spikes") {
+    turns[currentTurn].spikes[side].toxicSpikes = Math.min((turns[currentTurn].spikes[side].toxicSpikes || 0) + 1, 2);
+  } else if (effectName === "stealth rock") {
+    turns[currentTurn].spikes[side].stealthRock = true;
   } else {
     console.log("Unhandled sidestart effect:", effectName);
   }
@@ -1133,6 +1154,13 @@ function processSideEnd(currentTurn, line, turns) {
 function getPokemonName(nickname, player, turns, currentTurn) {
   const revealedPokemon = turns[currentTurn].revealedPokemon[player];
   const pokemon = revealedPokemon.find(p => p.nickname === nickname);
+  
+  // Si no encontramos el Pokémon por nickname, devolvemos el nickname original
+  // ya que en algunos casos el nickname es el nombre real del Pokémon
+  if (!pokemon) {
+    return nickname;
+  }
+  
   return pokemon.name;
 }
 

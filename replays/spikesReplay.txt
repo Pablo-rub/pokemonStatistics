@@ -1,0 +1,120 @@
+|j|☆pokemonStatistics1
+|j|☆pokemonStatistics2
+|t:|1739814252
+|gametype|doubles
+|player|p1|pokemonStatistics1|169|
+|player|p2|pokemonStatistics2|101|
+|teamsize|p1|5
+|teamsize|p2|6
+|gen|9
+|tier|[Gen 9] Doubles Custom Game
+|bigerror|Warning: One player isn't adhering to a 510 EV limit, and the other player is.
+|clearpoke
+|poke|p1|Pelipper, L50, M|
+|poke|p1|Whimsicott, L50, M|
+|poke|p1|Tornadus, L50, M|
+|poke|p1|Rillaboom, L50, M|
+|poke|p1|Gliscor, L50, M|
+|poke|p2|Miraidon, L50|
+|poke|p2|Urshifu-*, L50, F|
+|poke|p2|Iron Hands, L50|
+|poke|p2|Iron Moth, L50|
+|poke|p2|Farigiraf, L50, M|
+|poke|p2|Incineroar, L50, M|
+|teampreview
+|inactive|Battle timer is ON: inactive players will automatically lose when time's up. (requested by pokemonStatistics1)
+|inactive|pokemonStatistics2 also wants the timer to be on.
+|
+|t:|1739814268
+|start
+|switch|p1a: Rillaboom|Rillaboom, L50, M|207/207
+|switch|p1b: Gliscor|Gliscor, L50, M|182/182
+|switch|p2a: Iron Hands|Iron Hands, L50|239/239
+|switch|p2b: Incineroar|Incineroar, L50, M|202/202
+|-fieldstart|move: Grassy Terrain|[from] ability: Grassy Surge|[of] p1a: Rillaboom
+|-ability|p2b: Incineroar|Intimidate|boost
+|-unboost|p1a: Rillaboom|atk|1
+|-fail|p1b: Gliscor|unboost|Attack|[from] ability: Hyper Cutter|[of] p1b: Gliscor
+|turn|1
+|
+|t:|1739814284
+|move|p2b: Incineroar|Fake Out|p2a: Iron Hands
+|-damage|p2a: Iron Hands|222/239
+|cant|p2a: Iron Hands|flinch
+|move|p1b: Gliscor|Stealth Rock|p2a: Iron Hands
+|-sidestart|p2: pokemonStatistics2|move: Stealth Rock
+|move|p1a: Rillaboom|Leech Seed|p2a: Iron Hands
+|-start|p2a: Iron Hands|move: Leech Seed
+|
+|debug|Pokemon semi-invuln or not grounded; Grassy Terrain skipped
+|-heal|p2a: Iron Hands|236/239|[from] Grassy Terrain
+|-damage|p2a: Iron Hands|207/239|[from] Leech Seed|[of] p1a: Rillaboom
+|upkeep
+|turn|2
+|inactive|pokemonStatistics1 has 270 seconds left.
+|inactive|pokemonStatistics2 has 270 seconds left.
+|inactive|pokemonStatistics2 has 240 seconds left.
+|
+|t:|1739814346
+|move|p1a: Rillaboom|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p1a: Rillaboom
+|move|p2b: Incineroar|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2b: Incineroar
+|move|p2a: Iron Hands|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2a: Iron Hands
+|move|p1b: Gliscor|Toxic Spikes|p2b: Incineroar
+|-sidestart|p2: pokemonStatistics2|move: Toxic Spikes
+|
+|debug|Pokemon semi-invuln or not grounded; Grassy Terrain skipped
+|-heal|p2a: Iron Hands|221/239|[from] Grassy Terrain
+|-damage|p2a: Iron Hands|192/239|[from] Leech Seed|[of] p1a: Rillaboom
+|upkeep
+|turn|3
+|inactive|pokemonStatistics1 has 270 seconds left.
+|
+|t:|1739814379
+|move|p2b: Incineroar|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2b: Incineroar
+|move|p2a: Iron Hands|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2a: Iron Hands
+|move|p1b: Gliscor|Spikes|p2b: Incineroar
+|-sidestart|p2: pokemonStatistics2|Spikes
+|move|p1a: Rillaboom|Leech Seed||[still]
+|-fail|p1a: Rillaboom
+|debug|move failed because it did nothing
+|
+|debug|Pokemon semi-invuln or not grounded; Grassy Terrain skipped
+|-heal|p2a: Iron Hands|206/239|[from] Grassy Terrain
+|-damage|p2a: Iron Hands|177/239|[from] Leech Seed|[of] p1a: Rillaboom
+|upkeep
+|turn|4
+|inactive|pokemonStatistics2 has 270 seconds left.
+|
+|t:|1739814402
+|move|p1a: Rillaboom|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p1a: Rillaboom
+|move|p2b: Incineroar|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2b: Incineroar
+|move|p2a: Iron Hands|Fake Out||[still]
+|-hint|Fake Out only works on your first turn out.
+|-fail|p2a: Iron Hands
+|move|p1b: Gliscor|Stealth Rock||[still]
+|-fail|p1b: Gliscor
+|debug|move failed because it did nothing
+|
+|debug|Pokemon semi-invuln or not grounded; Grassy Terrain skipped
+|-heal|p2a: Iron Hands|191/239|[from] Grassy Terrain
+|-damage|p2a: Iron Hands|162/239|[from] Leech Seed|[of] p1a: Rillaboom
+|upkeep
+|turn|5
+|inactive|pokemonStatistics1 has 270 seconds left.
+|-message|pokemonStatistics1 forfeited.
+|
+|win|pokemonStatistics2
