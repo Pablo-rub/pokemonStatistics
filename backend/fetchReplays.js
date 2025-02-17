@@ -3,7 +3,7 @@ const cheerio = require("cheerio");
 const puppeteer = require('puppeteer');
 
 // Set to true to process all replays, false to stop on first existing replay
-const CONTINUE_ON_EXISTING = false; 
+const CONTINUE_ON_EXISTING = true; 
 
 async function getLatestFormat() {
     // it should has vgc and bo3
