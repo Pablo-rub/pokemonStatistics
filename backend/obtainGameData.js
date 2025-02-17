@@ -170,7 +170,7 @@ router.post("/", async (req, res) => {
         incrementVolatileTurnCounters(turns);
       }
       if (switchMatches) { // Detect active Pokémon switches and update revealed Pokémon if necessary
-        console.log("Switch detected");
+        //console.log("Switch detected");
         processSwitch(currentTurn, switchMatches, turns, teams);
         //console.log("Turn processed");
       } 
@@ -414,7 +414,7 @@ function processTurn(currentTurn, turns) {
     }
   });
 
-  console.log(`Start of turn ${currentTurn}`);
+  //console.log(`Start of turn ${currentTurn}`);
   //console.log(`Terrain left: ${newField.duration}`);
   //console.log(`Weather left: ${newWeather.duration}`);
   //console.log(`Room left: ${newRoom.duration}`);
@@ -460,7 +460,7 @@ function processTurn(currentTurn, turns) {
         // If Pokémon exists and is sleeping, mark it in movesDone
         if (pokemon && pokemon.nonVolatileStatus === "slp") {
           turns[currentTurn].movesDone[player][slot] = "sleeping";
-          console.log(`Move done updated for ${player} slot ${slot}: sleeping`);
+          //console.log(`Move done updated for ${player} slot ${slot}: sleeping`);
         }
       }
     }
@@ -548,7 +548,7 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
       turns[currentTurn].movesDone[player][slot] += `, switch to ${newPokemonName}`;
     }
 
-    console.log(`Move done updated for ${player} slot ${slot}: ${turns[currentTurn].movesDone[player][slot]}`);
+    //console.log(`Move done updated for ${player} slot ${slot}: ${turns[currentTurn].movesDone[player][slot]}`);
   }
   
   // Locate (or create) the new (switching-in) Pokémon.
@@ -577,15 +577,13 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
       transformed: false
     };
     turns[currentTurn].revealedPokemon[player].push(newPokemon);
-    console.log(`New Pokémon revealed: ${newPokemonName}`);
+    //console.log(`New Pokémon revealed: ${newPokemonName}`);
   }
   
   // For turn 0 only, update switching-in move description in movesDone.
   if (currentTurn === 0) {
     turns[currentTurn].movesDone[player][slot] = "switched in";
-    console.log(
-      `Move done set for ${player} slot ${slot}: switched in because of the switch`
-    );
+    //console.log(`Move done set for ${player} slot ${slot}: switched in because of the switch`);
   }
   
   // Update the active slot with the new Pokémon.
@@ -853,7 +851,7 @@ function processMove(currentTurn, moveMatch, turns) {
   } else {
     turns[currentTurn].movesDone[player][slot] = `${moveUsed}${targetInfo}`;
   }
-  console.log(`Move done updated for ${player} slot ${slot}: ${turns[currentTurn].movesDone[player][slot]}`);
+  //console.log(`Move done updated for ${player} slot ${slot}: ${turns[currentTurn].movesDone[player][slot]}`);
 
   // Find the Pokémon in the current turn's revealedPokemon
   const userPokemon = turns[currentTurn].revealedPokemon[player].find(
