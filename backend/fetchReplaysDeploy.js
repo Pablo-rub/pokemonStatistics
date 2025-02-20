@@ -1,12 +1,11 @@
 const { BigQuery } = require('@google-cloud/bigquery');
 const axios = require("axios");
 const cheerio = require("cheerio");
-const puppeteer = require('puppeteer-core');
 const { saveReplayToBigQuery } = require('./obtainGameDataDeploy');
-const chromium = require('chrome-aws-lambda');
 
 const bigQuery = new BigQuery();
-// Configuración: si encuentras una replay existente, se para (puedes ajustar)
+
+// Configuración: si encuentras una replay existente, se para (false) o se sigue (true)
 const CONTINUE_ON_EXISTING = false;
 
 async function getLatestFormat() {
@@ -65,144 +64,37 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Función para obtener enlaces de replay mediante Puppeteer
+// Función para obtener enlaces de replay mediante axios y cheerio
 async function fetchReplayLinks(replaySearchUrl, format) {
   try {
-    console.log("Launching browser with chrome-aws-lambda...");
-    let browser = await launchBrowser();
-    console.log("Browser launched successfully");
-
     let allReplayLinks = [];
     let pageNumber = 1;
     let hasReplays = true;
-    let consecutiveFailures = 0;
-    const MAX_CONSECUTIVE_FAILURES = 3;
-    const PAGES_PER_BROWSER = 10;
-    console.log("variables");
-
+    
     while (hasReplays) {
-      console.log("while");
       try {
-        console.log("while try");
-        if (!browser || pageNumber % PAGES_PER_BROWSER === 1) {
-          console.log("while try if");
-          if (browser) await browser.close();
-          console.log("while try if close");
-          try {
-            browser = await launchBrowser();
-            console.log("Launched new browser instance");
-          } catch (launchError) {
-            console.error("Error launching browser:", launchError);
-            continue;
-          }
-        }
-
         const pageUrl = `${replaySearchUrl}&page=${pageNumber}`;
         console.log(`Fetching replays from page ${pageNumber}: ${pageUrl}`);
-        const page = await browser.newPage();
-        page.setDefaultNavigationTimeout(0);
-        console.log("New page created");
 
-        let replayLinks = [];
-        try {
-          console.log("try 2");
-          const maxRetries = 5;
-          let attempts = 0;
-          let navigated = false;
+        const response = await axios.get(pageUrl);
+        const $ = cheerio.load(response.data);
+        
+        // Extraer enlaces de replay usando cheerio
+        const replayLinks = $('ul.linklist li a.blocklink')
+          .map((_, element) => {
+            const href = $(element).attr('href');
+            return href && href.startsWith(format) 
+              ? `https://replay.pokemonshowdown.com/${href}`
+              : null;
+          })
+          .get()
+          .filter(Boolean);
 
-          while (attempts < maxRetries && !navigated) {
-            try {
-              console.log(`Navigation attempt ${attempts + 1} for page ${pageNumber}`);
-              page.goto(pageUrl, { waitUntil: 'domcontentloaded' });
-              console.log(`Navigated to page ${pageNumber}`);
+        console.log(`Found ${replayLinks.length} replays on page ${pageNumber}`);
 
-              // After basic navigation, wait for content
-              try {
-                const content = await page.evaluate(() => {
-                  const list = document.querySelector('ul.linklist');
-                  const panel = document.querySelector('.pfx-panel');
-                  const body = document.querySelector('.pfx-body');
-                  return list || panel || body;
-                },);
-
-                console.log(`Content found on page ${pageNumber}`);
-
-                if (!content) {
-                  throw new Error('No content found');
-                }
-                
-                navigated = true;
-                consecutiveFailures = 0;
-                console.log(`Successfully navigated to page ${pageNumber}`);
-              } catch (selectorError) {
-                console.warn(`Selector not found, page might be empty or invalid`);
-                // Consider this a successful navigation, but possibly empty page
-                navigated = true;
-                consecutiveFailures = 0;
-              }
-              
-            } catch (navError) {
-              attempts++;
-              console.warn(`Navigation attempt ${attempts} failed: ${navError.message}`);
-              
-              if (navError.message.includes('ECONNRESET')) {
-                console.warn('ECONNRESET detected. Restarting browser and retrying...');
-                if (browser) await browser.close();
-                browser = await launchBrowser();
-                // optionally, re-create the page before retrying
-                page = await browser.newPage();
-                // continue to retry…
-              }
-
-              if (attempts < maxRetries) {
-                // Exponential backoff with maximum wait time
-                const waitTime = Math.min(2000 * Math.pow(2, attempts), 10000);
-                console.log(`Waiting ${waitTime}ms before retry...`);
-                await delay(waitTime);
-              } else {
-                throw navError;
-              }
-            }
-          }
-
-          if (!navigated) {
-            consecutiveFailures++;
-            console.error(`Failed to navigate page ${pageNumber} after ${maxRetries} attempts.`);
-            if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-              if (browser) await browser.close();
-              browser = await launchBrowser();
-              consecutiveFailures = 0;
-            }
-            pageNumber++;
-            continue;
-          }
-          
-          // Extraer enlaces de replay
-          replayLinks = await page.evaluate((format) => {
-            return Array.from(document.querySelectorAll('ul.linklist li a.blocklink'))
-              .map(a => a.getAttribute('href'))
-              .filter(href => href && href.startsWith(format))
-              .map(href => `https://replay.pokemonshowdown.com/${href}`);
-          }, format);
-          console.log(`Found ${replayLinks.length} replays on page ${pageNumber}`);
-        } catch (error) {
-          console.error(`Error processing page ${pageNumber}: ${error.message}`);
-          consecutiveFailures++;
-          if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-            if (browser) await browser.close();
-            browser = await launchBrowser();
-            consecutiveFailures = 0;
-          }
-          continue;
-        } finally {
-          try { if (!page.isClosed()) await page.close(); } catch (closeError) {
-            console.error(`Error closing page ${pageNumber}: ${closeError.message}`);
-          }
-        }
         if (replayLinks.length === 0) {
           hasReplays = false;
         } else {
-          // Process replays as we get them, page by page
           const foundExisting = await processReplays(replayLinks);
           if (foundExisting) {
             console.log("Found existing replay, stopping further pagination...");
@@ -210,22 +102,19 @@ async function fetchReplayLinks(replaySearchUrl, format) {
           } else {
             allReplayLinks.push(...replayLinks);
             pageNumber++;
-            await delay(1000);
+            await delay(1000); // Mantener el delay para no sobrecargar el servidor
           }
         }
-      } catch (browserError) {
-        console.error(`Browser error on page ${pageNumber}: ${browserError.message}`);
-        if (browser) await browser.close();
-        browser = null;
-        await delay(5000);
+      } catch (error) {
+        console.error(`Error processing page ${pageNumber}:`, error.message);
+        await delay(5000); // Esperar antes de reintentar
       }
     }
 
-    if (browser) await browser.close();
     console.log(`Total replays processed: ${allReplayLinks.length}`);
     return allReplayLinks;
   } catch (error) {
-    console.error("Error fetching replay links on all pages:", error);
+    console.error("Error fetching replay links:", error);
     throw error;
   }
 }
@@ -267,33 +156,6 @@ async function processReplays(replayLinks) {
     console.error("Error in processReplays:", error);
     throw error;
   }
-}
-
-async function launchBrowser() {
-  return await chromium.puppeteer.launch({
-    args: [
-      ...chromium.args,
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--disable-setuid-sandbox',
-      '--no-first-run',
-      '--no-sandbox',
-      '--no-zygote',
-      '--deterministic-fetch',
-      '--disable-features=IsolateOrigins',
-      '--disable-site-isolation-trials',
-      '--single-process',
-      '--no-zygote',
-    ],
-    defaultViewport: {
-      width: 800,
-      height: 600,
-      deviceScaleFactor: 1
-    },
-    executablePath: await chromium.executablePath,
-    headless: true,
-    timeout: 120000,
-  });
 }
 
 // In the same file, update the entry point
