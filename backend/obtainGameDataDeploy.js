@@ -342,9 +342,12 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
     const slot = slotOwner.endsWith("a") ? 0 : 1;
 
     // Identify the old (switching-out) Pokémon name from the active slot.
-    const oldMonName =
-        turns[currentTurn].endsWith[player][slot] ||
-        turns[currentTurn].startsWith[player][slot];
+    let oldMonName = "none";
+    if (currentTurn != 0) {
+        oldMonName =
+            turns[currentTurn].endsWith[player][slot] ||
+            turns[currentTurn].startsWith[player][slot];
+    }
         
     // Update movesDone for the switching-out Pokémon
     if (oldMonName && oldMonName !== "none") {
