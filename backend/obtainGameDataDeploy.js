@@ -25,17 +25,17 @@ async function saveReplayToBigQuery(replayData) {
 
         let turns = [];
 
-        // Initialize first turn
+        // Initialize first turn with proper structure
         let currentTurn = 0;
         turns.push({
-            turn_number: currentTurn,
-            starts_with: {
-                player1: [],
-                player2: [],
+            turnNumber: currentTurn,
+            startsWith: {
+                player1: ["none", "none"],  // Initialize with "none"
+                player2: ["none", "none"]   // Initialize with "none"
             },
-            ends_with: {
-                player1: [],
-                player2: [],
+            endsWith: {
+                player1: ["none", "none"],  // Initialize with "none"
+                player2: ["none", "none"]   // Initialize with "none"
             },
             field: {
                 terrain: "",
@@ -72,11 +72,11 @@ async function saveReplayToBigQuery(replayData) {
                     stealthRock: false
                 }
             },
-            moves_done: {
+            movesDone: {
                 player1: ["", ""],
                 player2: ["", ""]
             },
-            revealed_pokemon: {
+            revealedPokemon: {
                 player1: [],
                 player2: [],
             }
@@ -948,3 +948,38 @@ run().catch(console.dir);
 module.exports = {
     saveReplayToBigQuery
 };
+
+// Agrega la definición de processTurn
+function processTurn(currentTurn, turns) {
+  // En este ejemplo, se clona el estado del turno anterior para crear el nuevo turno.
+  const previousTurn = turns[currentTurn - 1];
+  const newTurn = {
+    turn_number: currentTurn,
+    startsWith: {
+      player1: previousTurn ? [...previousTurn.endsWith.player1] : ["none", "none"],
+      player2: previousTurn ? [...previousTurn.endsWith.player2] : ["none", "none"]
+    },
+    endsWith: {
+      player1: previousTurn ? [...previousTurn.endsWith.player1] : ["none", "none"],
+      player2: previousTurn ? [...previousTurn.endsWith.player2] : ["none", "none"]
+    },
+    field: { terrain: "", duration: 0 },
+    weather: { condition: "", duration: 0 },
+    room: { condition: "", duration: 0 },
+    screens: {
+      reflect: { player1: false, player2: false, duration1: 0, duration2: 0 },
+      lightscreen: { player1: false, player2: false, duration1: 0, duration2: 0 },
+      auroraveil: { player1: false, player2: false, duration1: 0, duration2: 0 }
+    },
+    tailwind: { player1: false, player2: false, duration1: 0, duration2: 0 },
+    spikes: {
+      player1: { spikes: 0, toxicSpikes: 0, stealthRock: false },
+      player2: { spikes: 0, toxicSpikes: 0, stealthRock: false }
+    },
+    movesDone: { player1: ["", ""], player2: ["", ""] },
+    revealedPokemon: { player1: [], player2: [] }
+  };
+
+  turns.push(newTurn);
+  return turns;
+}

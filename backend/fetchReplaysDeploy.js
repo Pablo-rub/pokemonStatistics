@@ -10,7 +10,7 @@ const CONTINUE_ON_EXISTING = false;
 
 async function getLatestFormat() {
   try {
-    // Se obtiene directamente desde Smogon (sin endpoints locales)
+    // Se mantiene igual ya que necesitamos obtener el formato más reciente
     const response = await axios.get('https://www.smogon.com/stats/');
     const $ = cheerio.load(response.data);
     const months = new Set();
@@ -41,21 +41,9 @@ async function getLatestFormat() {
     if (latestFormat.includes('-')) {
       latestFormat = latestFormat.split('-')[0];
     }
-    return { month: latestMonth, format: latestFormat };
+    return latestFormat;
   } catch (error) {
     console.error("Error in getLatestFormat:", error);
-    throw error;
-  }
-}
-
-async function getReplaySearchUrl() {
-  try {
-    const { month, format } = await getLatestFormat();
-    console.log("Month:", month, ", format:", format);
-    const searchUrl = `https://replay.pokemonshowdown.com/?format=${format}`;
-    return { replaySearchUrl: searchUrl, format };
-  } catch (error) {
-    console.error("Error in getReplaySearchUrl:", error);
     throw error;
   }
 }
@@ -64,122 +52,103 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Función para obtener enlaces de replay mediante axios y cheerio
-async function fetchReplayLinks(replaySearchUrl, format) {
+async function fetchReplayLinks(format) {
   try {
-    let allReplayLinks = [];
     let pageNumber = 1;
-    let hasReplays = true;
-    
-    while (hasReplays) {
+    let hasMoreReplays = true;
+    let processedReplays = new Set();
+
+    while (hasMoreReplays) {
       try {
-        const pageUrl = `${replaySearchUrl}&page=${pageNumber}`;
-        console.log(`Fetching replays from page ${pageNumber}: ${pageUrl}`);
+        const searchUrl = `https://replay.pokemonshowdown.com/search.json?format=${format}&page=${pageNumber}`;
+        console.log(`Fetching replays from page ${pageNumber}: ${searchUrl}`);
 
-        const response = await axios.get(pageUrl);
-        const $ = cheerio.load(response.data);
-        
-        // Extraer enlaces de replay usando cheerio
-        const replayLinks = $('ul.linklist li a.blocklink')
-          .map((_, element) => {
-            const href = $(element).attr('href');
-            return href && href.startsWith(format) 
-              ? `https://replay.pokemonshowdown.com/${href}`
-              : null;
-          })
-          .get()
-          .filter(Boolean);
+        const response = await axios.get(searchUrl);
+        const replays = response.data;
 
-        console.log(`Found ${replayLinks.length} replays on page ${pageNumber}`);
+        if (!replays || !Array.isArray(replays) || replays.length === 0) {
+          console.log('No more replays found');
+          break;
+        }
 
-        if (replayLinks.length === 0) {
-          hasReplays = false;
-        } else {
-          const foundExisting = await processReplays(replayLinks);
-          if (foundExisting) {
-            console.log("Found existing replay, stopping further pagination...");
-            hasReplays = false;
-          } else {
-            allReplayLinks.push(...replayLinks);
-            pageNumber++;
-            await delay(1000); // Mantener el delay para no sobrecargar el servidor
+        console.log(`Found ${replays.length} replays on page ${pageNumber}`);
+
+        for (const replay of replays) {
+          try {
+            // Verificar si la replay ya existe en BigQuery
+            const query = `SELECT replay_id FROM \`pokemon-statistics.pokemon_replays.replays\` WHERE replay_id = '${replay.id}'`;
+            const [rows] = await bigQuery.query(query);
+
+            if (rows.length > 0) {
+              console.log(`Replay ${replay.id} already exists in database`);
+              if (!CONTINUE_ON_EXISTING) {
+                hasMoreReplays = false;
+                break;
+              }
+              continue;
+            }
+
+            if (!processedReplays.has(replay.id)) {
+              // Obtener los datos completos de la replay
+              const replayUrl = `https://replay.pokemonshowdown.com/${replay.id}.json`;
+              const replayResponse = await axios.get(replayUrl);
+              console.log(`Processing replay ${replay.id}`);
+              
+              await saveReplayToBigQuery(replayResponse.data);
+              processedReplays.add(replay.id);
+              console.log(`Successfully saved replay ${replay.id}`);
+              
+              // Pequeña pausa entre replays para no sobrecargar el servidor
+              await delay(1000);
+            }
+          } catch (error) {
+            console.error(`Error processing replay ${replay.id}:`, error.message);
           }
         }
+
+        if (hasMoreReplays) {
+          pageNumber++;
+          await delay(2000); // Pausa entre páginas
+        }
+
       } catch (error) {
         console.error(`Error processing page ${pageNumber}:`, error.message);
-        await delay(5000); // Esperar antes de reintentar
+        if (error.response && error.response.status === 404) {
+          hasMoreReplays = false;
+        } else {
+          await delay(5000); // Esperar más tiempo si hay un error
+        }
       }
     }
 
-    console.log(`Total replays processed: ${allReplayLinks.length}`);
-    return allReplayLinks;
+    console.log(`Total replays processed: ${processedReplays.size}`);
+    return Array.from(processedReplays);
   } catch (error) {
     console.error("Error fetching replay links:", error);
     throw error;
   }
 }
 
-async function processReplays(replayLinks) {
-  try {
-    let foundExisting = false;
-
-    for (const url of replayLinks) {
-      const parts = url.split('/');
-      const replayId = parts[parts.length - 1].replace('.json', '');
-      
-      try {
-        // Check if replay exists in BigQuery
-        const query = `SELECT replay_id FROM \`pokemon-statistics.pokemon_replays.replays\` WHERE replay_id = '${replayId}'`;
-        const [rows] = await bigQuery.query(query);
-        
-        if (rows.length > 0) {
-          console.log(`Replay ${replayId} already exists in database`);
-          if (!CONTINUE_ON_EXISTING) {
-            foundExisting = true;
-            break; // Exit the loop immediately
-          }
-          continue;
-        }
-
-        // If replay doesn't exist, process it
-        const response = await axios.get(`${url}.json`);
-        console.log(`Fetched data for replay ${replayId}`);
-        await saveReplayToBigQuery(response.data);
-        console.log(`Successfully saved replay ${replayId} to BigQuery`);
-      } catch (error) {
-        console.error(`Error processing replay ${replayId}:`, error.message);
-      }
-    }
-
-    return foundExisting;
-  } catch (error) {
-    console.error("Error in processReplays:", error);
-    throw error;
-  }
-}
-
-// In the same file, update the entry point
 exports.fetchReplaysDaily = async (req, res) => {
   console.log('Starting fetchReplaysDaily at:', new Date().toISOString());
   res.status(200).send('Processing started');
   
   (async () => {
     try {
-      console.log('Getting replay search URL...');
-      const { replaySearchUrl, format } = await getReplaySearchUrl();
-      console.log('Obtained search URL:', replaySearchUrl, 'for format:', format);
+      console.log('Getting latest format...');
+      const format = await getLatestFormat();
+      console.log('Latest format:', format);
 
       console.log('Starting to fetch replay links...');
       try {
-        const replayLinks = await fetchReplayLinks(replaySearchUrl, format);
-        console.log(`Found ${replayLinks.length} replay links`);
+        const processedReplays = await fetchReplayLinks(format);
+        console.log(`Successfully processed ${processedReplays.length} replays`);
       } catch (fetchError) {
         console.error('Error in fetchReplayLinks:', fetchError);
         throw fetchError;
       }
     } catch (error) {
       console.error('Critical error in async processing:', error);
-      // Log the full error stack for better debugging
       console.error('Error stack:', error.stack);
     }
   })();
