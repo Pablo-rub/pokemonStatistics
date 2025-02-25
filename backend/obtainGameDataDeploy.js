@@ -1,27 +1,28 @@
 const { BigQuery } = require('@google-cloud/bigquery');
 
+// todo: sticky web
+
 // Initialize BigQuery without keyFilename for Cloud Functions
 const bigQuery = new BigQuery();
 
 // Remove Express-specific code and export only the necessary functions
 async function saveReplayToBigQuery(replayData) {
-    console.log('Starting to process replay:', replayData.id);
     try {
         // Extract data from the replay
         const id = replayData.id;
         const format = replayData.format;
         const players = replayData.players;
         const log = replayData.log.split("\n");
-        console.log(`Processing replay ${id} - Format: ${format}, Players: ${players.join(' vs ')}`);
+        //console.log(`Processing replay ${id} - Format: ${format}, Players: ${players.join(' vs ')}`);
 
         // Process data
-        console.log('Processing winner...');
+        //console.log('Processing winner...');
         const winner = processWinner(log);
-        console.log('Winner:', winner);
+        //console.log('Winner:', winner);
 
-        console.log('Processing teams...');
+        //console.log('Processing teams...');
         const teams = processShowteam(log);
-        console.log('Teams processed:', JSON.stringify(teams, null, 2));
+        //console.log('Teams processed:', JSON.stringify(teams, null, 2));
 
         let turns = [];
 
@@ -30,12 +31,12 @@ async function saveReplayToBigQuery(replayData) {
         turns.push({
             turnNumber: currentTurn,
             startsWith: {
-                player1: ["none", "none"],  // Initialize with "none"
-                player2: ["none", "none"]   // Initialize with "none"
+                player1: ["none", "none"],
+                player2: ["none", "none"] 
             },
             endsWith: {
-                player1: ["none", "none"],  // Initialize with "none"
-                player2: ["none", "none"]   // Initialize with "none"
+                player1: ["none", "none"],
+                player2: ["none", "none"] 
             },
             field: {
                 terrain: "",
@@ -249,14 +250,18 @@ async function saveReplayToBigQuery(replayData) {
             turns: turns
         };
 
-        console.log('Attempting to save to BigQuery:', replayToSave.replay_id);
-        
-        // Save to BigQuery
+        //console.log('Replay to snake case');
+
+        // Convertir todo el objeto a snake_case antes de guardarlo
+        const snakeCaseReplay = toSnakeCase(replayToSave);
+
+        //console.log('Attempting to save to BigQuery:', replayToSave.replay_id);
+
+        // Guardar en BigQuery
         const dataset = bigQuery.dataset('pokemon_replays');
         const table = dataset.table('replays');
-        await table.insert(replayToSave);
+        await table.insert(snakeCaseReplay);
 
-        console.log(`Successfully saved replay ${id} to BigQuery`);
         return true;
     } catch (error) {
         console.error('Error in saveReplayToBigQuery:', error);
@@ -275,6 +280,185 @@ function processWinner(log) {
     }
 
     return winner.trim();
+}
+
+function processTurn(currentTurn, turns) {
+    const previousTurn = turns[currentTurn - 1];
+
+    // Process weather update (existing code)
+    let newWeather = { condition: "", duration: 0 };
+    if (previousTurn.weather && previousTurn.weather.duration > 0) {
+        const weatherDuration = previousTurn.turnNumber >= 1 ? previousTurn.weather.duration - 1 : previousTurn.weather.duration;
+        newWeather = {
+        condition: previousTurn.weather.condition,
+        duration: weatherDuration > 0 ? weatherDuration : 0
+        };
+        if (newWeather.duration === 0); //console.log(`Weather ${newWeather.condition} ended.`);
+    }
+
+    // Process field update (existing code)
+    let newField = { terrain: "", duration: 0 };
+    if (previousTurn.field && previousTurn.field.duration > 0) {
+        const fieldDuration = previousTurn.turnNumber >= 1 ? previousTurn.field.duration - 1 : previousTurn.field.duration;
+        newField = {
+        terrain: previousTurn.field.terrain,
+        duration: fieldDuration > 0 ? fieldDuration : 0
+        };
+        if (newField.duration === 0); //console.log(`Terrain ${newField.terrain} ended.`);
+    }
+
+    // Process room update (existing code)
+    let newRoom = { condition: "", duration: 0 };
+    if (previousTurn.room && previousTurn.room.duration > 0) {
+        const roomDuration = previousTurn.turnNumber >= 1 ? previousTurn.room.duration - 1 : previousTurn.room.duration;
+        newRoom = {
+        condition: previousTurn.room.condition,
+        duration: roomDuration > 0 ? roomDuration : 0
+        };
+        if (newRoom.duration === 0); //console.log(`Room ${newRoom.condition} ended.`);
+    }
+
+    // Process screens update for each type and each player
+    let newScreens = {
+        reflect: { player1: previousTurn.screens.reflect.player1, player2: previousTurn.screens.reflect.player2, duration1: 0, duration2: 0 },
+        lightscreen: { player1: previousTurn.screens.lightscreen.player1, player2: previousTurn.screens.lightscreen.player2, duration1: 0, duration2: 0 },
+        auroraveil: { player1: previousTurn.screens.auroraveil.player1, player2: previousTurn.screens.auroraveil.player2, duration1: 0, duration2: 0 }
+    };
+
+    ['reflect', 'lightscreen', 'auroraveil'].forEach(screen => {
+        ['player1', 'player2'].forEach(player => {
+        const durationKey = "duration" + (player === "player1" ? "1" : "2");
+        const prevDuration = previousTurn.screens[screen][durationKey];
+        if (prevDuration && prevDuration > 0) {
+            const newDuration = previousTurn.turnNumber >= 1 ? prevDuration - 1 : prevDuration;
+            newScreens[screen][durationKey] = newDuration > 0 ? newDuration : 0;
+            if (newDuration <= 0) {
+            newScreens[screen][player] = false;
+            } else {
+            newScreens[screen][player] = previousTurn.screens[screen][player];
+            }
+        }
+        });
+    });
+
+    // Process tailwind update for each player
+    let newTailwind = {
+        player1: previousTurn.tailwind.player1,
+        player2: previousTurn.tailwind.player2,
+        duration1: 0,
+        duration2: 0
+    };
+
+    ['player1', 'player2'].forEach(player => {
+        const durationKey = "duration" + (player === "player1" ? "1" : "2");
+        const prevDuration = previousTurn.tailwind[durationKey];
+        if (prevDuration && prevDuration > 0) {
+        const newDuration = previousTurn.turnNumber >= 1 ? prevDuration - 1 : prevDuration;
+        newTailwind[durationKey] = newDuration > 0 ? newDuration : 0;
+        if (newDuration <= 0) {
+            newTailwind[player] = false;
+        } else {
+            newTailwind[player] = previousTurn.tailwind[player];
+        }
+        //console.log(`Tailwind on ${player} has ${newTailwind[durationKey]} turns left`);
+        }
+    });
+
+    // Build new turn state incorporating updates
+    turns.push({
+        turnNumber: currentTurn,
+        startsWith: {
+        player1: [
+            previousTurn.endsWith.player1[0] || "none",
+            previousTurn.endsWith.player1[1] || "none"
+        ],
+        player2: [
+            previousTurn.endsWith.player2[0] || "none", 
+            previousTurn.endsWith.player2[1] || "none"
+        ]
+        },
+        endsWith: {
+        player1: [
+            previousTurn.endsWith.player1[0] || "none",
+            previousTurn.endsWith.player1[1] || "none"
+        ],
+        player2: [
+            previousTurn.endsWith.player2[0] || "none", 
+            previousTurn.endsWith.player2[1] || "none"
+        ]
+        },
+        field: newField,
+        weather: newWeather,
+        room: newRoom,
+        screens: newScreens,
+        tailwind: newTailwind,
+        spikes: {
+        player1: { ...previousTurn.spikes.player1 },
+        player2: { ...previousTurn.spikes.player2 }
+        },
+        movesDone: {
+        player1: [ "", "" ],
+        player2: [ "", "" ]
+        },
+        revealedPokemon: {
+        player1: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player1)),
+        player2: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player2)),
+        }
+    });
+
+    //console.log(`Start of turn ${currentTurn}`);
+    //console.log(`Terrain left: ${newField.duration}`);
+    //console.log(`Weather left: ${newWeather.duration}`);
+    //console.log(`Room left: ${newRoom.duration}`);
+    //console.log(`Reflect left: ${newScreens.reflect.duration1} ${newScreens.reflect.duration2}`);
+    //console.log(`Lightscreen left: ${newScreens.lightscreen.duration1} ${newScreens.lightscreen.duration2}`);
+    //console.log(`Auroraveil left: ${newScreens.auroraveil.duration1} ${newScreens.auroraveil.duration2}`);
+    //console.log(`Tailwind left: ${newTailwind.duration1} ${newTailwind.duration2}`);
+    //console.log('startsWith p1:', turns[currentTurn].startsWith.player1);
+    //console.log('startsWith p2:', turns[currentTurn].startsWith.player2);
+    //console.log('endsWith p1:', turns[currentTurn].endsWith.player1);
+    //console.log('endsWith p2:', turns[currentTurn].endsWith.player2);
+
+    // After initializing the turn, check for sleeping Pokémon and update their movesDone
+    for (const player of ['player1', 'player2']) {
+        // Check each active slot (0 and 1)
+        for (let slot = 0; slot < 2; slot++) {
+        const pokemonName = turns[currentTurn].startsWith[player][slot];
+        if (pokemonName && pokemonName !== "none") {
+            const pokemon = turns[currentTurn].revealedPokemon[player].find(
+            p => p && p.name === pokemonName
+            );
+            
+            // If Pokémon exists, is sleeping, and hasn't made a move yet
+            if (pokemon && pokemon.nonVolatileStatus === "slp" && 
+                (!turns[currentTurn].movesDone[player][slot] 
+                || turns[currentTurn].movesDone[player][slot] === "")) {
+            turns[currentTurn].movesDone[player][slot] = "continue sleeping";
+            }
+        }
+        }
+    }
+
+    // Check for sleeping Pokémon at the start of each turn
+    for (const player of ['player1', 'player2']) {
+        // Check each active slot (0 and 1)
+        for (let slot = 0; slot < 2; slot++) {
+        const pokemonName = turns[currentTurn].startsWith[player][slot];
+        if (pokemonName && pokemonName !== "none") {
+            const pokemon = turns[currentTurn].revealedPokemon[player].find(
+            p => p && p.name === pokemonName
+            );
+            
+            // If Pokémon exists and is sleeping, mark it in movesDone
+            if (pokemon && pokemon.nonVolatileStatus === "slp") {
+            turns[currentTurn].movesDone[player][slot] = "sleeping";
+            //console.log(`Move done updated for ${player} slot ${slot}: sleeping`);
+            }
+        }
+        }
+    }
+
+    return turns;
 }
 
 function processShowteam(log) {
@@ -340,6 +524,9 @@ function processSwitch(currentTurn, switchMatches, turns, teams) {
     const nickname = switchMatches[2];
     const newPokemonName = switchMatches[3];
     const slot = slotOwner.endsWith("a") ? 0 : 1;
+
+    //console.log(`Processing switch: Turn ${currentTurn}, Player ${player}, Slot ${slot}, Pokemon ${newPokemonName}`);
+    //console.log('Current turn state:', JSON.stringify(turns[currentTurn], null, 2));
 
     // Identify the old (switching-out) Pokémon name from the active slot.
     let oldMonName = "none";
@@ -578,26 +765,6 @@ function toSnakeCase(data) {
         }, {});
     }
     return data;
-}
-
-// Function to save the replay data in BigQuery and receive more info from problems
-async function saveReplay(data) {
-    const dataset = bigQuery.dataset('pokemon_replays');
-    const table = dataset.table('replays');
-
-    try {
-        await table.insert(data);
-        console.log('Replay saved successfully');
-    } catch (error) {
-        console.error('Error saving replay:', error);
-
-        if (error.errors) {
-            error.errors.forEach(err => {
-                console.error('Row with error:', err.row);
-                console.error('Details of the error:', err.errors);
-            });
-        }
-    }
 }
 
 // Whenever a Pokémon uses a move, track that as its lastMoveUsed:
@@ -948,38 +1115,3 @@ run().catch(console.dir);
 module.exports = {
     saveReplayToBigQuery
 };
-
-// Agrega la definición de processTurn
-function processTurn(currentTurn, turns) {
-  // En este ejemplo, se clona el estado del turno anterior para crear el nuevo turno.
-  const previousTurn = turns[currentTurn - 1];
-  const newTurn = {
-    turn_number: currentTurn,
-    startsWith: {
-      player1: previousTurn ? [...previousTurn.endsWith.player1] : ["none", "none"],
-      player2: previousTurn ? [...previousTurn.endsWith.player2] : ["none", "none"]
-    },
-    endsWith: {
-      player1: previousTurn ? [...previousTurn.endsWith.player1] : ["none", "none"],
-      player2: previousTurn ? [...previousTurn.endsWith.player2] : ["none", "none"]
-    },
-    field: { terrain: "", duration: 0 },
-    weather: { condition: "", duration: 0 },
-    room: { condition: "", duration: 0 },
-    screens: {
-      reflect: { player1: false, player2: false, duration1: 0, duration2: 0 },
-      lightscreen: { player1: false, player2: false, duration1: 0, duration2: 0 },
-      auroraveil: { player1: false, player2: false, duration1: 0, duration2: 0 }
-    },
-    tailwind: { player1: false, player2: false, duration1: 0, duration2: 0 },
-    spikes: {
-      player1: { spikes: 0, toxicSpikes: 0, stealthRock: false },
-      player2: { spikes: 0, toxicSpikes: 0, stealthRock: false }
-    },
-    movesDone: { player1: ["", ""], player2: ["", ""] },
-    revealedPokemon: { player1: [], player2: [] }
-  };
-
-  turns.push(newTurn);
-  return turns;
-}

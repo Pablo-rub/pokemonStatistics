@@ -52,7 +52,7 @@ router.post("/", async (req, res) => {
     // Initialize the first turn
     let currentTurn = 0;
     turns.push({
-      turn_number: currentTurn,
+      turnNumber: currentTurn,
       startsWith: {
         player1: [],
         player2: [],
@@ -310,7 +310,7 @@ function processTurn(currentTurn, turns) {
   // Process weather update (existing code)
   let newWeather = { condition: "", duration: 0 };
   if (previousTurn.weather && previousTurn.weather.duration > 0) {
-    const weatherDuration = previousTurn.turn_number >= 1 ? previousTurn.weather.duration - 1 : previousTurn.weather.duration;
+    const weatherDuration = previousTurn.turnNumber >= 1 ? previousTurn.weather.duration - 1 : previousTurn.weather.duration;
     newWeather = {
       condition: previousTurn.weather.condition,
       duration: weatherDuration > 0 ? weatherDuration : 0
@@ -321,7 +321,7 @@ function processTurn(currentTurn, turns) {
   // Process field update (existing code)
   let newField = { terrain: "", duration: 0 };
   if (previousTurn.field && previousTurn.field.duration > 0) {
-    const fieldDuration = previousTurn.turn_number >= 1 ? previousTurn.field.duration - 1 : previousTurn.field.duration;
+    const fieldDuration = previousTurn.turnNumber >= 1 ? previousTurn.field.duration - 1 : previousTurn.field.duration;
     newField = {
       terrain: previousTurn.field.terrain,
       duration: fieldDuration > 0 ? fieldDuration : 0
@@ -332,7 +332,7 @@ function processTurn(currentTurn, turns) {
   // Process room update (existing code)
   let newRoom = { condition: "", duration: 0 };
   if (previousTurn.room && previousTurn.room.duration > 0) {
-    const roomDuration = previousTurn.turn_number >= 1 ? previousTurn.room.duration - 1 : previousTurn.room.duration;
+    const roomDuration = previousTurn.turnNumber >= 1 ? previousTurn.room.duration - 1 : previousTurn.room.duration;
     newRoom = {
       condition: previousTurn.room.condition,
       duration: roomDuration > 0 ? roomDuration : 0
@@ -352,7 +352,7 @@ function processTurn(currentTurn, turns) {
       const durationKey = "duration" + (player === "player1" ? "1" : "2");
       const prevDuration = previousTurn.screens[screen][durationKey];
       if (prevDuration && prevDuration > 0) {
-        const newDuration = previousTurn.turn_number >= 1 ? prevDuration - 1 : prevDuration;
+        const newDuration = previousTurn.turnNumber >= 1 ? prevDuration - 1 : prevDuration;
         newScreens[screen][durationKey] = newDuration > 0 ? newDuration : 0;
         if (newDuration <= 0) {
           newScreens[screen][player] = false;
@@ -375,7 +375,7 @@ function processTurn(currentTurn, turns) {
     const durationKey = "duration" + (player === "player1" ? "1" : "2");
     const prevDuration = previousTurn.tailwind[durationKey];
     if (prevDuration && prevDuration > 0) {
-      const newDuration = previousTurn.turn_number >= 1 ? prevDuration - 1 : prevDuration;
+      const newDuration = previousTurn.turnNumber >= 1 ? prevDuration - 1 : prevDuration;
       newTailwind[durationKey] = newDuration > 0 ? newDuration : 0;
       if (newDuration <= 0) {
         newTailwind[player] = false;
@@ -388,7 +388,7 @@ function processTurn(currentTurn, turns) {
   
   // Build new turn state incorporating updates
   turns.push({
-    turn_number: currentTurn,
+    turnNumber: currentTurn,
     startsWith: {
       player1: [
         previousTurn.endsWith.player1[0] || "none",

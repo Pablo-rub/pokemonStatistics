@@ -54,14 +54,17 @@ function delay(ms) {
 
 async function fetchReplayLinks(format) {
   try {
-    let pageNumber = 1;
     let hasMoreReplays = true;
     let processedReplays = new Set();
+    let lastTimestamp = null;
 
     while (hasMoreReplays) {
       try {
-        const searchUrl = `https://replay.pokemonshowdown.com/search.json?format=${format}&page=${pageNumber}`;
-        console.log(`Fetching replays from page ${pageNumber}: ${searchUrl}`);
+        let searchUrl = `https://replay.pokemonshowdown.com/search.json?format=${format}`;
+        if (lastTimestamp) {
+          searchUrl += `&before=${lastTimestamp}`;
+        }
+        console.log(`Fetching replays from: ${searchUrl}`);
 
         const response = await axios.get(searchUrl);
         const replays = response.data;
@@ -71,11 +74,13 @@ async function fetchReplayLinks(format) {
           break;
         }
 
-        console.log(`Found ${replays.length} replays on page ${pageNumber}`);
+        // Si hay 51 elementos, significa que hay más páginas
+        hasMoreReplays = replays.length > 50;
+        console.log(`Found ${replays.length} replays (${hasMoreReplays ? 'more pages available' : 'last page'})`);
 
-        for (const replay of replays) {
+        // Procesar solo los primeros 50 replays
+        for (const replay of replays.slice(0, 50)) {
           try {
-            // Verificar si la replay ya existe en BigQuery
             const query = `SELECT replay_id FROM \`pokemon-statistics.pokemon_replays.replays\` WHERE replay_id = '${replay.id}'`;
             const [rows] = await bigQuery.query(query);
 
@@ -89,30 +94,30 @@ async function fetchReplayLinks(format) {
             }
 
             if (!processedReplays.has(replay.id)) {
-              // Obtener los datos completos de la replay
               const replayUrl = `https://replay.pokemonshowdown.com/${replay.id}.json`;
               const replayResponse = await axios.get(replayUrl);
-              console.log(`Processing replay ${replay.id}`);
+              //console.log(`Processing replay ${replay.id}`);
               
               await saveReplayToBigQuery(replayResponse.data);
               processedReplays.add(replay.id);
               console.log(`Successfully saved replay ${replay.id}`);
               
-              // Pequeña pausa entre replays para no sobrecargar el servidor
-              await delay(1000);
+              await delay(1000); // Pausa entre replays
             }
           } catch (error) {
             console.error(`Error processing replay ${replay.id}:`, error.message);
           }
         }
 
-        if (hasMoreReplays) {
-          pageNumber++;
+        // Si hay más páginas, actualizar el timestamp con el último replay procesado
+        if (hasMoreReplays && replays.length >= 50) {
+          lastTimestamp = replays[49].uploadtime;
+          console.log(`Setting timestamp for next page: ${lastTimestamp}`);
           await delay(2000); // Pausa entre páginas
         }
 
       } catch (error) {
-        console.error(`Error processing page ${pageNumber}:`, error.message);
+        console.error(`Error processing batch:`, error.message);
         if (error.response && error.response.status === 404) {
           hasMoreReplays = false;
         } else {
