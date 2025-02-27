@@ -65,12 +65,14 @@ async function saveReplayToBigQuery(replayData) {
                 player1: {
                     spikes: 0,
                     toxicSpikes: 0,
-                    stealthRock: false
+                    stealthRock: false,
+                    stickyWeb: false
                 },
                 player2: {
                     spikes: 0,
                     toxicSpikes: 0,
-                    stealthRock: false
+                    stealthRock: false,
+                    stickyWeb: false
                 }
             },
             movesDone: {
@@ -1027,6 +1029,8 @@ function processSideStart(currentTurn, sideStartMatch, turns) {
         turns[currentTurn].spikes[side].toxicSpikes = Math.min((turns[currentTurn].spikes[side].toxicSpikes || 0) + 1, 2);
     } else if (effectName === "stealth rock") {
         turns[currentTurn].spikes[side].stealthRock = true;
+    } else if (effectName === "sticky web") {
+        turns[currentTurn].spikes[side].stickyWeb = true;
     } else {
         console.log("Unhandled sidestart effect:", effectName);
     }
