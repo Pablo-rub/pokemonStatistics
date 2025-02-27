@@ -921,7 +921,7 @@ function handleObjectChangingMoves(currentTurn, userPokemon, targetPokemon, move
 function processWeather(currentTurn, weatherMatch, turns, line) {
     if (weatherMatch && !line.includes("[upkeep]")) {
         const newCondition = weatherMatch[1];
-        const initialDuration = (currentTurn === 0) ? 6 : 5;
+        const initialDuration = 5;
         
         // Check if the Pokemon setting the weather has a duration-extending item
         const player = line.includes("p1") ? "player1" : "player2";
@@ -934,16 +934,16 @@ function processWeather(currentTurn, weatherMatch, turns, line) {
         if (pokemon) {
             switch(pokemon.item) {
                 case "Damp Rock":
-                    if (newCondition === "RainDance") initialDuration = currentTurn === 0 ? 9 : 8;
+                    if (newCondition === "RainDance") initialDuration = 8;
                     break;
                 case "Heat Rock":
-                    if (newCondition === "SunnyDay") initialDuration = currentTurn === 0 ? 9 : 8;
+                    if (newCondition === "SunnyDay") initialDuration = 8;
                     break;
                 case "Smooth Rock":
-                    if (newCondition === "Sandstorm") initialDuration = currentTurn === 0 ? 9 : 8;
+                    if (newCondition === "Sandstorm") initialDuration = 8;
                     break;
                 case "Icy Rock":
-                    if (newCondition === "Hail") initialDuration = currentTurn === 0 ? 9 : 8;
+                    if (newCondition === "Hail") initialDuration = 8;
                     break;
             }
         }
@@ -961,14 +961,14 @@ function processWeather(currentTurn, weatherMatch, turns, line) {
 function processField(currentTurn, fieldMatch, turns) {
     if (fieldMatch) {
         const terrain = fieldMatch[1];
-        let initialDuration = (currentTurn === 0) ? 6 : 5;
+        let initialDuration = 5;
 
         // Check if any active Pokemon has Terrain Extender
         const hasTerrainExtender = turns[currentTurn].revealedPokemon.player1.some(p => p.item === "Terrain Extender") ||
                                   turns[currentTurn].revealedPokemon.player2.some(p => p.item === "Terrain Extender");
 
         if (hasTerrainExtender) {
-            initialDuration = currentTurn === 0 ? 9 : 8;
+            initialDuration = 8;
         }
         
         turns[currentTurn].field = {
@@ -987,7 +987,7 @@ function processRoom(currentTurn, fieldMatch, turns, line) {
         const effect = fieldMatch[1];
         // Only process if the effect is one of the allowed room effects
         if (roomEffects.includes(effect)) {
-            const initialDuration = (currentTurn === 0) ? 6 : 5;
+            const initialDuration = 5;
             // If the same room effect is already active, cancel (delete) it
             if (turns[currentTurn].room.condition === effect) {
                 turns[currentTurn].room = { condition: "", duration: 0 };
@@ -1037,14 +1037,14 @@ function processSideStart(currentTurn, sideStartMatch, turns) {
 }
 
 function processScreen(currentTurn, side, screenType, turns, line) {
-    let initialDuration = (currentTurn === 0) ? 6 : 5;
+    let initialDuration = 5;
     
     // Check if setter has Light Clay
     const player = side === "player1" ? "player1" : "player2";
     const hasLightClay = turns[currentTurn].revealedPokemon[player].some(p => p.item === "Light Clay");
     
     if (hasLightClay) {
-        initialDuration = currentTurn === 0 ? 9 : 8;
+        initialDuration = 8;
     }
 
     turns[currentTurn].screens[screenType][side] = true;
@@ -1065,7 +1065,7 @@ function processAuroraVeil(currentTurn, side, turns, line) {
 
 // Create a function to process tailwind effects for a given player side
 function processTailwind(currentTurn, side, turns, line) {
-    const initialDuration = (currentTurn === 0) ? 6 : 5;
+    const initialDuration = 5;
     turns[currentTurn].tailwind[side] = true;
     turns[currentTurn].tailwind["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
     //console.log(`Tailwind set for ${side} with duration: ${initialDuration}`);
