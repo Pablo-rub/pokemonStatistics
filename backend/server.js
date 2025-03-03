@@ -35,15 +35,28 @@ app.listen(PORT, () => {
 });
 
 // Endpoint to get the list of games
-app.get('/api/public-games', async (req, res) => {
-    try {
-        const query = 'SELECT * FROM `pokemon-statistics.pokemon_replays.replays`';
-        const [rows] = await bigQuery.query(query);
-        res.json(rows);
-    } catch (error) {
-        console.error("Error fetching data from BigQuery:", error);
-        res.status(500).send("Error retrieving data");
-    }
+app.get('/api/games', async (req, res) => {
+  try {
+    // Obtén la página y el número de items por página (por defecto 1 y 50)
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = (page - 1) * limit;
+
+    // Ajusta la consulta para traer únicamente los registros correspondientes
+    const query = `
+      SELECT *
+      FROM \`pokemon-statistics.pokemon_replays.replays\`
+      ORDER BY date DESC
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `;
+    const [rows] = await bigQuery.query(query);
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Error fetching data from BigQuery:", error);
+    res.status(500).send("Error retrieving data");
+  }
 });
 
 // Endpoint that returns if a replay is already in the database
