@@ -49,3 +49,9 @@ illusion
 arena trap
 magnet pull
 shadow tag
+
+rooms:
+trick room
+gravity
+magic room
+wonder room

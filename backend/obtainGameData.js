@@ -1,18 +1,20 @@
-const {BigQuery} = require('@google-cloud/bigquery');
+const { BigQuery } = require('@google-cloud/bigquery');
 const express = require("express");
 const axios = require("axios");
 
+const router = express.Router();
 const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
 
 // Initialize the BigQuery client
-const bigQuery = new BigQuery({keyFilename});
+const bigQuery = new BigQuery({ keyFilename });
 
-//Initialize the express app
-const app = express();
-app.use(express.json());
-
-app.post("/replays", async (req, res) => {
+// POST endpoint to process a replay
+router.post("/", async (req, res) => {
   const replayUrl = req.body.url;
+  if (!replayUrl) {
+    return res.status(400).json({ error: 'Missing replay URL' });
+  }
+
   try {
     // Obtaining the data from the JSON file in the URL
     const response = await axios.get(`${replayUrl}.json`);
@@ -20,13 +22,6 @@ app.post("/replays", async (req, res) => {
 
     // Extracting the data from the replay
     const id = replayData.id;
-
-    // Check if the replay is already in the database
-    const checkResponse = await axios.get(`http://localhost:5000/api/games/${id}`);
-    if (checkResponse.data.exists) {
-      res.status(200).send("Replay already exists in the database");
-      return;
-    }
 
     const format = replayData.format;
     const players = replayData.players;
@@ -50,14 +45,14 @@ app.post("/replays", async (req, res) => {
     const date = new Date(uploadtime * 1000).toISOString();
     //console.log("Date of the match is:", date);
     const teams = processShowteam(log); // Safe fallback if no showteam lines
-    console.log("Initial teams: ", teams);
+    //console.log("Initial teams: ", teams);
     let turns = [];
     //console.log("Empty initial turns: ", turns);
     
     // Initialize the first turn
     let currentTurn = 0;
     turns.push({
-      turn_number: currentTurn,
+      turnNumber: currentTurn,
       startsWith: {
         player1: [],
         player2: [],
@@ -70,6 +65,41 @@ app.post("/replays", async (req, res) => {
         terrain: "",
         duration: 0,
       },
+      weather: {
+        condition: "",
+        duration: 0,
+      },
+      room: {
+        condition: "",
+        duration: 0,
+      },
+      screens: {
+        reflect: { player1: false, player2: false, duration1: 0, duration2: 0 },
+        lightscreen: { player1: false, player2: false, duration1: 0, duration2: 0 },
+        auroraveil: { player1: false, player2: false, duration1: 0, duration2: 0 }
+      },
+      tailwind: {
+        player1: false,
+        player2: false,
+        duration1: 0,
+        duration2: 0
+      },
+      spikes: {
+        player1: {
+          spikes: 0,
+          toxicSpikes: 0,
+          stealthRock: false
+        },
+        player2: {
+          spikes: 0,
+          toxicSpikes: 0,
+          stealthRock: false
+        }
+      },
+      movesDone: {
+        player1: [ "", "" ],
+        player2: [ "", "" ]
+      },
       revealedPokemon: {
         player1: [],
         player2: [],
@@ -81,10 +111,10 @@ app.post("/replays", async (req, res) => {
 
       const turnMatch = line.match(/\|turn\|(\d+)/);
       const switchMatchesG = line.match(
-        /\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)(?:, ([MF])\|)?(\d+)\/(\d+)/
+        /\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)(?:, ([MF]))?(?:, shiny)?\|(\d+)\/(\d+)/
       );
       const switchMatchesNG = line.match(
-        /\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)\|(\d+)\/(\d+)/
+        /\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)(?:, shiny)?\|(\d+)\/(\d+)/
       );
       let switchMatches = switchMatchesG || switchMatchesNG;
       const itemMatchActivate = line.match(
@@ -112,9 +142,13 @@ app.post("/replays", async (req, res) => {
       let abilityMatch = line.match(
         /\|-ability\|(p1[ab]|p2[ab]): (.+)\|(.+)\|(.+)/
       );
-      let moveMatch = line.match(
+      let moveOkMatch = line.match(
         /\|move\|(p1[ab]|p2[ab]): (.+)\|(.+?)\|(p1[ab]|p2[ab]): (.+)/
       );
+      let moveFailMatch = line.match(
+        /\|move\|(p1[ab]|p2[ab]): (.+)\|(.+?)\|\[still\]/
+      );
+      let moveMatch = moveOkMatch || moveFailMatch;
       let damageMatch = line.match(/\|-damage\|(p1[ab]|p2[ab]): (.+?)\|(.+)/);
       const healMatch = line.match(
         /\|-heal\|(p1[ab]|p2[ab]): (.+?)\|(.+?)\|(?:\[from\] (.+?))?(?:\|\[of\] (.+?))?/
@@ -134,7 +168,9 @@ app.post("/replays", async (req, res) => {
       const teraMatch = line.match(
         /\|-terastallize\|(p1[ab]|p2[ab]): (.+?)\|(.+)/
       );
-      const fieldMatch = line.match(/\|-fieldstart\|move: (\w+\s?\w*)\|\[of\] (p\d[ab]): (\w+)/);
+      const fieldMatch = line.match(/\|-fieldstart\|move: ([\w\s]+)\|(?:\[from\] [^\|]+\|)?\[of\] (p\d[ab]): ([\w\s]+)/);
+      const weatherMatch = line.match(/\|-weather\|(.+?)\|(.+)/);
+      const sideStartMatch = line.match(/^\|-sidestart\|(p1|p2):\s*([^|]+)\|move:\s*(.+)$/);
       const volatileMatch = line.match(/\|-start\|(p1[ab]|p2[ab]): (.+?)\|(.+)/);
       
       // Detect new turn
@@ -142,16 +178,10 @@ app.post("/replays", async (req, res) => {
         currentTurn = parseInt(turnMatch[1]);
         turns = processTurn(currentTurn, turns);
         incrementVolatileTurnCounters(turns);
-        //console.log("Start of turn", turnMatch[1]);
       }
       if (switchMatches) { // Detect active Pokémon switches and update revealed Pokémon if necessary
         //console.log("Switch detected");
-        processSwitch(
-          currentTurn,
-          switchMatches,
-          turns,
-          teams
-        );
+        processSwitch(currentTurn, switchMatches, turns, teams);
         //console.log("Turn processed");
       } 
       if (itemMatch) { // Detect the usage of an item in different formats
@@ -161,10 +191,7 @@ app.post("/replays", async (req, res) => {
         //console.log(endItemMatch);
         processItem(currentTurn, endItemMatch, turns);
       } 
-      if (abilityMatch) { // Detect the usage of an ability
-        processAbility(currentTurn, abilityMatch, turns);
-      } 
-      if (moveMatch) { // Detect the usage of a move
+      if (moveMatch || moveFailMatch) { // Detect the usage of a move
         processMove(currentTurn, moveMatch, turns);
       } 
       if (damageMatch) { // Update the remaining HP of a Pokémon in each turn
@@ -204,13 +231,31 @@ app.post("/replays", async (req, res) => {
         processTerastallize(currentTurn, teraMatch, turns);
       } 
       if (fieldMatch) { // Detect the start of a field effect
-        //console.log(fieldMatch);
-        turns[currentTurn].field = { terrain: fieldMatch[1], duration: 5 };
+        // If the effect is Trick Room, process it as a room effect.
+        if (roomEffects.includes(fieldMatch[1])) {
+          processRoom(currentTurn, fieldMatch, turns, line);
+        } else {
+          // Otherwise, process it as a normal terrain field effect.
+          processField(currentTurn, fieldMatch, turns);
+        }
+      }
+      if (weatherMatch && !line.includes("[upkeep]")) { // Only set or reset weather if line doesn't have [upkeep]
+        processWeather(currentTurn, weatherMatch, turns, line);
       }
       if (volatileMatch) { // Detect the start of a volatile status
         processVolatileStart(currentTurn, volatileMatch, turns);
       }
-      //TODO: detect the start of a weather effect
+      // Process fieldend to clear terrain effect if found
+      if (line.includes("fieldend")) {
+        processFieldEnd(currentTurn, line, turns);
+      }
+      if (sideStartMatch) { // Detect the start of a side effect
+        processSideStart(currentTurn, sideStartMatch, turns);
+      }
+      // Process sideend to clear tailwind and screens if found
+      if (line.includes("sideend")) {
+        processSideEnd(currentTurn, line, turns);
+      }
     }
 
     try {
@@ -238,10 +283,12 @@ app.post("/replays", async (req, res) => {
 
       // Rename the names of the variables to match the BigQuery schema
       const snakeCaseData = toSnakeCase(replayData);
-      //console.log("Replay in snake case", snakeCaseData);
-      //console.log(snakeCaseData.turns[4].revealed_pokemon.player1);
-    
-      // Save the replay data in BigQuery
+      
+      // Add detailed logging of snakeCaseData
+      //console.log("Full replay data after snake case conversion:");
+      //console.log(JSON.stringify(snakeCaseData, null, 2));
+
+      // Save the replay data in BigQuery 
       saveReplay(snakeCaseData);
       res.status(200).send("Replay saved successfully");
 
@@ -256,58 +303,181 @@ app.post("/replays", async (req, res) => {
   }
 });
 
-// Process the turn
+// In processTurn, add logging for the remaining turns of side effects (screens and tailwind)
 function processTurn(currentTurn, turns) {
-  // Check if we are adding the first turn
-  if (turns.length === 0) {
-    // If no turns exist yet, initialize the first turn
-    turns.push({
-      turnNumber: currentTurn,
-      startsWith: {
-        player1: [],
-        player2: [],
-      },
-      endsWith: {
-        player1: [],
-        player2: [],
-      },
-      field: {
-        terrain: "",
-        duration: 0,
-      },
-      revealedPokemon: {
-        player1: [],
-        player2: [],
-      }
-    });
-  } else {
-    // Copy the active Pokémon from the previous turn
-    //console.log("Previous turn", turns[currentTurn - 1]);
-    const previousTurn = turns[currentTurn - 1];
-    //console.log(previousTurn.field.duration, previousTurn.field.terrain);
-    const previousTerrainEnds = (previousTurn.field.duration - 1) > 1;
-    //console.log(previousTerrainEnds);
+  const previousTurn = turns[currentTurn - 1];
+  
+  // Process weather update (existing code)
+  let newWeather = { condition: "", duration: 0 };
+  if (previousTurn.weather && previousTurn.weather.duration > 0) {
+    const weatherDuration = previousTurn.turnNumber >= 1 ? previousTurn.weather.duration - 1 : previousTurn.weather.duration;
+    newWeather = {
+      condition: previousTurn.weather.condition,
+      duration: weatherDuration > 0 ? weatherDuration : 0
+    };
+    if (newWeather.duration === 0); //console.log(`Weather ${newWeather.condition} ended.`);
+  }
+  
+  // Process field update (existing code)
+  let newField = { terrain: "", duration: 0 };
+  if (previousTurn.field && previousTurn.field.duration > 0) {
+    const fieldDuration = previousTurn.turnNumber >= 1 ? previousTurn.field.duration - 1 : previousTurn.field.duration;
+    newField = {
+      terrain: previousTurn.field.terrain,
+      duration: fieldDuration > 0 ? fieldDuration : 0
+    };
+    if (newField.duration === 0); //console.log(`Terrain ${newField.terrain} ended.`);
+  }
+  
+  // Process room update (existing code)
+  let newRoom = { condition: "", duration: 0 };
+  if (previousTurn.room && previousTurn.room.duration > 0) {
+    const roomDuration = previousTurn.turnNumber >= 1 ? previousTurn.room.duration - 1 : previousTurn.room.duration;
+    newRoom = {
+      condition: previousTurn.room.condition,
+      duration: roomDuration > 0 ? roomDuration : 0
+    };
+    if (newRoom.duration === 0); //console.log(`Room ${newRoom.condition} ended.`);
+  }
+  
+  // Process screens update for each type and each player
+  let newScreens = {
+    reflect: { player1: previousTurn.screens.reflect.player1, player2: previousTurn.screens.reflect.player2, duration1: 0, duration2: 0 },
+    lightscreen: { player1: previousTurn.screens.lightscreen.player1, player2: previousTurn.screens.lightscreen.player2, duration1: 0, duration2: 0 },
+    auroraveil: { player1: previousTurn.screens.auroraveil.player1, player2: previousTurn.screens.auroraveil.player2, duration1: 0, duration2: 0 }
+  };
 
-    // Create a new object for the current turn
-    turns.push({
-      turnNumber: currentTurn,
-      startsWith: {
-        player1: JSON.parse(JSON.stringify(previousTurn.endsWith.player1)), // Deep copy
-        player2: JSON.parse(JSON.stringify(previousTurn.endsWith.player2)), // Deep copy
-      },
-      endsWith: {
-        player1: JSON.parse(JSON.stringify(previousTurn.endsWith.player1)), // Deep copy
-        player2: JSON.parse(JSON.stringify(previousTurn.endsWith.player2)), // Deep copy
-      },
-      field: {
-        terrain: previousTerrainEnds ? previousTurn.field.terrain : "",
-        duration: previousTerrainEnds ? previousTurn.field.duration - 1 : 0,
-      },
-      revealedPokemon: {
-        player1: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player1)), // Deep copy
-        player2: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player2)), // Deep copy
+  ['reflect', 'lightscreen', 'auroraveil'].forEach(screen => {
+    ['player1', 'player2'].forEach(player => {
+      const durationKey = "duration" + (player === "player1" ? "1" : "2");
+      const prevDuration = previousTurn.screens[screen][durationKey];
+      if (prevDuration && prevDuration > 0) {
+        const newDuration = previousTurn.turnNumber >= 1 ? prevDuration - 1 : prevDuration;
+        newScreens[screen][durationKey] = newDuration > 0 ? newDuration : 0;
+        if (newDuration <= 0) {
+          newScreens[screen][player] = false;
+        } else {
+          newScreens[screen][player] = previousTurn.screens[screen][player];
+        }
       }
     });
+  });
+  
+  // Process tailwind update for each player
+  let newTailwind = {
+    player1: previousTurn.tailwind.player1,
+    player2: previousTurn.tailwind.player2,
+    duration1: 0,
+    duration2: 0
+  };
+
+  ['player1', 'player2'].forEach(player => {
+    const durationKey = "duration" + (player === "player1" ? "1" : "2");
+    const prevDuration = previousTurn.tailwind[durationKey];
+    if (prevDuration && prevDuration > 0) {
+      const newDuration = previousTurn.turnNumber >= 1 ? prevDuration - 1 : prevDuration;
+      newTailwind[durationKey] = newDuration > 0 ? newDuration : 0;
+      if (newDuration <= 0) {
+        newTailwind[player] = false;
+      } else {
+        newTailwind[player] = previousTurn.tailwind[player];
+      }
+      //console.log(`Tailwind on ${player} has ${newTailwind[durationKey]} turns left`);
+    }
+  });
+  
+  // Build new turn state incorporating updates
+  turns.push({
+    turnNumber: currentTurn,
+    startsWith: {
+      player1: [
+        previousTurn.endsWith.player1[0] || "none",
+        previousTurn.endsWith.player1[1] || "none"
+      ],
+      player2: [
+        previousTurn.endsWith.player2[0] || "none", 
+        previousTurn.endsWith.player2[1] || "none"
+      ]
+    },
+    endsWith: {
+      player1: [
+        previousTurn.endsWith.player1[0] || "none",
+        previousTurn.endsWith.player1[1] || "none"
+      ],
+      player2: [
+        previousTurn.endsWith.player2[0] || "none", 
+        previousTurn.endsWith.player2[1] || "none"
+      ]
+    },
+    field: newField,
+    weather: newWeather,
+    room: newRoom,
+    screens: newScreens,
+    tailwind: newTailwind,
+    spikes: {
+      player1: { ...previousTurn.spikes.player1 },
+      player2: { ...previousTurn.spikes.player2 }
+    },
+    movesDone: {
+      player1: [ "", "" ],
+      player2: [ "", "" ]
+    },
+    revealedPokemon: {
+      player1: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player1)),
+      player2: JSON.parse(JSON.stringify(previousTurn.revealedPokemon.player2)),
+    }
+  });
+
+  //console.log(`Start of turn ${currentTurn}`);
+  //console.log(`Terrain left: ${newField.duration}`);
+  //console.log(`Weather left: ${newWeather.duration}`);
+  //console.log(`Room left: ${newRoom.duration}`);
+  //console.log(`Reflect left: ${newScreens.reflect.duration1} ${newScreens.reflect.duration2}`);
+  //console.log(`Lightscreen left: ${newScreens.lightscreen.duration1} ${newScreens.lightscreen.duration2}`);
+  //console.log(`Auroraveil left: ${newScreens.auroraveil.duration1} ${newScreens.auroraveil.duration2}`);
+  //console.log(`Tailwind left: ${newTailwind.duration1} ${newTailwind.duration2}`);
+  //console.log('startsWith p1:', turns[currentTurn].startsWith.player1);
+  //console.log('startsWith p2:', turns[currentTurn].startsWith.player2);
+  //console.log('endsWith p1:', turns[currentTurn].endsWith.player1);
+  //console.log('endsWith p2:', turns[currentTurn].endsWith.player2);
+
+  // After initializing the turn, check for sleeping Pokémon and update their movesDone
+  for (const player of ['player1', 'player2']) {
+    // Check each active slot (0 and 1)
+    for (let slot = 0; slot < 2; slot++) {
+      const pokemonName = turns[currentTurn].startsWith[player][slot];
+      if (pokemonName && pokemonName !== "none") {
+        const pokemon = turns[currentTurn].revealedPokemon[player].find(
+          p => p && p.name === pokemonName
+        );
+        
+        // If Pokémon exists, is sleeping, and hasn't made a move yet
+        if (pokemon && pokemon.nonVolatileStatus === "slp" && 
+            (!turns[currentTurn].movesDone[player][slot] 
+            || turns[currentTurn].movesDone[player][slot] === "")) {
+          turns[currentTurn].movesDone[player][slot] = "continue sleeping";
+        }
+      }
+    }
+  }
+
+  // Check for sleeping Pokémon at the start of each turn
+  for (const player of ['player1', 'player2']) {
+    // Check each active slot (0 and 1)
+    for (let slot = 0; slot < 2; slot++) {
+      const pokemonName = turns[currentTurn].startsWith[player][slot];
+      if (pokemonName && pokemonName !== "none") {
+        const pokemon = turns[currentTurn].revealedPokemon[player].find(
+          p => p && p.name === pokemonName
+        );
+        
+        // If Pokémon exists and is sleeping, mark it in movesDone
+        if (pokemon && pokemon.nonVolatileStatus === "slp") {
+          turns[currentTurn].movesDone[player][slot] = "sleeping";
+          //console.log(`Move done updated for ${player} slot ${slot}: sleeping`);
+        }
+      }
+    }
   }
 
   return turns;
@@ -373,70 +543,73 @@ function processShowteam(log) {
 
 // Process the switch of a Pokémon
 function processSwitch(currentTurn, switchMatches, turns, teams) {
-  const slotOwner = switchMatches[1];       // e.g. p1a
+  const slotOwner = switchMatches[1];
   const player = slotOwner.startsWith("p1") ? "player1" : "player2";
-  const pokemonName = switchMatches[2];
+  const nickname = switchMatches[2];
+  const newPokemonName = switchMatches[3];
   const slot = slotOwner.endsWith("a") ? 0 : 1;
 
-  // Reset volatile on whoever was in this slot
-  const oldMon = turns[currentTurn].endsWith[player][slot];
-  if (oldMon) {
-    turns[currentTurn].revealedPokemon[player] =
-      turns[currentTurn].revealedPokemon[player].map((p) =>
-        p && p.name === oldMon ? { ...p, volatileStatus: [] } : p
-      );
-  }
-
-  // Check if this Pokémon is already revealed
-  const isRevealed = turns[currentTurn].revealedPokemon[player].some(
-    (p) => p.name === pokemonName
-  );
-
-  let pokemon;
-  if (!isRevealed) {
-    // Safely retrieve a matching Pokémon record from teams if it exists
-    let pInfo = undefined;
-    if (teams && teams[player]) {
-      pInfo = teams[player].find((m) => m.name === pokemonName);
+  // Identify the old (switching-out) Pokémon name from the active slot.
+  const oldMonName =
+    turns[currentTurn].endsWith[player][slot] ||
+    turns[currentTurn].startsWith[player][slot];
+    
+  // Update movesDone for the switching-out Pokémon
+  if (oldMonName && oldMonName !== "none") {
+    if (turns[currentTurn].movesDone[player][slot] === "") {
+      turns[currentTurn].movesDone[player][slot] = `switch to ${newPokemonName}`;
+    } else {
+      turns[currentTurn].movesDone[player][slot] += `, switch to ${newPokemonName}`;
     }
 
-    // Fallback to default values if not found
-    pokemon = {
-      name: pokemonName,
-      moves: pInfo?.moves || [],
-      ability: pInfo?.ability || "",
-      item: pInfo?.item || "",
+    //console.log(`Move done updated for ${player} slot ${slot}: ${turns[currentTurn].movesDone[player][slot]}`);
+  }
+  
+  // Locate (or create) the new (switching-in) Pokémon.
+  let newPokemon = turns[currentTurn].revealedPokemon[player].find(
+    (p) => p && p.name === newPokemonName
+  );
+  
+  if (!newPokemon) {
+    newPokemon = {
+      name: newPokemonName,
+      nickname: nickname,
+      moves: [],
+      ability: "",
+      item: "",
       remainingHp: 100,
       volatileStatus: [],
-      nonVolatileStatus: "",
+      nonVolatileStatus: "none",
       stats: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 },
-      tera: { type: pInfo?.tera_type || "", active: false },
-      fightingStatus: "",
+      tera: { type: "", active: false },
+      fightingStatus: "ok",
       consecutiveProtectCounter: 0,
       abilitySuppressed: false,
-      lastMoveUsed: "",
+      lastMoveUsed: "none",
       mimicUsed: false,
-      copiedMove: "",
+      copiedMove: "none",
       transformed: false
     };
-
-    turns[currentTurn].revealedPokemon[player].push(pokemon);
-  } else {
-    // Already known, just find it
-    pokemon = turns[currentTurn].revealedPokemon[player].find(
-      (p) => p && p.name === pokemonName
-    );
+    turns[currentTurn].revealedPokemon[player].push(newPokemon);
+    //console.log(`New Pokémon revealed: ${newPokemonName}`);
   }
-
-  // Update active Pokémon in endsWith
-  turns[currentTurn].endsWith[player][slot] = pokemon.name;
+  
+  // For turn 0 only, update switching-in move description in movesDone.
+  if (currentTurn === 0) {
+    turns[currentTurn].movesDone[player][slot] = "switched in";
+    //console.log(`Move done set for ${player} slot ${slot}: switched in because of the switch`);
+  }
+  
+  // Update the active slot with the new Pokémon.
+  turns[currentTurn].endsWith[player][slot] = newPokemonName;
   return turns;
 }
 
 // Process the usage of an item
 function processItem(currentTurn, itemMatch, turns) {
   const player = itemMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = itemMatch[2];
+  let pokemonName = itemMatch[2];
+  pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
   let item = itemMatch[3];
   
   if (itemMatch[0].startsWith("|-enditem")) {
@@ -447,42 +620,32 @@ function processItem(currentTurn, itemMatch, turns) {
       p.name === pokemonName ? { ...p, item: item } : p
     );
   }
-
-  //TODO: moves like trick, switcheroo, etc.
-
-  //console.log(pokemonName, "used the item", item);
-}
-
-// Process the usage of an ability
-function processAbility(currentTurn, abilityMatch, turns) {
-  const player = abilityMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = abilityMatch[2];
-  const ability = abilityMatch[3];
-
-  //TODO: moves like role play, skill swap, etc.
-
-  // Update the ability of the Pokémon in revealedPokemon
-  //turns[currentTurn].revealedPokemon[player] = turns[currentTurn].revealedPokemon[player].map((p) =>
-  //  p.name === pokemonName ? { ...p, ability: ability } : p
-  //);
 }
 
 // Process the damage received by a Pokémon
-function processDamage(
-  currentTurn,
-  damageMatch,
-  turns
-) {
+function processDamage(currentTurn, damageMatch, turns) {
   const player = damageMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = damageMatch[2];
+  let pokemonName = damageMatch[2];
+  pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
   const damageInfo = damageMatch[3];
-  console.log("Damage info", damageInfo);
+  //console.log("Damage info", damageInfo);
   
   let remainingHp, newFightingStatus;
   if (damageInfo === "0 fnt") {
     newFightingStatus = "fainted";
     remainingHp = 0;
     //console.log(pokemonName, "fainted");
+
+    // Find which slot this Pokemon occupies
+    const slot = turns[currentTurn].startsWith[player].indexOf(pokemonName);
+    if (slot !== -1) {
+      // If there's already a move recorded, append (fainted), otherwise just set to "fainted"
+      if (turns[currentTurn].movesDone[player][slot]) {
+        turns[currentTurn].movesDone[player][slot] += " (fainted)";
+      } else {
+        turns[currentTurn].movesDone[player][slot] = "fainted";
+      }
+    }
   } else {
     // Update the remaining HP of the Pokémon in revealedPokemon
     remainingHp = parseInt(damageInfo.split("/")[0]);
@@ -496,13 +659,14 @@ function processDamage(
     p.name === pokemonName ? { ...p, remainingHp: remainingHp, fightingStatus: newFightingStatus, } : p
   );
 
-  console.log(pokemonName, "status:", damageInfo);
+  //console.log(pokemonName, "status:", damageInfo);
 }
 
 // Process the effect of a status condition
 function processStatus(currentTurn, statusMatch, turns) {
   const player = statusMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = statusMatch[2];
+  let pokemonName = statusMatch[2];
+  pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
   let status;
 
   if (statusMatch[0].startsWith("|-curestatus")) {
@@ -520,8 +684,10 @@ function processStatus(currentTurn, statusMatch, turns) {
 // Process the effect of a boost
 function processBoost(currentTurn, boostMatch, turns) {
   const player = boostMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = boostMatch[2];
-  const statBoosted = boostMatch[3];
+  let pokemonName = boostMatch[2];
+  pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
+  let statBoosted = boostMatch[3];
+  if (statBoosted === "accuracy") statBoosted = "acc";
   const boost = parseInt(boostMatch[4]);
 
   // Update the boosts of the Pokémon in revealedPokemon
@@ -545,7 +711,8 @@ function processBoost(currentTurn, boostMatch, turns) {
 // Process the terastallize effect
 function processTerastallize(currentTurn, teraMatch, turns) {
   const player = teraMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = teraMatch[2];
+  let pokemonName = teraMatch[2];
+  pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
   const type = teraMatch[3];
 
   // Update the terastallize effect of the Pokémon in revealedPokemon
@@ -557,7 +724,8 @@ function processTerastallize(currentTurn, teraMatch, turns) {
 // Add a function to process volatile statuses
 function processVolatileStart(currentTurn, volatileMatch, turns) {
   const player = volatileMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = volatileMatch[2];
+  let pokemonName = volatileMatch[2];
+  pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
   let statusName = volatileMatch[3] || "";
   if (statusName.startsWith("move: ")) {
     statusName = statusName.replace("move: ", "");
@@ -576,11 +744,11 @@ function processVolatileStart(currentTurn, volatileMatch, turns) {
   const existing = pokemon.volatileStatus.find((v) => v.name === statusName);
   if (!existing) {
     pokemon.volatileStatus.push({ name: statusName, turnCounter: 0 });
-    console.log(pokemonName, "got the volatile status", statusName);
+    //console.log(pokemonName, "got the volatile status", statusName);
   }
 }
 
-// Increments volatile turn counters each turn
+// Modify incrementVolatileTurnCounters to not increment protect counter automatically
 function incrementVolatileTurnCounters(turns) {
   if (!turns.length) return;
   const current = turns[turns.length - 1];
@@ -590,10 +758,6 @@ function incrementVolatileTurnCounters(turns) {
         p.volatileStatus.forEach((v) => {
           v.turnCounter++;
         });
-      }
-      
-      if (p.consecutiveProtectCounter !== undefined) {
-        p.consecutiveProtectCounter++;
       }
     });
   }
@@ -676,28 +840,53 @@ function processMove(currentTurn, moveMatch, turns) {
   ];
 
   const player = moveMatch[1].startsWith("p1") ? "player1" : "player2";
-  const pokemonName = moveMatch[2];
-  const moveUsed = moveMatch[3];
+  let pokemonName = moveMatch[2];
+  pokemonName = getPokemonName(pokemonName, player, turns, currentTurn);
+  const moveUsed = moveMatch[3].toLowerCase().replace(/\|.*$/, ''); // Remove anything after a |
 
-  // Find the attacking Pokémon
+  // Extract target info (for successful moves)
+  let targetInfo = "";
+  if (moveMatch.length > 4) {
+    const targetPlayer = moveMatch[4].startsWith("p1") ? "player1" : "player2";
+    const targetSlot = moveMatch[4].endsWith("a") ? 0 : 1;
+    // Get the original target from startsWith instead of the final Pokemon
+    const originalTarget = turns[currentTurn].startsWith[targetPlayer][targetSlot];
+    targetInfo = ` on ${originalTarget}`;
+  }
+
+  // Find which slot the moving Pokémon occupies in the active (startsWith) array.
+  const slot = turns[currentTurn].startsWith[player].indexOf(pokemonName);
+  if (slot === -1) return; // not active
+  
+  // Update movesDone with target info
+  if (moveMatch[0].includes("[spread]")) {
+    turns[currentTurn].movesDone[player][slot] = `${moveUsed} (spread)`;
+  } else if (moveMatch[0].includes("[still]")) {
+    turns[currentTurn].movesDone[player][slot] = `${moveUsed} (failed)`;
+  } else {
+    turns[currentTurn].movesDone[player][slot] = `${moveUsed}${targetInfo}`;
+  }
+  //console.log(`Move done updated for ${player} slot ${slot}: ${turns[currentTurn].movesDone[player][slot]}`);
+
+  // Find the Pokémon in the current turn's revealedPokemon
   const userPokemon = turns[currentTurn].revealedPokemon[player].find(
     (p) => p && p.name === pokemonName
   );
   if (!userPokemon) return;
 
-  // Initialize protect counter
+  // Initialize protect counter if undefined
   if (userPokemon.consecutiveProtectCounter === undefined) {
     userPokemon.consecutiveProtectCounter = 0;
   }
 
-  // Increment or reset protect counter
-  if (protectMoves.includes(moveUsed.toLowerCase())) {
-    userPokemon.consecutiveProtectCounter += 1;
+  // Update protect counter based on move used
+  if (protectMoves.includes(moveUsed)) {
+    userPokemon.consecutiveProtectCounter++;
   } else {
     userPokemon.consecutiveProtectCounter = 0;
   }
 
-  // Record the last move used by userPokemon
+  // Record the last move used
   userPokemon.lastMoveUsed = moveUsed;
 
   // Identify the target (simplified to the opponent's first slot)
@@ -780,4 +969,201 @@ function handleObjectChangingMoves(currentTurn, userPokemon, targetPokemon, move
   }
 }
 
+// If weather or field introduced at turn 0, initialize it with duration=5 (or 6 to compensate turn 0)
+function processWeather(currentTurn, weatherMatch, turns, line) {
+  if (weatherMatch && !line.includes("[upkeep]")) {
+    const newCondition = weatherMatch[1];
+    const initialDuration = (currentTurn === 0) ? 6 : 5;
+    
+    // Check if the Pokemon setting the weather has a duration-extending item
+    const player = line.includes("p1") ? "player1" : "player2";
+    const pokemon = turns[currentTurn].revealedPokemon[player].find(p => {
+      return p.item === "Heat Rock" || p.item === "Damp Rock" || 
+             p.item === "Smooth Rock" || p.item === "Icy Rock";
+    });
+
+    // If Pokemon has relevant item, extend duration
+    if (pokemon) {
+      switch(pokemon.item) {
+        case "Damp Rock":
+          if (newCondition === "RainDance") initialDuration = currentTurn === 0 ? 9 : 8;
+          break;
+        case "Heat Rock":
+          if (newCondition === "SunnyDay") initialDuration = currentTurn === 0 ? 9 : 8;
+          break;
+        case "Smooth Rock":
+          if (newCondition === "Sandstorm") initialDuration = currentTurn === 0 ? 9 : 8;
+          break;
+        case "Icy Rock":
+          if (newCondition === "Hail") initialDuration = currentTurn === 0 ? 9 : 8;
+          break;
+      }
+    }
+
+    // Always replace existing weather with new weather
+    turns[currentTurn].weather = {
+      condition: newCondition,
+      duration: initialDuration
+    };
+    
+    //console.log(`Weather changed to: ${newCondition} with duration: ${initialDuration}`);
+  }
+}
+
+function processField(currentTurn, fieldMatch, turns) {
+  if (fieldMatch) {
+    const terrain = fieldMatch[1];
+    let initialDuration = (currentTurn === 0) ? 6 : 5;
+
+    // Check if any active Pokemon has Terrain Extender
+    const hasTerrainExtender = turns[currentTurn].revealedPokemon.player1.some(p => p.item === "Terrain Extender") ||
+                              turns[currentTurn].revealedPokemon.player2.some(p => p.item === "Terrain Extender");
+
+    if (hasTerrainExtender) {
+      initialDuration = currentTurn === 0 ? 9 : 8;
+    }
+    
+    turns[currentTurn].field = {
+      terrain: terrain,
+      duration: initialDuration
+    };
+  }
+}
+
+// Allowed room effects
+const roomEffects = ["Trick Room", "Gravity", "Magic Room", "Wonder Room"];
+
+// Process room effects (moves that affect room property) using the same command (|-startfield|)
+function processRoom(currentTurn, fieldMatch, turns, line) {
+  if (fieldMatch && !line.includes("[upkeep]")) {
+    const effect = fieldMatch[1];
+    // Only process if the effect is one of the allowed room effects
+    if (roomEffects.includes(effect)) {
+      const initialDuration = (currentTurn === 0) ? 6 : 5;
+      // If the same room effect is already active, cancel (delete) it
+      if (turns[currentTurn].room.condition === effect) {
+        turns[currentTurn].room = { condition: "", duration: 0 };
+        //console.log(`${effect} cancelled.`);
+      } else {
+        // Otherwise, override the previous room effect with the new one
+        turns[currentTurn].room = {
+          condition: effect,
+          duration: initialDuration
+        };
+        //console.log(`Room effect set to: ${effect} with duration: ${initialDuration}`);
+      }
+    }
+  }
+}
+
+function processSideStart(currentTurn, sideStartMatch, turns) {
+  const playerNumber = sideStartMatch[1];
+  //console.log("Player number:", playerNumber);
+  const playerName = sideStartMatch[2].trim();
+  //console.log("Player name:", playerName);
+  const effectName = sideStartMatch[3].trim().toLowerCase();
+  //console.log("Effect name:", effectName);
+  const side = playerNumber === "1" ? "player1" : "player2";
+
+  //console.log(`Side start detected for ${side} (${playerName}), effect: ${effectName}`);
+
+  if (effectName === "light screen") {
+    processLightscreen(currentTurn, side, turns, sideStartMatch);
+  } else if (effectName === "reflect") {
+    processReflect(currentTurn, side, turns, sideStartMatch);
+  } else if (effectName === "aurora veil") {
+    processAuroraVeil(currentTurn, side, turns, sideStartMatch);
+  } else if (effectName === "tailwind") {
+    processTailwind(currentTurn, side, turns, sideStartMatch);
+  } else if (effectName === "spikes") {
+    turns[currentTurn].spikes[side].spikes = Math.min((turns[currentTurn].spikes[side].spikes || 0) + 1, 3);
+  } else if (effectName === "toxic spikes") {
+    turns[currentTurn].spikes[side].toxicSpikes = Math.min((turns[currentTurn].spikes[side].toxicSpikes || 0) + 1, 2);
+  } else if (effectName === "stealth rock") {
+    turns[currentTurn].spikes[side].stealthRock = true;
+  } else {
+    console.log("Unhandled sidestart effect:", effectName);
+  }
+}
+
+function processScreen(currentTurn, side, screenType, turns, line) {
+  let initialDuration = (currentTurn === 0) ? 6 : 5;
+  
+  // Check if setter has Light Clay
+  const player = side === "player1" ? "player1" : "player2";
+  const hasLightClay = turns[currentTurn].revealedPokemon[player].some(p => p.item === "Light Clay");
+  
+  if (hasLightClay) {
+    initialDuration = currentTurn === 0 ? 9 : 8;
+  }
+
+  turns[currentTurn].screens[screenType][side] = true;
+  turns[currentTurn].screens[screenType]["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
+}
+
+function processReflect(currentTurn, side, turns, line) {
+  processScreen(currentTurn, side, "reflect", turns, line);
+}
+
+function processLightscreen(currentTurn, side, turns, line) {
+  processScreen(currentTurn, side, "lightscreen", turns, line);
+}
+
+function processAuroraVeil(currentTurn, side, turns, line) {
+  processScreen(currentTurn, side, "auroraveil", turns, line);
+}
+
+// Create a function to process tailwind effects for a given player side
+function processTailwind(currentTurn, side, turns, line) {
+  const initialDuration = (currentTurn === 0) ? 6 : 5;
+  turns[currentTurn].tailwind[side] = true;
+  turns[currentTurn].tailwind["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
+  //console.log(`Tailwind set for ${side} with duration: ${initialDuration}`);
+}
+
+// New function to process fieldend: clears terrain effects
+function processFieldEnd(currentTurn, line, turns) {
+  if (line.includes("fieldend") && !line.includes("[upkeep]")) {
+    turns[currentTurn].field = {
+      terrain: "",
+      duration: 0
+    };
+    //console.log("Field ended (terrain cleared).");
+  }
+}
+
+// New function to process sideend: clears tailwind and screens effects
+function processSideEnd(currentTurn, line, turns) {
+  if (line.includes("sideend") && !line.includes("[upkeep]")) {
+    // Clear tailwind
+    turns[currentTurn].tailwind = {
+      player1: false,
+      player2: false,
+      duration1: 0,
+      duration2: 0
+    };
+    // Clear screens for both players
+    turns[currentTurn].screens.reflect = { player1: false, player2: false, duration1: 0, duration2: 0 };
+    turns[currentTurn].screens.lightscreen = { player1: false, player2: false, duration1: 0, duration2: 0 };
+    turns[currentTurn].screens.auroraveil = { player1: false, player2: false, duration1: 0, duration2: 0 };
+    //console.log("Side effects ended (tailwind and screens cleared).");
+  }
+}
+
+// returns the original name of the pokemon given the alias
+function getPokemonName(nickname, player, turns, currentTurn) {
+  const revealedPokemon = turns[currentTurn].revealedPokemon[player];
+  const pokemon = revealedPokemon.find(p => p.nickname === nickname);
+  
+  // Si no encontramos el Pokémon por nickname, devolvemos el nickname original
+  // ya que en algunos casos el nickname es el nombre real del Pokémon
+  if (!pokemon) {
+    return nickname;
+  }
+  
+  return pokemon.name;
+}
+
 run().catch(console.dir);
+
+module.exports = router;
