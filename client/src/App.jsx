@@ -1,18 +1,23 @@
-import React from 'react';
-import './App.css';
-import { Outlet } from 'react-router-dom';
+import { Route, Routes } from "react-router-dom";
+
+import HomePage from "./Pages/HomePage.jsx";
+import TurnAssistantPage from "./Pages/TurnAssistantPage.jsx";
+import GamesPage from './Pages/GamesPage.jsx';
+import RankingsPage from "./Pages/RankingsPage.jsx";
+import MainLayout from "./layout/MainLayout.jsx";
 
 function App() {
   return (
-    /* <div className="App">
-      <header className="App-header">
-        <h1>Pokemon Statistics</h1>
-        <p>
-          Bienvenido a la aplicación de estadísticas de Pokémon.
-        </p>
-        </header>
-        </div>*/
-    <Outlet />
+    <Routes>
+      <Route element={<MainLayout />}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/turn-assistant" element={<TurnAssistantPage />} />
+        <Route path="/my-games" element={<GamesPage />} />
+        <Route path="/saved-games" element={<GamesPage />} />
+        <Route path="/public-games" element={<GamesPage />} />
+        <Route path="/rankings" element={<RankingsPage />} />
+      </Route>
+    </Routes>
   );
 }
 
