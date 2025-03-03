@@ -4,29 +4,31 @@ const theme = createTheme({
   palette: {
     mode: "light",
     primary: {
-      main: "#52796f",
-      light: "#84a29d",
-      dark: "#36554a",
-      contrastText: "#ffffff",
+      main: "#221FC7"
     },
     secondary: {
-      main: "#355c7d",
-      light: "#5d85a5",
-      dark: "#1e3b54",
-      contrastText: "#ffffff",
+      main: "#1A1896"
     },
     error: {
-      main: "#aa4465",
+      main: "#E9A5A5",
     },
     warning: {
       main: "#e7a977",
     },
     success: {
-      main: "#6ea683",
+      main: "#24CC9F",
     },
     background: {
-      default: "#f5f7f6",
-      paper: "#ffffff",
+      default: "#2B2828"
+    },
+    text: {
+      primary: "#ffffff", // Set the primary text color to white
+      secondary: "#ffffff", // Set the secondary text color to white
+    },
+  },
+  typography: {
+    allVariants: {
+      color: "#ffffff", // Set the default text color to white
     },
   },
   components: {
@@ -48,9 +50,17 @@ const theme = createTheme({
         },
       },
     },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: "#52796f", // Example: change drawer background color
+        },
+      },
+    },
     MuiListItem: {
       styleOverrides: {
         root: {
+          color: "#ffffff", // Example: change text color
           "&.Mui-selected": {
             backgroundColor: "#84a29d", // Highlight selected items
             "&:hover": {
@@ -58,7 +68,7 @@ const theme = createTheme({
             },
           },
           "&:hover": {
-            backgroundColor: "#eef1f0", // Light grey on hover
+            backgroundColor: "#6d8e89", // Light grey on hover
           },
         },
       },
