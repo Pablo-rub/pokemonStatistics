@@ -18,7 +18,6 @@ import PublicIcon from '@mui/icons-material/Public';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import AssistantIcon from '@mui/icons-material/Assistant';
 import LoginIcon from '@mui/icons-material/Login';
-import LogoutIcon from '@mui/icons-material/Logout';
 import { useAuth } from '../contexts/AuthContext';
 
 //todo
