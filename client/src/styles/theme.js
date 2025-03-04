@@ -23,7 +23,7 @@ const theme = createTheme({
     },
     text: {
       primary: "#ffffff", // Set the primary text color to white
-      secondary: "#ffffff", // Set the secondary text color to white
+      secondary: "#000000", // Set the secondary text color to white
     },
   },
   typography: {
@@ -95,6 +95,14 @@ const theme = createTheme({
             color: "#52796f",
             fontWeight: 500,
           },
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundColor: "#C7ADBE",
+          boxShadow: '0px 3px 8px rgba(0, 0, 0, 0.15)', // Añade sombra sutil
         },
       },
     },
