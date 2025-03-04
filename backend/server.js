@@ -34,16 +34,106 @@ app.listen(PORT, () => {
     console.log(`Server listening in port number ${PORT}`);
 });
 
-// Endpoint to get the list of games
-app.get('/api/public-games', async (req, res) => {
+// Endpoint to get the total number of games
+app.get('/api/games/count', async (req, res) => {
     try {
-        const query = 'SELECT * FROM `pokemon-statistics.pokemon_replays.replays`';
+        const query = 'SELECT COUNT(*) AS number_games FROM `pokemon-statistics.pokemon_replays.replays`';
         const [rows] = await bigQuery.query(query);
-        res.json(rows);
+        console.log('Count result:', rows[0].number_games);
+        res.json({ numGames: parseInt(rows[0].number_games) });
     } catch (error) {
         console.error("Error fetching data from BigQuery:", error);
-        res.status(500).send("Error retrieving data");
+        res.status(500).json({ error: "Error retrieving data" });
     }
+});
+
+// Modify the /api/games endpoint
+app.get('/api/games', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const sortBy = req.query.sortBy || 'date DESC';
+    const playerFilter = req.query.playerFilter || '';
+    const ratingFilter = req.query.ratingFilter || 'all';
+    const dateFilter = req.query.dateFilter || 'all';
+    const offset = (page - 1) * limit;
+
+    let whereClause = [];
+    let orderBy = 'date DESC';
+
+    // Sort clause
+    if (sortBy === 'date ASC') orderBy = 'date ASC';
+    else if (sortBy === 'date DESC') orderBy = 'date DESC';
+    else if (sortBy === 'rating ASC') orderBy = 'rating ASC';
+    else if (sortBy === 'rating DESC') orderBy = 'rating DESC';
+
+    // Player filter
+    if (playerFilter) {
+      whereClause.push(`(LOWER(player1) LIKE LOWER('%${playerFilter}%') OR LOWER(player2) LIKE LOWER('%${playerFilter}%'))`);
+    }
+
+    // Rating filter
+    if (ratingFilter !== 'all') {
+      if (ratingFilter === 'unknown') {
+        whereClause.push('rating IS NULL');
+      } else {
+        const ratingValue = parseInt(ratingFilter.replace('+', ''));
+        whereClause.push(`rating >= ${ratingValue}`);
+      }
+    }
+
+    // Date filter
+    if (dateFilter !== 'all') {
+      let dateLimit;
+      const now = new Date();
+      
+      switch (dateFilter) {
+        case 'week':
+          dateLimit = new Date(now.setDate(now.getDate() - 7));
+          break;
+        case 'month':
+          dateLimit = new Date(now.setMonth(now.getMonth() - 1));
+          break;
+        case 'year':
+          dateLimit = new Date(now.setFullYear(now.getFullYear() - 1));
+          break;
+      }
+
+      if (dateLimit) {
+        whereClause.push(`date >= '${dateLimit.toISOString()}'`);
+      }
+    }
+
+    const whereClauseString = whereClause.length > 0 ? `WHERE ${whereClause.join(' AND ')}` : '';
+
+    // Get filtered count
+    const countQuery = `
+      SELECT COUNT(*) as count
+      FROM \`pokemon-statistics.pokemon_replays.replays\`
+      ${whereClauseString}
+    `;
+    const [countRows] = await bigQuery.query(countQuery);
+    const totalFilteredGames = parseInt(countRows[0].count);
+
+    // Get paginated results
+    const dataQuery = `
+      SELECT *
+      FROM \`pokemon-statistics.pokemon_replays.replays\`
+      ${whereClauseString}
+      ORDER BY ${orderBy}
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `;
+    const [rows] = await bigQuery.query(dataQuery);
+
+    res.json({
+      games: rows,
+      total: totalFilteredGames
+    });
+  } catch (error) {
+    console.error("Error fetching data from BigQuery:", error);
+    res.status(500).send("Error retrieving data");
+  }
 });
 
 // Endpoint that returns if a replay is already in the database
@@ -57,18 +147,6 @@ app.get('/api/games/:gameId', async (req, res) => {
     } catch (error) {
         console.error("Error fetching data from BigQuery:", error);
         res.status(500).send("Error checking if game exists");
-    }
-});
-
-// Endpoint to get the total number of games
-app.get('/api/games/count', async (req, res) => {
-    try {
-        const query = 'SELECT COUNT(*) AS number_games FROM `pokemon-statistics.pokemon_replays.replays`';
-        const [rows] = await bigQuery.query(query);
-        res.json({ numGames: rows[0].number_games });
-    } catch (error) {
-        console.error("Error fetching data from BigQuery:", error);
-        res.status(500).send("Error retrieving data");
     }
 });
 
