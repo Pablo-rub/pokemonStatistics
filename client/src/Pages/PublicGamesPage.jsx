@@ -15,7 +15,7 @@ import ReplayCard from "../components/ReplayCard";
 
 // todo
 // accesible filters
-// better performance
+// improve performance
 
 function PublicGamesPage() {
   // Estados actuales
