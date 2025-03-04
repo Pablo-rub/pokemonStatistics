@@ -15,6 +15,7 @@ const PokemonSprite = ({ pokemon }) => {
       'Ho-Oh': 'hooh',
       'Ting-Lu': 'tinglu',
       'Wo-Chien': 'wochien',
+      'Necrozma-Dawn-Wings': 'necrozma-dawnwings',
     };
 
     // Comprobar si es un caso especial
