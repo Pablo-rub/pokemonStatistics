@@ -5,6 +5,17 @@ import Favorite from '@mui/icons-material/Favorite';
 import PokemonSprite from "./PokemonSprite";
 
 const ReplayCard = ({ game }) => {
+  const formatDate = (timestamp) => {
+    try {
+      // Convert BigQuery timestamp (microseconds) to milliseconds
+      const date = new Date(parseInt(timestamp) / 1000);
+      return date.toLocaleDateString();
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Unknown";
+    }
+  };
+
   return (
     <Paper 
       sx={{ 
@@ -36,6 +47,8 @@ const ReplayCard = ({ game }) => {
           </Typography>
           <Typography variant="subtitle1" color="textSecondary">
             Rating: {game.rating ? game.rating : "Unknown"}
+          </Typography><Typography variant="subtitle1" color="textSecondary">
+            Date: {game.date ? formatDate(game.date) : "Unknown"}
           </Typography>
         </Box>
 
