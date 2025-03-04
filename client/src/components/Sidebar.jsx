@@ -53,8 +53,6 @@ const Sidebar = () => {
         >
           {menuItems.map((item, index) => (
             <ListItem
-              button
-              key={index}
               component={Link}
               to={item.path}
               sx={{

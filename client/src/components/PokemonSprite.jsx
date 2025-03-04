@@ -11,14 +11,16 @@ const PokemonSprite = ({ pokemon }) => {
     const specialNames = {
       'Urshifu-Rapid-Strike': 'urshifu-rapidstrike',
       'Chien-Pao': 'chienpao',
-      'Wo-Chien': 'wochien',
       'Chi-Yu': 'chiyu',
+      'Ho-Oh': 'hooh',
+      'Ting-Lu': 'tinglu',
+      'Wo-Chien': 'wochien',
     };
 
     // Comprobar si es un caso especial
     const formattedName = specialNames[pokemonName] || 
                          pokemonName.toLowerCase()
-                                  .replace(/[^a-z0-9\-]/g, '');
+                                  .replace(/[^a-z0-9-]/g, '');
 
     // Intenta primero con los sprites animados
     const animatedUrl = `https://play.pokemonshowdown.com/sprites/gen5ani/${formattedName}.gif`;
