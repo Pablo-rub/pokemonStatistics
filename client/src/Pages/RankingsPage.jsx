@@ -23,6 +23,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 //no solapamiento
 //checks and counters
 //abilities centered horizontally
+//rankings de victoria
 
 const PokemonUsage = () => {
     const [months, setMonths] = useState([]);
