@@ -16,6 +16,9 @@ import EmailIcon from '@mui/icons-material/Email';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
+//todo
+//if signed up with mail and password, option to change password
+
 const ProfilePage = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
