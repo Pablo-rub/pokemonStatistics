@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from 'react-bootstrap';
-
-//todo
-//que solo se muestre vgc
-//sprites
-//mas rankings
-//graficas
-//graficas temporales
+import {
+  Box,
+  Typography,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel 
+} from '@mui/material';
+import PokemonSprite from '../components/PokemonSprite';
 
 const PokemonUsage = () => {
     const [months, setMonths] = useState([]);
-    const [month, setMonth] = useState();
+    const [month, setMonth] = useState('');
     const [formats, setFormats] = useState([]);
-    const [format, setFormat] = useState();
+    const [format, setFormat] = useState('');
     const [usageData, setUsageData] = useState([]);
     const [error, setError] = useState(null);
 
@@ -21,8 +22,10 @@ const PokemonUsage = () => {
         try {
             const response = await fetch(`http://localhost:5000/api/formats/${selectedMonth}`);
             const data = await response.json();
-            setFormats(data);
-            setFormat(data[0] || '');
+            // Filter only VGC formats
+            const vgcFormats = data.filter(fmt => fmt.toLowerCase().includes('vgc'));
+            setFormats(vgcFormats);
+            setFormat(vgcFormats[0] || '');
         } catch (error) {
             console.error("Error fetching formats:", error);
         }
@@ -52,24 +55,19 @@ const PokemonUsage = () => {
 
     useEffect(() => {
         const fetchData = async () => {
-                if (month && format) {
+            if (month && format) {
                 const url = `http://localhost:5000/api/rankings?month=${month}&format=${format}.txt`;
-                console.log("Fetching data from:", url);
                 try {
                     const response = await fetch(url);
-                    if (!response.ok) {
-                        //throw new Error(`HTTP error! status: ${response.status}`);
-                    }
                     const data = await response.text();
                     parseData(data);
                 } catch (error) {
-                    console.error("Error al cargar los datos:", error);
+                    console.error("Error loading data:", error);
                     setError(error.message);
                 }
             }
         };
         fetchData();
-
     }, [format, month]);
 
     const parseData = (data) => {
@@ -81,7 +79,7 @@ const PokemonUsage = () => {
                 const columns = line.split('|').map(col => col.trim()).filter(col => col);
                 parsedData.push({
                     rank: columns[0],
-                    pokemon: columns[1],
+                    name: columns[1],
                     usagePercentage: columns[2],
                     raw: columns[3],
                     realPercentage: columns[5],
@@ -92,28 +90,68 @@ const PokemonUsage = () => {
     };
 
     return (
-        <div>
-            <h1> Pokemon Usage </h1>
-            <Button href="/"> Home </Button> <br />
-            <select onChange={(e) => handleMonthChange(e.target.value)}>
-                {months.map((month) => (
-                    <option key={month} value={month}>{month}</option>
-                ))}
-            </select>
-            <select value={format} onChange={handleFormatChange}>
-                {formats.map((fmt) => (
-                    <option key={fmt} value={fmt}>{fmt}</option>
-                ))}
-            </select>
-            {error && <p>Error: {error}</p>}
-            <ul>
+        <Box sx={{ padding: 2 }}>
+            <Typography variant="h4" gutterBottom>
+                Pokémon Usage Statistics
+            </Typography>
+
+            <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+                <FormControl sx={{ minWidth: 200 }}>
+                    <InputLabel>Month</InputLabel>
+                    <Select
+                        value={month}
+                        label="Month"
+                        onChange={(e) => handleMonthChange(e.target.value)}
+                    >
+                        {months.map((m) => (
+                            <MenuItem key={m} value={m}>{m}</MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+
+                <FormControl sx={{ minWidth: 300 }}>
+                    <InputLabel>Format</InputLabel>
+                    <Select
+                        value={format}
+                        label="Format"
+                        onChange={handleFormatChange}
+                    >
+                        {formats.map((fmt) => (
+                            <MenuItem key={fmt} value={fmt}>{fmt}</MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            </Box>
+
+            {error && (
+                <Typography color="error" sx={{ mb: 2 }}>
+                    Error: {error}
+                </Typography>
+            )}
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {usageData.map((pokemon) => (
-                    <p key={pokemon.rank}>
-                        {pokemon.rank}: {pokemon.pokemon} - {pokemon.usagePercentage} - {}
-                    </p>
+                    <Box 
+                        key={pokemon.rank}
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            padding: 1,
+                            borderRadius: 1,
+                            '&:hover': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                            }
+                        }}
+                    >
+                        <Typography sx={{ minWidth: 50 }}>#{pokemon.rank}</Typography>
+                        <PokemonSprite pokemon={{ name: pokemon.name }} />
+                        <Typography sx={{ minWidth: 150 }}>{pokemon.name}</Typography>
+                        <Typography>{pokemon.usagePercentage}%</Typography>
+                    </Box>
                 ))}
-            </ul>
-        </div>
+            </Box>
+        </Box>
     );
 };
 
