@@ -13,6 +13,7 @@ import {
   updatePassword
 } from "firebase/auth";
 import { getAuthErrorMessage } from '../utils/errorMessages';
+import axios from 'axios';
 
 const AuthContext = createContext();
 
@@ -25,10 +26,34 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
 
+  const createUserRecord = async (user) => {
+    try {
+      // First create the user entry in saved_replays table
+      await axios.post('http://localhost:5000/api/users/saved-replays', {
+        userId: user.uid,
+      });
+    } catch (error) {
+      console.error('Error creating user record:', error);
+      throw error;
+    }
+  };
+
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
+      // Check if user already exists in database
+      try {
+        const response = await axios.get(`http://localhost:5000/api/users/${result.user.uid}/saved-replays`);
+        if (!response.data || response.data.length === 0) {
+          await createUserRecord(result.user);
+        }
+      } catch (error) {
+        // If user doesn't exist, create record
+        if (error.response && error.response.status === 404) {
+          await createUserRecord(result.user);
+        }
+      }
       setAuthError(null);
       return result;
     } catch (error) {
@@ -45,6 +70,7 @@ export function AuthProvider({ children }) {
       }
       const result = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(result.user, { displayName });
+      await createUserRecord(result.user);
       setAuthError(null);
       return result;
     } catch (error) {
