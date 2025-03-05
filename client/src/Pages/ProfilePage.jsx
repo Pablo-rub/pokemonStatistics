@@ -33,9 +33,6 @@ import {
 //todo
 //boton mostrar contraseña en cambio de contraseña
 //accesibilidad cambiar contraseña
-//when changing password: Cannot read properties of undefined (reading 'credential');
-//error al intentar eliminar la cuenta de google: Firebase: Error (auth/invalid-value-(password),-starting-an-object-on-a-scalar-field).
-//error al intentar eliminar la cuenta de correo: Cannot read properties of undefined (reading 'credential')
 
 const ProfilePage = () => {
   const { currentUser, changePassword, deleteAccount, logout } = useAuth();
@@ -192,7 +189,7 @@ const ProfilePage = () => {
             </Typography>
           </Box>
           <Button
-            variant="outlined"
+            variant="outlinedWhite"
             onClick={handleLogout}
             startIcon={<LogoutIcon />}
             sx={{ 

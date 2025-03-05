@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -18,9 +18,8 @@ import PasswordStrengthBar from 'react-password-strength-bar';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 
 //todo
-//accesibilidad sign in and sign up
 //poder mover la ventana
-//que al cerrar la ventana se limpien los campos
+//recuperar contraseña
 
 export default function LoginDialog({ open, onClose, isSignUp = false }) {
   const [email, setEmail] = useState('');
@@ -58,42 +57,55 @@ export default function LoginDialog({ open, onClose, isSignUp = false }) {
     }
   };
 
+  const resetFields = () => {
+    setEmail('');
+    setPassword('');
+    setDisplayName('');
+    setError('');
+    setShowPassword(false);
+  };
+
+  useEffect(() => {
+    if (!open) {
+      resetFields();
+    }
+  }, [open]);
+
   const textFieldStyle = {
+    mb: 2,
     '& .MuiInputLabel-root': {
-      color: '#000000',
+      color: '#000',
       '&.Mui-focused': {
-        color: '#000000',
+        color: '#1976d2',
       },
     },
     '& .MuiOutlinedInput-root': {
       '& fieldset': {
-        borderColor: '#000000',
+        borderColor: '#000',
       },
       '&:hover fieldset': {
-        borderColor: '#000000',
+        borderColor: '#1976d2',
       },
       '&.Mui-focused fieldset': {
-        borderColor: '#000000',
+        borderColor: '#1976d2',
+        borderWidth: '2px',
       },
     },
     '& .MuiInputBase-input': {
-      color: '#000000',
-    }
+      color: '#ffffff',
+      caretColor: '#ffffff',
+    },
   };
 
   return (
     <Dialog 
       open={open} 
       onClose={onClose}
-      maxWidth="sm" 
+      maxWidth="sm"
       fullWidth
-      PaperProps={{
-        sx: {
-          bgcolor: '#C7ADBE'
-        }
-      }}
+      variant="login"
     >
-      <DialogTitle sx={{ color: '#000000' }}>
+      <DialogTitle>
         {isSignUp ? 'Create Account' : 'Sign In'}
       </DialogTitle>
       <DialogContent>
@@ -115,6 +127,7 @@ export default function LoginDialog({ open, onClose, isSignUp = false }) {
                   margin="normal"
                   required
                   sx={textFieldStyle}
+                  variant='outlined'
                 />
               </>
             )}
@@ -189,16 +202,7 @@ export default function LoginDialog({ open, onClose, isSignUp = false }) {
               fullWidth
               variant="outlined"
               startIcon={<GoogleIcon />}
-              onClick={handleGoogleSignIn} // Use the new handler
-              sx={{ 
-                mb: 2,
-                borderColor: '#000000',
-                color: '#000000',
-                '&:hover': {
-                  borderColor: '#000000',
-                  bgcolor: 'rgba(0, 0, 0, 0.04)',
-                }
-              }}
+              onClick={handleGoogleSignIn}
             >
               Continue with Google
             </Button>
