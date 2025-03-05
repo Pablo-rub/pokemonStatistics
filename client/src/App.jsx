@@ -8,6 +8,7 @@ import MainLayout from "./layout/MainLayout.jsx";
 import PublicGamesPage from "./Pages/PublicGamesPage.jsx";
 import ProfilePage from "./Pages/ProfilePage.jsx";
 import FinishSignIn from "./Pages/FinishSignIn.jsx";
+import SavedGamesPage from "./Pages/SavedGamesPage.jsx";
 
 function App() {
   return (
@@ -16,7 +17,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/turn-assistant" element={<TurnAssistantPage />} />
         <Route path="/my-games" element={<GamesPage />} />
-        <Route path="/saved-games" element={<GamesPage />} />
+        <Route path="/saved-games" element={<SavedGamesPage />} />
         <Route path="/public-games" element={<PublicGamesPage />} />
         <Route path="/rankings" element={<RankingsPage />} />
         <Route path="/profile" element={<ProfilePage />} />

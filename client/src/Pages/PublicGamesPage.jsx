@@ -17,6 +17,8 @@ import ReplayCard from "../components/ReplayCard";
 // accesible filters
 // improve performance
 // si no has iniciado sesion, no puedes guardar replay (pulsar corazon)
+// filtro para solo ver las no guardadas
+// no hacer tanto zoom en el hover
 
 function PublicGamesPage() {
   // Estados actuales
