@@ -248,12 +248,37 @@ const theme = createTheme({
         },
       }
     },
-    MuiFormControl: {
+    MuiTextField: {
       styleOverrides: {
         root: {
-          margin: '0 10px',
-        },
-      },
+          mb: 2,
+          '& .MuiInputLabel-root': {
+            color: '#000',
+            '&.Mui-focused': {
+              color: '#1976d2',
+            },
+          },
+          '& .MuiOutlinedInput-root': {
+            '& fieldset': {
+              borderColor: '#000',
+            },
+            '&:hover fieldset': {
+              borderColor: '#1976d2',
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: '#1976d2',
+              borderWidth: '2px',
+            },
+          },
+          '& .MuiInputBase-input': {
+            color: '#ffffff',
+            caretColor: '#ffffff',
+          },
+          '& .MuiIconButton-root': {
+            color: '#ffffff',
+          },
+        }
+      }
     },
   },
 });
