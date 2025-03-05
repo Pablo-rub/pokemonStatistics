@@ -56,9 +56,25 @@ app.get('/api/games', async (req, res) => {
     const playerFilter = req.query.playerFilter || '';
     const ratingFilter = req.query.ratingFilter || 'all';
     const dateFilter = req.query.dateFilter || 'all';
+    const userId = req.query.userId;
+    const showSaved = req.query.showSaved || 'all';
     const offset = (page - 1) * limit;
 
     let whereClause = [];
+    let joinClause = '';
+
+    // Filtro para partidas no guardadas
+    if (userId && showSaved === 'unsaved') {
+      joinClause = `
+        LEFT JOIN (
+          SELECT unnest(replays_saved).replay_id as saved_replay_id
+          FROM \`pokemon-statistics.pokemon_replays.saved_replays\`
+          WHERE user_id = '${userId}'
+        ) saved ON r.replay_id = saved.saved_replay_id
+      `;
+      whereClause.push('saved.saved_replay_id IS NULL');
+    }
+
     let orderBy = 'date DESC';
 
     // Sort clause
@@ -109,7 +125,8 @@ app.get('/api/games', async (req, res) => {
     // Get filtered count
     const countQuery = `
       SELECT COUNT(*) as count
-      FROM \`pokemon-statistics.pokemon_replays.replays\`
+      FROM \`pokemon-statistics.pokemon_replays.replays\` r
+      ${joinClause}
       ${whereClauseString}
     `;
     const [countRows] = await bigQuery.query(countQuery);
@@ -117,8 +134,9 @@ app.get('/api/games', async (req, res) => {
 
     // Get paginated results
     const dataQuery = `
-      SELECT *
-      FROM \`pokemon-statistics.pokemon_replays.replays\`
+      SELECT r.*
+      FROM \`pokemon-statistics.pokemon_replays.replays\` r
+      ${joinClause}
       ${whereClauseString}
       ORDER BY ${orderBy}
       LIMIT ${limit}

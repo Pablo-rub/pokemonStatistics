@@ -11,6 +11,8 @@ import { useAuth } from "../contexts/AuthContext";
 import axios from "axios";
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LoginIcon from '@mui/icons-material/Login';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import LoginDialog from "../components/LoginDialog"; // Import LoginDialog
 
 //todo
 //subir partidas pasando url
@@ -22,6 +24,12 @@ function SavedGamesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+  const [refreshKey, setRefreshKey] = useState(0); // Add this state
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false); // Add this state
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   useEffect(() => {
     const fetchSavedGames = async () => {
@@ -41,7 +49,7 @@ function SavedGamesPage() {
     };
 
     fetchSavedGames();
-  }, [currentUser]);
+  }, [currentUser, refreshKey]); // Add refreshKey to dependencies
 
   if (!currentUser) {
     return (
@@ -61,10 +69,15 @@ function SavedGamesPage() {
         <Button
           variant="contained"
           startIcon={<LoginIcon />}
-          onClick={() => navigate('/')}
+          onClick={() => setLoginDialogOpen(true)} // Change this instead of navigating
         >
           Sign In
         </Button>
+        <LoginDialog 
+          open={loginDialogOpen} 
+          onClose={() => setLoginDialogOpen(false)}
+          isSignUp={false}
+        />
       </Box>
     );
   }
@@ -108,9 +121,16 @@ function SavedGamesPage() {
 
   return (
     <Box sx={{ padding: 2 }}>
-      <Typography variant="h4" gutterBottom>
-        Saved Replays
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="h4">Saved Replays</Typography>
+        <Button
+          variant="contained"
+          startIcon={<RefreshIcon />}
+          onClick={handleRefresh}
+        >
+          Refresh
+        </Button>
+      </Box>
       <Typography variant="subtitle1" sx={{ marginBottom: 2 }}>
         Total Saved: {games.length}
       </Typography>
