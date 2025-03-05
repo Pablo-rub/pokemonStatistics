@@ -1,13 +1,49 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Paper, Typography, Box, Checkbox } from "@mui/material";
 import FavoriteBorder from '@mui/icons-material/FavoriteBorder';
 import Favorite from '@mui/icons-material/Favorite';
 import PokemonSprite from "./PokemonSprite";
+import axios from 'axios';
+import { useAuth } from '../contexts/AuthContext';
 
 // todo
 // fix date
 
 const ReplayCard = ({ game }) => {
+  const { currentUser } = useAuth();
+  const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    // Check if replay is saved for current user
+    const checkSavedStatus = async () => {
+      if (!currentUser) return;
+      try {
+        const response = await axios.get(`http://localhost:5000/api/users/${currentUser.uid}/saved-replays`);
+        setIsSaved(response.data.some(replay => replay.replay_id === game.replay_id));
+      } catch (error) {
+        console.error('Error checking saved status:', error);
+      }
+    };
+    checkSavedStatus();
+  }, [currentUser, game.replay_id]);
+
+  const handleSaveToggle = async () => {
+    if (!currentUser) return;
+
+    try {
+      if (isSaved) {
+        await axios.delete(`http://localhost:5000/api/users/${currentUser.uid}/saved-replays/${game.replay_id}`);
+      } else {
+        await axios.post(`http://localhost:5000/api/users/${currentUser.uid}/saved-replays`, {
+          replayId: game.replay_id
+        });
+      }
+      setIsSaved(!isSaved);
+    } catch (error) {
+      console.error('Error toggling save:', error);
+    }
+  };
+
   const formatDate = (timestamp) => {
     try {
       // Convert BigQuery timestamp (microseconds) to milliseconds
@@ -69,17 +105,21 @@ const ReplayCard = ({ game }) => {
         </Box>
 
         {/* Right side - Heart checkbox */}
-        <Checkbox 
-          icon={<FavoriteBorder />} 
-          checkedIcon={<Favorite />}
-          className="MuiCheckbox-root"
-          sx={{
-            color: '#000000',
-            '&.Mui-checked': {
+        {currentUser && (
+          <Checkbox 
+            icon={<FavoriteBorder />} 
+            checkedIcon={<Favorite />}
+            checked={isSaved}
+            onChange={handleSaveToggle}
+            className="MuiCheckbox-root"
+            sx={{
               color: '#000000',
-            },
-          }}
-        />
+              '&.Mui-checked': {
+                color: '#000000',
+              },
+            }}
+          />
+        )}
       </Box>
     </Paper>
   );
