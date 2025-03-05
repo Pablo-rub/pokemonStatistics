@@ -7,6 +7,7 @@ import RankingsPage from "./Pages/RankingsPage.jsx";
 import MainLayout from "./layout/MainLayout.jsx";
 import PublicGamesPage from "./Pages/PublicGamesPage.jsx";
 import ProfilePage from "./Pages/ProfilePage.jsx";
+import FinishSignIn from "./Pages/FinishSignIn.jsx";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/public-games" element={<PublicGamesPage />} />
         <Route path="/rankings" element={<RankingsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/finishSignIn" element={<FinishSignIn />} />
       </Route>
     </Routes>
   );

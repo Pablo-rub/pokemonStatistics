@@ -10,7 +10,6 @@ import {
   Typography 
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
-import { useTheme } from '@mui/material/styles';
 import HomeIcon from '@mui/icons-material/Home';
 import GamesIcon from '@mui/icons-material/Games';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
@@ -18,19 +17,22 @@ import PublicIcon from '@mui/icons-material/Public';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import AssistantIcon from '@mui/icons-material/Assistant';
 import LoginIcon from '@mui/icons-material/Login';
-import LogoutIcon from '@mui/icons-material/Logout';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { useAuth } from '../contexts/AuthContext';
-
-//todo
-// hover de sign in
+import LoginDialog from './LoginDialog';
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const theme = useTheme();
-  const { currentUser, signInWithGoogle, logout } = useAuth();
+  const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  const handleAuth = async () => {
+  // Widths for mini vs. expanded
+  const miniWidth = '60px';
+  const expandedWidth = '16.6667vw';
+
+  const handleAuth = async (isSignUp = false) => {
     if (currentUser) {
       try {
         await logout();
@@ -38,17 +40,10 @@ const Sidebar = () => {
         console.error("Error signing out:", error);
       }
     } else {
-      try {
-        await signInWithGoogle();
-      } catch (error) {
-        console.error("Error signing in:", error);
-      }
+      setIsSignUp(isSignUp);
+      setLoginDialogOpen(true);
     }
   };
-
-  // Widths for mini vs. expanded
-  const miniWidth = '60px';
-  const expandedWidth = '16.6667vw';
 
   const menuItems = [
     { text: 'Home', path: '/', icon: <HomeIcon /> },
@@ -59,20 +54,8 @@ const Sidebar = () => {
     { text: 'Turn Assistant', path: '/turn-assistant', icon: <AssistantIcon /> },
   ];
 
-  const commonListItemStyles = {
-    height: 56,
-    alignItems: 'center',
-    whiteSpace: 'nowrap',
-    justifyContent: isExpanded ? 'flex-start' : 'center',
-    '&:hover': {
-      backgroundColor: theme.palette.secondary.main,
-      color: theme.palette.secondary.contrastText,
-    },
-  };
-
   return (
     <>
-      {/* Drawer (always visible) */}
       <Drawer
         variant="permanent"
         PaperProps={{
@@ -85,73 +68,67 @@ const Sidebar = () => {
             overflowX: 'hidden',
             width: isExpanded ? expandedWidth : miniWidth,
             transition: 'width 0.3s',
-            backgroundColor: theme.palette.primary.main,
-            color: theme.palette.primary.contrastText,
           },
         }}
         onMouseEnter={() => setIsExpanded(true)}
         onMouseLeave={() => setIsExpanded(false)}
       >
-        <List
-          sx={{
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-          }}
-        >
-          {/* Auth Button/User Info */}
-          <ListItem
-            sx={commonListItemStyles}
-            onClick={currentUser ? () => navigate('/profile') : handleAuth}
-            style={{ cursor: 'pointer' }}
-          >
-            {currentUser ? (
-              <>
-                {isExpanded ? (
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 1,
-                    width: '100%'
-                  }}>
-                    <Avatar 
-                      src={currentUser.photoURL} 
-                      sx={{ width: 32, height: 32 }}
-                    />
-                    <Typography noWrap>{currentUser.displayName}</Typography>
-                  </Box>
-                ) : (
-                  <Avatar 
-                    src={currentUser.photoURL}
-                    sx={{ width: 32, height: 32 }}
-                  />
-                )}
-              </>
-            ) : (
-              <>
-                <ListItemIcon sx={{ color: 'inherit', minWidth: isExpanded ? 40 : 'auto' }}>
+        <List sx={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+        }}>
+          {/* Auth Buttons */}
+          {!currentUser ? (
+            <>
+              <ListItem
+                onClick={() => handleAuth(false)}
+                className="auth-item"
+                sx={{ cursor: 'pointer' }}
+              >
+                <ListItemIcon sx={{ minWidth: isExpanded ? 40 : 'auto' }}>
                   <LoginIcon />
                 </ListItemIcon>
-                {isExpanded && (
-                  <ListItemText 
-                    primary="Sign In"
-                    sx={{ margin: 0 }}
-                  />
-                )}
-              </>
-            )}
-          </ListItem>
+                {isExpanded && <ListItemText primary="Sign In" />}
+              </ListItem>
 
-          {/* Rest of menu items */}
-          {menuItems.map((item, index) => (
+              <ListItem
+                onClick={() => handleAuth(true)}
+                className="auth-item"
+                sx={{ cursor: 'pointer' }}
+              >
+                <ListItemIcon sx={{ minWidth: isExpanded ? 40 : 'auto' }}>
+                  <PersonAddIcon />
+                </ListItemIcon>
+                {isExpanded && <ListItemText primary="Sign Up" />}
+              </ListItem>
+            </>
+          ) : (
+            <ListItem
+              onClick={() => navigate('/profile')}
+              className="auth-item"
+              sx={{ cursor: 'pointer' }}
+            >
+              {isExpanded ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                  <Avatar src={currentUser.photoURL} sx={{ width: 32, height: 32 }} />
+                  <Typography noWrap>{currentUser.displayName}</Typography>
+                </Box>
+              ) : (
+                <Avatar src={currentUser.photoURL} sx={{ width: 32, height: 32 }} />
+              )}
+            </ListItem>
+          )}
+
+          {/* Menu Items */}
+          {menuItems.map((item) => (
             <ListItem
               key={item.text}
               component={Link}
               to={item.path}
-              sx={commonListItemStyles}
             >
-              <ListItemIcon sx={{ color: 'inherit', minWidth: isExpanded ? 40 : 'auto' }}>
+              <ListItemIcon sx={{ minWidth: isExpanded ? 40 : 'auto' }}>
                 {item.icon}
               </ListItemIcon>
               {isExpanded && <ListItemText primary={item.text} />}
@@ -160,16 +137,20 @@ const Sidebar = () => {
         </List>
       </Drawer>
 
-      {/* Main content offset (so content is not underneath the drawer) */}
-      <Box
-        sx={{
-          marginLeft: isExpanded ? expandedWidth : miniWidth,
-          transition: 'margin-left 0.3s',
-          flexGrow: 1,
+      <LoginDialog 
+        open={loginDialogOpen}
+        onClose={() => {
+          setLoginDialogOpen(false);
+          setIsSignUp(false);
         }}
-      >
-        {/* Page content goes here */}
-      </Box>
+        isSignUp={isSignUp}
+      />
+
+      <Box sx={{
+        marginLeft: isExpanded ? expandedWidth : miniWidth,
+        transition: 'margin-left 0.3s',
+        flexGrow: 1,
+      }} />
     </>
   );
 };
