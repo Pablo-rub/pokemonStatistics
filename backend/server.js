@@ -230,23 +230,27 @@ app.get('/api/formats/:month', async (req, res) => {
     }
 });
 
-// Endpoint to get the rankings
+// En server.js, modifica el endpoint /api/rankings
 app.get('/api/rankings', async (req, res) => {
-    const { format, month } = req.query;
+    const { format, month, chaos } = req.query;
 
     if (!format || !month) {
         res.status(400).send("Missing format or month");
         return;
     }
 
-    const url = `https://www.smogon.com/stats/${month}/${format}`;
-    console.log("Fetching data from:", url);
     try {
+        const url = chaos 
+            ? `https://www.smogon.com/stats/${month}/chaos/${format}.json`
+            : `https://www.smogon.com/stats/${month}/${format}`;
+
+        console.log('Fetching from URL:', url);
         const response = await axios.get(url);
+        //console.log(response.data);
         res.send(response.data);
     } catch (error) {
-        console.error("Error al obtener datos de Smogon:", error);
-        res.status(500).send("Error al obtener datos de Smogon");
+        console.error("Error fetching data from Smogon:", error);
+        res.status(500).send("Error fetching data from Smogon");
     }
 });
 

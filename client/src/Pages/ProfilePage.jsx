@@ -157,11 +157,7 @@ const ProfilePage = () => {
         Profile
       </Typography>
 
-      <Paper variant='profile' sx={{ 
-        padding: 3, 
-        maxWidth: 800, 
-        margin: '0 auto',
-      }}>
+      <Paper variant='profile'>
         {/* Profile Header */}
         <Box sx={{ 
           display: 'flex', 
@@ -178,23 +174,24 @@ const ProfilePage = () => {
             }}
           />
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h5" sx={{ color: 'black', fontWeight: 'bold' }}>
+            <Typography variant="h5" sx={{ color: 'white', fontWeight: 'bold' }}>
               {currentUser.displayName}
             </Typography>
-            <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+            <Typography variant="body1" sx={{ color: 'white' }}>
               {currentUser.email}
             </Typography>
           </Box>
           <Button
-            variant="logout"
+            variant="outlined"
             onClick={handleLogout}
             startIcon={<LogoutIcon />}
+            sx={{ color: 'white', borderColor: 'white' }}
           >
             Logout
           </Button>
         </Box>
 
-        <Divider sx={{ marginY: 3 }} />
+        <Divider sx={{ marginY: 3, borderColor: 'white' }} />
 
         {/* User Information Grid */}
         <Grid container spacing={3}>
@@ -208,14 +205,14 @@ const ProfilePage = () => {
                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 borderRadius: 1
               }}>
-                <Box sx={{ color: 'black' }}>
+                <Box sx={{ color: 'white' }}>
                   {info.icon}
                 </Box>
                 <Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                     {info.label}
                   </Typography>
-                  <Typography variant="body1" sx={{ color: 'black' }}>
+                  <Typography variant="body1" sx={{ color: 'white' }}>
                     {info.value}
                   </Typography>
                 </Box>
@@ -226,16 +223,16 @@ const ProfilePage = () => {
 
         {/* Additional Information Section */}
         <Box sx={{ marginTop: 3 }}>
-          <Typography variant="h6" sx={{ color: 'black', marginBottom: 2 }}>
+          <Typography variant="h6" sx={{ color: 'white', marginBottom: 2 }}>
             Account Details
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
             User ID: {currentUser.uid}
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
             Email Verified: {currentUser.emailVerified ? 'Yes' : 'No'}
           </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
             Provider: {currentUser.providerData[0].providerId}
           </Typography>
         </Box>

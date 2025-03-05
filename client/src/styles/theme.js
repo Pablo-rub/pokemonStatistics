@@ -194,10 +194,10 @@ const theme = createTheme({
           borderRadius: 8,
         },
         login: {
-          backgroundColor: '#C7ADBE',
+          backgroundColor: '#221FC7',
         },
         paper: {
-          backgroundColor: '#000000',
+          backgroundColor: '#221FC7', // Cambiado de '#000000' a '#221FC7'
           '& .MuiDialogTitle-root': {
             color: '#ffffff'
           },
@@ -275,20 +275,20 @@ const theme = createTheme({
         root: {
           mb: 2,
           '& .MuiInputLabel-root': {
-            color: '#000',
+            color: '#ffffff', // Cambiado de '#000' a '#ffffff'
             '&.Mui-focused': {
-              color: '#1976d2',
+              color: '#ffffff', // Cambiado de '#1976d2' a '#ffffff'
             },
           },
           '& .MuiOutlinedInput-root': {
             '& fieldset': {
-              borderColor: '#000',
+              borderColor: '#ffffff', // Cambiado de '#000' a '#ffffff'
             },
             '&:hover fieldset': {
-              borderColor: '#1976d2',
+              borderColor: '#ffffff', // Cambiado de '#1976d2' a '#ffffff'
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#1976d2',
+              borderColor: '#ffffff', // Cambiado de '#1976d2' a '#ffffff'
               borderWidth: '2px',
             },
           },
@@ -302,6 +302,17 @@ const theme = createTheme({
         }
       }
     },
+    Typography: {
+      color: '#ffffff', // Añade esto para asegurar que todo el texto sea blanco
+      '& .MuiDivider-root': {
+        '&::before, &::after': {
+          borderColor: '#ffffff'
+        }
+      },
+      '& .MuiTypography-root': {
+        color: '#ffffff'
+      }
+    }
   },
 });
 
