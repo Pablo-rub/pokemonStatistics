@@ -12,41 +12,35 @@ import {
 } from '@mui/material';
 import GoogleIcon from '@mui/icons-material/Google';
 import { useAuth } from '../contexts/AuthContext';
+import { getAuthErrorMessage } from '../utils/errorMessages';
+import PasswordStrengthBar from 'react-password-strength-bar';
 
-const getErrorMessage = (errorCode) => {
-  switch (errorCode) {
-    case 'auth/invalid-credential':
-      return 'Invalid email or password. Please try again.';
-    case 'auth/user-not-found':
-      return 'No account found with this email.';
-    case 'auth/wrong-password':
-      return 'Incorrect password.';
-    case 'auth/too-many-requests':
-      return 'Too many failed attempts. Please try again later.';
-    default:
-      return 'An error occurred. Please try again.';
-  }
-};
+//todo
+//accesibilidad sign in and sign up
 
 export default function LoginDialog({ open, onClose, isSignUp = false }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, sendSignInEmail } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
 
   const handleEmailAuth = async (e) => {
     e.preventDefault();
     setError('');
     try {
       if (isSignUp) {
+        if (password.length < 6) {
+          setError('Password must be at least 6 characters long.');
+          return;
+        }
         await signUpWithEmail(email, password, displayName);
       } else {
         await signInWithEmail(email, password);
       }
       onClose();
     } catch (error) {
-      setError(getErrorMessage(error.code));
+      setError(getAuthErrorMessage(error));
     }
   };
 
@@ -107,15 +101,17 @@ export default function LoginDialog({ open, onClose, isSignUp = false }) {
             )}
             
             {isSignUp && (
-              <TextField
-                fullWidth
-                label="Display Name"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                margin="normal"
-                required
-                sx={textFieldStyle}
-              />
+              <>
+                <TextField
+                  fullWidth
+                  label="Display Name"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  margin="normal"
+                  required
+                  sx={textFieldStyle}
+                />
+              </>
             )}
             
             <TextField
@@ -139,6 +135,17 @@ export default function LoginDialog({ open, onClose, isSignUp = false }) {
               required
               sx={textFieldStyle}
             />
+
+            {isSignUp && password.length > 0 && (
+              <Box sx={{ mt: 1 }}>
+                <PasswordStrengthBar
+                  password={password}
+                  minLength={6}
+                  scoreWords={['Too weak', 'Weak', 'Okay', 'Good', 'Strong']}
+                  shortScoreWord={'Too short'}
+                />
+              </Box>
+            )}
 
             <Box sx={{ display: 'flex', gap: 2, mt: 3, mb: 2 }}>
               <Button

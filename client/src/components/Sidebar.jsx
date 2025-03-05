@@ -10,7 +10,6 @@ import {
   Typography 
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
-import { useTheme } from '@mui/material/styles';
 import HomeIcon from '@mui/icons-material/Home';
 import GamesIcon from '@mui/icons-material/Games';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
@@ -24,8 +23,7 @@ import LoginDialog from './LoginDialog';
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const theme = useTheme();
-  const { currentUser, signInWithGoogle, logout } = useAuth();
+  const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);

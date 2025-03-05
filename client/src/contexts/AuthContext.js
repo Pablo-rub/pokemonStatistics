@@ -8,9 +8,7 @@ import {
   signInWithEmailAndPassword,
   updateProfile
 } from "firebase/auth";
-
-//todo
-//show error when password is too short or email is already signed up when signed up
+import { getAuthErrorMessage } from '../utils/errorMessages';
 
 const AuthContext = createContext();
 
@@ -37,12 +35,15 @@ export function AuthProvider({ children }) {
 
   const signUpWithEmail = async (email, password, displayName) => {
     try {
+      if (password.length < 6) {
+        throw { code: 'auth/weak-password' };
+      }
       const result = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(result.user, { displayName });
       setAuthError(null);
       return result;
     } catch (error) {
-      setAuthError(error.message);
+      setAuthError(getAuthErrorMessage(error));
       throw error;
     }
   };
@@ -53,7 +54,7 @@ export function AuthProvider({ children }) {
       setAuthError(null);
       return result;
     } catch (error) {
-      setAuthError(error.message);
+      setAuthError(getAuthErrorMessage(error));
       throw error;
     }
   };
