@@ -1,8 +1,9 @@
 import { createTheme } from "@mui/material/styles";
 
 //todo
-//fondo de sign in negro
-//box de google blanca
+//eliminar sx
+//filters
+//login textfields, google sorrounding
 
 const theme = createTheme({
   palette: {
@@ -39,31 +40,37 @@ const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          textTransform: "none", // Disable uppercase transformation
-          borderRadius: 8, // Rounded corners
+          textTransform: "none",
+          borderRadius: 8,
         },
         containedSuccess: {
           backgroundColor: '#24CC9F',
           color: '#000000',
+          //hover 50% more darker than its color
           "&:hover": {
-            backgroundColor: '#1fb589',
+            backgroundColor: '#1b9e7a',
           },
         },
         containedCancel: {
           backgroundColor: '#E9A5A5',
           color: '#000000',
+          //hover 50% more darker than its color
           "&:hover": {
-            backgroundColor: "#1e3b54",
+            backgroundColor: '#c97b7b',
           },
         },
-        outlinedPrimary: {
-          borderColor: '#E9A5A5',
-          color: '#ffffff',
+        containedSecondary: {
+          backgroundColor: '#C7ADBE',
+          color: '#000000',
+          margin: 10,
           "&:hover": {
-            backgroundColor: 'rgba(233, 165, 165, 0.1)',
-            borderColor: '#d49494',
+            backgroundColor: '#b39db1',
           },
-        }
+        },
+        outlined: {
+          color: '#ffffff',
+          borderColor: '#ffffff',
+        },
       },
     },
     MuiDrawer: {
@@ -144,13 +151,29 @@ const theme = createTheme({
     MuiPaper: {
       styleOverrides: {
         root: {
-          backgroundColor: "#C7ADBE",
-          boxShadow: '0px 3px 8px rgba(0, 0, 0, 0.15)', // Añade sombra sutil
+          borderRadius: 8,
+        },
+        replay: {
+          backgroundColor: '#C7ADBE',
+          padding: 10, 
+          marginBottom: 10,
+          cursor: 'pointer',
+          '&:hover': {
+            boxShadow: 6,
+            transform: 'scale(1.05)',
+            transition: 'all 0.2s ease-in-out',
+          },
         },
       },
     },
     MuiDialog: {
       styleOverrides: {
+        root: {
+          borderRadius: 8,
+        },
+        login: {
+          backgroundColor: '#C7ADBE',
+        },
         paper: {
           backgroundColor: '#000000',
           '& .MuiDialogTitle-root': {
@@ -189,7 +212,49 @@ const theme = createTheme({
           }
         }
       }
-    }
+    },
+    MuiBox: {
+      styleOverrides: {
+        filter: {
+          display: 'flex', 
+          alignItems: 'center',
+          gap: 2, 
+          flexWrap: 'wrap',
+          marginBottom: 2
+        },
+      },
+    },
+    MuiSelect: {
+      styleOverrides: {
+        root: {
+          margin: '0 10px',
+          color: '#ffffff',
+          '& .MuiSelect-icon': {
+            color: '#ffffff'
+          },
+          '&.MuiSelect-select': {
+            '&:focus': {
+              backgroundColor: 'transparent'
+            }
+          }
+        },
+        replayFilter: {
+          color: '#ffffff',
+          '&.MuiSelect-select': {
+            '&:focus': {
+              backgroundColor: 'transparent'
+            }
+          }
+        },
+      }
+    },
+    MuiFormControl: {
+      styleOverrides: {
+        root: {
+          margin: '0 10px',
+        },
+      },
+    },
   },
 });
 

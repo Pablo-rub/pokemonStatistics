@@ -114,21 +114,14 @@ function PublicGamesPage() {
       </Typography>
 
       {/* Filters row */}
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          gap: 2, 
-          flexWrap: 'wrap',
-          marginBottom: 2
-        }}>
+        <Box variant="filter">
           {/* Sort dropdown */}
-          <FormControl sx={{ minWidth: 200 }}>
+          <FormControl>
             <Select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               displayEmpty
               renderValue={(value) => `Sort by: ${value}`}
-              size="small" // Añadido para igualar altura con otros elementos
             >
               <MenuItem value={"date DESC"}>Date Descending</MenuItem>
               <MenuItem value={"date ASC"}>Date Ascending</MenuItem>
@@ -143,26 +136,15 @@ function PublicGamesPage() {
             value={playerFilter}
             onChange={(e) => setPlayerFilter(e.target.value)}
             size="small"
-            sx={{ 
-              minWidth: 200,
-              bgcolor: '#C7ADBE',
-              borderRadius: 1,
-              '& .MuiOutlinedInput-root': {
-                '& fieldset': {
-                  borderColor: 'transparent',
-                },
-              },
-            }}
           />
 
           {/* Rating filter */}
-          <FormControl sx={{ minWidth: 200 }}>
+          <FormControl>
             <Select
               value={ratingFilter}
               onChange={(e) => setRatingFilter(e.target.value)}
               displayEmpty
               renderValue={(value) => `Rating: ${value}`}
-              size="small" // Añadido para igualar altura
             >
               <MenuItem value="all">All Ratings</MenuItem>
               <MenuItem value="unknown">Unknown</MenuItem>
@@ -173,13 +155,12 @@ function PublicGamesPage() {
           </FormControl>
 
           {/* Date filter */}
-          <FormControl sx={{ minWidth: 200 }}>
+          <FormControl>
             <Select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
               displayEmpty
               renderValue={(value) => `Date: ${value}`}
-              size="small" // Añadido para igualar altura
             >
               <MenuItem value="all">All Time</MenuItem>
               <MenuItem value="week">Last Week</MenuItem>
@@ -188,38 +169,19 @@ function PublicGamesPage() {
             </Select>
           </FormControl>
 
-          {/* Search button */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
+          {/* Apply button */}
           <Button
-            variant="contained"
+            variant="containedSuccess"
             onClick={applyFilters}
-            sx={{ 
-              height: '40px',
-              bgcolor: '#C7ADBE',
-              color: 'black',
-              '&:hover': {
-                bgcolor: '#B399AA',
-              }
-            }}
           >
             Apply Filters
           </Button>
           <Button
-            variant="outlined"
+            variant="containedSecondary"
             onClick={resetFilters}
-            sx={{ 
-              height: '40px',
-              borderColor: '#C7ADBE',
-              color: '#C7ADBE',
-              '&:hover': {
-                borderColor: '#B399AA',
-                bgcolor: 'transparent',
-              }
-            }}
           >
             Reset Filters
           </Button>
-        </Box>
         </Box>
 
       {isLoading ? (

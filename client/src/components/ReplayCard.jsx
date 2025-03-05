@@ -21,21 +21,12 @@ const ReplayCard = ({ game }) => {
 
   return (
     <Paper 
-      sx={{ 
-        padding: 2, 
-        marginBottom: 2,
-        cursor: 'pointer',
-        '&:hover': {
-          boxShadow: 6,
-          transform: 'scale(1.005)',
-          transition: 'all 0.2s ease-in-out',
-        },
-      }}
       onClick={(e) => {
         if (!e.target.closest('.MuiCheckbox-root')) {
           window.open(`https://replay.pokemonshowdown.com/${game.replay_id}`, '_blank');
         }
       }}
+      variant="replay"
     >
       <Box sx={{ 
         display: 'flex', 
