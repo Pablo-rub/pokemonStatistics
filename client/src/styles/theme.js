@@ -3,6 +3,7 @@ import { createTheme } from "@mui/material/styles";
 //todo
 //eliminar sx
 //filters
+//change password
 
 const theme = createTheme({
   palette: {

@@ -31,7 +31,6 @@ import {
 } from '@mui/icons-material';
 
 //todo
-//mensaje de seguridad al borrar
 
 const ProfilePage = () => {
   const { currentUser, changePassword, deleteAccount, logout } = useAuth();

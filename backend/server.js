@@ -67,12 +67,25 @@ app.get('/api/games', async (req, res) => {
     if (userId && showSaved === 'unsaved') {
       joinClause = `
         LEFT JOIN (
-          SELECT unnest(replays_saved).replay_id as saved_replay_id
-          FROM \`pokemon-statistics.pokemon_replays.saved_replays\`
+          SELECT replay_id 
+          FROM \`pokemon-statistics.pokemon_replays.saved_replays\`,
+          UNNEST(replays_saved) as replays
           WHERE user_id = '${userId}'
-        ) saved ON r.replay_id = saved.saved_replay_id
+        ) saved ON r.replay_id = saved.replay_id
       `;
-      whereClause.push('saved.saved_replay_id IS NULL');
+      whereClause.push('saved.replay_id IS NULL');
+    }
+
+    // Nuevo: Filtro para partidas guardadas
+    if (userId && showSaved === 'saved') {
+      joinClause = `
+        INNER JOIN (
+          SELECT replay_id 
+          FROM \`pokemon-statistics.pokemon_replays.saved_replays\`,
+          UNNEST(replays_saved) as replays
+          WHERE user_id = '${userId}'
+        ) saved ON r.replay_id = saved.replay_id
+      `;
     }
 
     let orderBy = 'date DESC';
