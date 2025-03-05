@@ -6,7 +6,11 @@ import {
   signOut,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  updateProfile
+  updateProfile,
+  EmailAuthProvider,
+  deleteUser,
+  reauthenticateWithCredential,
+  updatePassword
 } from "firebase/auth";
 import { getAuthErrorMessage } from '../utils/errorMessages';
 
@@ -36,6 +40,7 @@ export function AuthProvider({ children }) {
   const signUpWithEmail = async (email, password, displayName) => {
     try {
       if (password.length < 6) {
+        // eslint-disable-next-line no-throw-literal
         throw { code: 'auth/weak-password' };
       }
       const result = await createUserWithEmailAndPassword(auth, email, password);
@@ -59,6 +64,39 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const changePassword = async (currentPassword, newPassword) => {
+    if (!currentUser) throw new Error('No user logged in');
+    if (currentPassword === newPassword) {
+      throw new Error('New password must be different from current password');
+    }
+    
+    try {
+      const credential = EmailAuthProvider.credential(
+        currentUser.email,
+        currentPassword
+      );
+      await reauthenticateWithCredential(currentUser, credential);
+      await updatePassword(currentUser, newPassword);
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const deleteAccount = async (password) => {
+    if (!currentUser) throw new Error('No user logged in');
+    
+    try {
+      const credential = EmailAuthProvider.credential(
+        currentUser.email,
+        password
+      );
+      await reauthenticateWithCredential(currentUser, credential);
+      await deleteUser(currentUser);
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const logout = () => {
     return signOut(auth);
   };
@@ -78,7 +116,9 @@ export function AuthProvider({ children }) {
     signInWithEmail,
     signUpWithEmail,
     logout,
-    authError
+    authError,
+    changePassword,
+    deleteAccount
   };
 
   return (

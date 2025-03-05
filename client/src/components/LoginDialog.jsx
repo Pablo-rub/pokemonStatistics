@@ -8,21 +8,26 @@ import {
   TextField,
   Typography,
   Divider,
-  Alert
+  Alert,
+  IconButton
 } from '@mui/material';
 import GoogleIcon from '@mui/icons-material/Google';
 import { useAuth } from '../contexts/AuthContext';
 import { getAuthErrorMessage } from '../utils/errorMessages';
 import PasswordStrengthBar from 'react-password-strength-bar';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 
 //todo
 //accesibilidad sign in and sign up
+//poder mover la ventana
+//que al cerrar la ventana se limpien los campos
 
 export default function LoginDialog({ open, onClose, isSignUp = false }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
 
   const handleEmailAuth = async (e) => {
@@ -128,12 +133,22 @@ export default function LoginDialog({ open, onClose, isSignUp = false }) {
             <TextField
               fullWidth
               label="Password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               margin="normal"
               required
               sx={textFieldStyle}
+              InputProps={{
+                endAdornment: (
+                  <IconButton
+                    onClick={() => setShowPassword(!showPassword)}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                ),
+              }}
             />
 
             {isSignUp && password.length > 0 && (
@@ -151,28 +166,14 @@ export default function LoginDialog({ open, onClose, isSignUp = false }) {
               <Button
                 type="submit"
                 fullWidth
-                variant="contained"
-                sx={{ 
-                  bgcolor: '#24CC9F',
-                  color: '#000000',
-                  '&:hover': {
-                    bgcolor: '#1fb589',
-                  }
-                }}
+                variant="containedSuccess"
               >
                 {isSignUp ? 'Sign Up' : 'Sign In'}
               </Button>
               <Button
                 onClick={onClose}
                 fullWidth
-                variant="contained"
-                sx={{ 
-                  bgcolor: '#E9A5A5',
-                  color: '#000000',
-                  '&:hover': {
-                    bgcolor: '#d49494',
-                  }
-                }}
+                variant="containedCancel"
               >
                 Cancel
               </Button>
