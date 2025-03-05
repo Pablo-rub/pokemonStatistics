@@ -15,10 +15,7 @@ import ReplayCard from "../components/ReplayCard";
 import { useAuth } from "../contexts/AuthContext";
 
 // todo
-// accesible filters
 // improve performance
-// filtro para solo ver las no guardadas
-// no hacer tanto zoom en el hover
 
 function PublicGamesPage() {
   // Estados actuales
@@ -33,7 +30,7 @@ function PublicGamesPage() {
   const [playerFilter, setPlayerFilter] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
-  const [showSaved, setShowSaved] = useState('all'); // Add this state
+  const [showSaved, setShowSaved] = useState('all');
   const { currentUser } = useAuth();
 
   // Estados para los filtros activos (los que realmente se aplican)
@@ -41,7 +38,8 @@ function PublicGamesPage() {
     sortBy: "date DESC",
     playerFilter: "",
     ratingFilter: "all",
-    dateFilter: "all"
+    dateFilter: "all",
+    showSaved: "all"
   });
 
   const fetchPublicGames = useCallback(async (page, filters) => {
@@ -53,7 +51,7 @@ function PublicGamesPage() {
           limit: itemsPerPage, 
           ...filters,
           userId: currentUser?.uid,
-          showSaved
+          showSaved: filters.showSaved
         },
       });
       
@@ -68,7 +66,7 @@ function PublicGamesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [itemsPerPage, currentUser, showSaved]);
+  }, [itemsPerPage, currentUser]);
 
   const applyFilters = () => {
     setCurrentPage(1);
@@ -76,7 +74,8 @@ function PublicGamesPage() {
       sortBy,
       playerFilter,
       ratingFilter,
-      dateFilter
+      dateFilter,
+      showSaved
     });
   };
 
@@ -85,12 +84,14 @@ function PublicGamesPage() {
     setPlayerFilter("");
     setRatingFilter("all");
     setDateFilter("all");
+    setShowSaved("all");
     setCurrentPage(1);
     setActiveFilters({
       sortBy: "date DESC",
       playerFilter: "",
       ratingFilter: "all",
-      dateFilter: "all"
+      dateFilter: "all",
+      showSaved: "all"
     });
   };
 

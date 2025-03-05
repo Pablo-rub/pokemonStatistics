@@ -18,11 +18,8 @@ import PasswordStrengthBar from 'react-password-strength-bar';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 
 //todo
-//poder mover la ventana
 //recuperar contraseña
 //que no se ponga blanco al hacer hover sobre una sugerencia
-//forgot password no va el enlace
-//el movimiento no es fluido con respecto al cursor
 
 export default function LoginDialog({ open, onClose, isSignUp = false }) {
   const [email, setEmail] = useState('');

@@ -16,8 +16,6 @@ import LoginDialog from "../components/LoginDialog"; // Import LoginDialog
 
 //todo
 //subir partidas pasando url
-//boton de sign in no te lleva a sign in
-//refresh button
 
 function SavedGamesPage() {
   const [games, setGames] = useState([]);
