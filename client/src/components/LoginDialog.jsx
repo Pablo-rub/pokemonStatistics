@@ -20,6 +20,7 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 //todo
 //poder mover la ventana
 //recuperar contraseña
+//que no se ponga blanco al hacer hover sobre una sugerencia
 
 export default function LoginDialog({ open, onClose, isSignUp = false }) {
   const [email, setEmail] = useState('');
@@ -71,32 +72,6 @@ export default function LoginDialog({ open, onClose, isSignUp = false }) {
     }
   }, [open]);
 
-  const textFieldStyle = {
-    mb: 2,
-    '& .MuiInputLabel-root': {
-      color: '#000',
-      '&.Mui-focused': {
-        color: '#1976d2',
-      },
-    },
-    '& .MuiOutlinedInput-root': {
-      '& fieldset': {
-        borderColor: '#000',
-      },
-      '&:hover fieldset': {
-        borderColor: '#1976d2',
-      },
-      '&.Mui-focused fieldset': {
-        borderColor: '#1976d2',
-        borderWidth: '2px',
-      },
-    },
-    '& .MuiInputBase-input': {
-      color: '#ffffff',
-      caretColor: '#ffffff',
-    },
-  };
-
   return (
     <Dialog 
       open={open} 
@@ -126,8 +101,6 @@ export default function LoginDialog({ open, onClose, isSignUp = false }) {
                   onChange={(e) => setDisplayName(e.target.value)}
                   margin="normal"
                   required
-                  sx={textFieldStyle}
-                  variant='outlined'
                 />
               </>
             )}
@@ -140,7 +113,6 @@ export default function LoginDialog({ open, onClose, isSignUp = false }) {
               onChange={(e) => setEmail(e.target.value)}
               margin="normal"
               required
-              sx={textFieldStyle}
             />
             
             <TextField
@@ -151,7 +123,6 @@ export default function LoginDialog({ open, onClose, isSignUp = false }) {
               onChange={(e) => setPassword(e.target.value)}
               margin="normal"
               required
-              sx={textFieldStyle}
               InputProps={{
                 endAdornment: (
                   <IconButton
