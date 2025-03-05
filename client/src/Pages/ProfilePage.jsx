@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -7,6 +7,11 @@ import {
   Divider,
   Button,
   Grid,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  TextField,
+  Alert
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -15,13 +20,24 @@ import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import EmailIcon from '@mui/icons-material/Email';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import LockIcon from '@mui/icons-material/Lock';
+import { getAuthErrorMessage } from '../utils/errorMessages';
 
 //todo
-//if signed up with mail and password, option to change password
+//when changing password: Cannot read properties of undefined (reading 'credential'); no permitir que sea la misma contraseña, boton de cancelar
+//boton mostrar contraseña
+//boton eliminar cuenta
+//color cambiar contraseña
 
 const ProfilePage = () => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, reauthenticateWithCredential, updatePassword, EmailAuthProvider } = useAuth();
   const navigate = useNavigate();
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleLogout = async () => {
     try {
@@ -29,6 +45,38 @@ const ProfilePage = () => {
       navigate('/');
     } catch (error) {
       console.error('Error logging out:', error);
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (newPassword !== confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      const credential = EmailAuthProvider.credential(
+        currentUser.email,
+        oldPassword
+      );
+      await reauthenticateWithCredential(currentUser, credential);
+      await updatePassword(currentUser, newPassword);
+      setSuccess('Password updated successfully');
+      setTimeout(() => {
+        setPasswordDialogOpen(false);
+        setSuccess('');
+      }, 2000);
+    } catch (error) {
+      setError(getAuthErrorMessage(error));
     }
   };
 
@@ -162,6 +210,63 @@ const ProfilePage = () => {
             Provider: {currentUser.providerData[0].providerId}
           </Typography>
         </Box>
+
+        {currentUser?.providerData[0]?.providerId === 'password' && (
+          <Button
+            variant="outlined"
+            startIcon={<LockIcon />}
+            onClick={() => setPasswordDialogOpen(true)}
+            sx={{ mt: 2 }}
+          >
+            Change Password
+          </Button>
+        )}
+
+        {/* Password Change Dialog */}
+        <Dialog open={passwordDialogOpen} onClose={() => setPasswordDialogOpen(false)}>
+          <DialogTitle>Change Password</DialogTitle>
+          <DialogContent>
+            <Box component="form" onSubmit={handlePasswordChange} sx={{ mt: 2 }}>
+              {error && <Alert severity="error">{error}</Alert>}
+              {success && <Alert severity="success">{success}</Alert>}
+              <TextField
+                fullWidth
+                label="Current Password"
+                type="password"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                margin="normal"
+                required
+              />
+              <TextField
+                fullWidth
+                label="New Password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                margin="normal"
+                required
+              />
+              <TextField
+                fullWidth
+                label="Confirm New Password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                margin="normal"
+                required
+              />
+              <Button 
+                fullWidth 
+                variant="contained" 
+                type="submit"
+                sx={{ mt: 2 }}
+              >
+                Update Password
+              </Button>
+            </Box>
+          </DialogContent>
+        </Dialog>
       </Paper>
     </Box>
   );
