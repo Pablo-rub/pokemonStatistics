@@ -221,3 +221,117 @@ app.get('/api/rankings', async (req, res) => {
 
 // Mount the obtainGameData router on the /api/replays path
 app.use('/api/replays', obtainGameDataRouter);
+
+// Save a replay for a user
+app.post('/api/users/:userId/saved-replays', async (req, res) => {
+  const { userId } = req.params;
+  const { replayId } = req.body;
+  
+  try {
+    // Check if user exists
+    const userQuery = `SELECT * FROM \`pokemon-statistics.pokemon_replays.saved_replays\` WHERE user_id = '${userId}'`;
+    const [userRows] = await bigQuery.query(userQuery);
+
+    if (userRows.length === 0) {
+      // Create new user entry
+      const insertQuery = `
+        INSERT INTO \`pokemon-statistics.pokemon_replays.saved_replays\`
+        (user_id, replays_saved)
+        VALUES ('${userId}', ARRAY<STRUCT<replay_id STRING>>[(STRUCT('${replayId}'))])
+      `;
+      await bigQuery.query(insertQuery);
+    } else {
+      // Update existing user's replays
+      const updateQuery = `
+        UPDATE \`pokemon-statistics.pokemon_replays.saved_replays\`
+        SET replays_saved = ARRAY_CONCAT(replays_saved, [STRUCT<replay_id STRING>('${replayId}')])
+        WHERE user_id = '${userId}'
+      `;
+      await bigQuery.query(updateQuery);
+    }
+    res.status(200).send("Replay saved successfully");
+  } catch (error) {
+    console.error("Error saving replay:", error);
+    res.status(500).send("Error saving replay");
+  }
+});
+
+// Create new user with empty replays array
+app.post('/api/users/saved-replays', async (req, res) => {
+  const { userId } = req.body;
+  
+  try {
+    const query = `
+      INSERT INTO \`pokemon-statistics.pokemon_replays.saved_replays\`
+      (user_id, replays_saved)
+      VALUES ('${userId}', ARRAY<STRUCT<replay_id STRING>>[])
+    `;
+    await bigQuery.query(query);
+    res.status(200).send("User created successfully with empty replays array");
+  } catch (error) {
+    console.error("Error creating user:", error);
+    res.status(500).send("Error creating user");
+  }
+});
+
+// Get user's saved replays
+app.get('/api/users/:userId/saved-replays', async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+    const query = `
+      SELECT r.*
+      FROM \`pokemon-statistics.pokemon_replays.replays\` r
+      JOIN UNNEST((
+        SELECT replays_saved 
+        FROM \`pokemon-statistics.pokemon_replays.saved_replays\` 
+        WHERE user_id = '${userId}'
+      )) saved
+      WHERE r.replay_id = saved.replay_id
+    `;
+    const [rows] = await bigQuery.query(query);
+    res.json(rows);
+  } catch (error) {
+    console.error("Error fetching saved replays:", error);
+    res.status(500).send("Error fetching saved replays");
+  }
+});
+
+// Delete a saved replay
+app.delete('/api/users/:userId/saved-replays/:replayId', async (req, res) => {
+  const { userId, replayId } = req.params;
+  
+  try {
+    const query = `
+      UPDATE \`pokemon-statistics.pokemon_replays.saved_replays\`
+      SET replays_saved = ARRAY(
+        SELECT STRUCT<replay_id STRING>(x.replay_id)
+        FROM UNNEST(replays_saved) x
+        WHERE x.replay_id != '${replayId}'
+      )
+      WHERE user_id = '${userId}'
+    `;
+    await bigQuery.query(query);
+    res.status(200).send("Replay removed successfully");
+  } catch (error) {
+    console.error("Error removing replay:", error);
+    res.status(500).send("Error removing replay");
+  }
+});
+
+// Delete all saved replays (when deleting account)
+app.delete('/api/users/:userId/saved-replays', async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+    const query = `
+      DELETE FROM \`pokemon-statistics.pokemon_replays.saved_replays\`
+      WHERE user_id = '${userId}'
+    `;
+    await bigQuery.query(query);
+    res.status(200).send("All saved replays deleted successfully");
+  } catch (error) {
+    console.error("Error deleting saved replays:", error);
+    res.status(500).send("Error deleting saved replays");
+  }
+});
