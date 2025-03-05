@@ -3,7 +3,6 @@ import { createTheme } from "@mui/material/styles";
 //todo
 //eliminar sx
 //filters
-//login textfields, google sorrounding
 
 const theme = createTheme({
   palette: {
@@ -176,7 +175,7 @@ const theme = createTheme({
           cursor: 'pointer',
           '&:hover': {
             boxShadow: 6,
-            transform: 'scale(1.05)',
+            transform: 'scale(1.005)',
             transition: 'all 0.2s ease-in-out',
           },
         },

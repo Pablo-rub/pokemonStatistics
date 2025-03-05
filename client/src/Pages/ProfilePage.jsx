@@ -316,10 +316,13 @@ const ProfilePage = () => {
 
         {/* Delete Account Dialog */}
         <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-          <DialogTitle>Delete Account</DialogTitle>
+          <DialogTitle sx={{ color: 'error.main' }}>Delete Account</DialogTitle>
           <DialogContent>
-            <Typography sx={{ mb: 2 }}>
-              Are you sure you want to delete your account? This action cannot be undone.
+            <Typography sx={{ mb: 2 }} color="error">
+              Warning: This action cannot be undone. All your saved replays and account data will be permanently deleted.
+            </Typography>
+            <Typography sx={{ mb: 3 }}>
+              Are you absolutely sure you want to delete your account?
             </Typography>
             {isGoogleAccount ? (
               <TextField
@@ -358,26 +361,16 @@ const ProfilePage = () => {
             )}
           </DialogContent>
           <DialogActions>
-            <Button 
-              onClick={() => setDeleteDialogOpen(false)}
-              variant="contained"
-              sx={{ 
-                bgcolor: '#E9A5A5',
-                color: '#000000',
-                '&:hover': {
-                  bgcolor: '#d49494',
-                }
-              }}
-            >
+            <Button onClick={() => setDeleteDialogOpen(false)}>
               Cancel
             </Button>
             <Button 
               onClick={handleDeleteAccount}
-              variant="containedCancel"
+              variant="contained"
               color="error"
               startIcon={<DeleteForever />}
             >
-              Delete Account
+              Yes, Delete My Account
             </Button>
           </DialogActions>
         </Dialog>
