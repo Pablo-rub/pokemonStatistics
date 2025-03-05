@@ -42,16 +42,18 @@ const theme = createTheme({
           textTransform: "none", // Disable uppercase transformation
           borderRadius: 8, // Rounded corners
         },
-        containedPrimary: {
+        containedSuccess: {
           backgroundColor: '#24CC9F',
-          color: '#ffffff',
+          color: '#000000',
           "&:hover": {
             backgroundColor: '#1fb589',
           },
         },
-        containedSecondary: {
+        containedCancel: {
+          backgroundColor: '#E9A5A5',
+          color: '#000000',
           "&:hover": {
-            backgroundColor: "#1e3b54", // Darken secondary color on hover
+            backgroundColor: "#1e3b54",
           },
         },
         outlinedPrimary: {

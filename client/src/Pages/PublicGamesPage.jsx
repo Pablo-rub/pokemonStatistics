@@ -16,6 +16,7 @@ import ReplayCard from "../components/ReplayCard";
 // todo
 // accesible filters
 // improve performance
+// si no has iniciado sesion, no puedes guardar replay (pulsar corazon)
 
 function PublicGamesPage() {
   // Estados actuales

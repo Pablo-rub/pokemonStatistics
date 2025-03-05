@@ -11,7 +11,9 @@ import {
   DialogTitle,
   DialogContent,
   TextField,
-  Alert
+  Alert,
+  IconButton,
+  DialogActions
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -22,15 +24,21 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LockIcon from '@mui/icons-material/Lock';
 import { getAuthErrorMessage } from '../utils/errorMessages';
+import { 
+  Visibility, 
+  VisibilityOff,
+  DeleteForever 
+} from '@mui/icons-material';
 
 //todo
-//when changing password: Cannot read properties of undefined (reading 'credential'); no permitir que sea la misma contraseña, boton de cancelar
-//boton mostrar contraseña
-//boton eliminar cuenta
-//color cambiar contraseña
+//boton mostrar contraseña en cambio de contraseña
+//accesibilidad cambiar contraseña
+//when changing password: Cannot read properties of undefined (reading 'credential');
+//error al intentar eliminar la cuenta de google: Firebase: Error (auth/invalid-value-(password),-starting-an-object-on-a-scalar-field).
+//error al intentar eliminar la cuenta de correo: Cannot read properties of undefined (reading 'credential')
 
 const ProfilePage = () => {
-  const { currentUser, logout, reauthenticateWithCredential, updatePassword, EmailAuthProvider } = useAuth();
+  const { currentUser, logout, reauthenticateWithCredential, updatePassword, EmailAuthProvider, deleteAccount } = useAuth();
   const navigate = useNavigate();
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
@@ -38,6 +46,14 @@ const ProfilePage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const isGoogleAccount = currentUser?.providerData[0]?.providerId === 'google.com';
 
   const handleLogout = async () => {
     try {
@@ -59,7 +75,12 @@ const ProfilePage = () => {
     }
 
     if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long');
+      setError('New password must be at least 6 characters long');
+      return;
+    }
+
+    if (oldPassword === newPassword) {
+      setError('New password must be different from current password');
       return;
     }
 
@@ -74,7 +95,34 @@ const ProfilePage = () => {
       setTimeout(() => {
         setPasswordDialogOpen(false);
         setSuccess('');
+        setOldPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
       }, 2000);
+    } catch (error) {
+      setError(getAuthErrorMessage(error));
+    }
+  };
+
+  const handleDeleteAccount = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      if (isGoogleAccount) {
+        if (deleteConfirmText !== 'delete') {
+          setError('Please type "delete" to confirm');
+          return;
+        }
+      } else {
+        // For email/password accounts, verify password
+        const credential = EmailAuthProvider.credential(
+          currentUser.email,
+          deletePassword
+        );
+        await reauthenticateWithCredential(currentUser, credential);
+      }
+      await deleteAccount(currentUser);
+      navigate('/');
     } catch (error) {
       setError(getAuthErrorMessage(error));
     }
@@ -232,41 +280,135 @@ const ProfilePage = () => {
               <TextField
                 fullWidth
                 label="Current Password"
-                type="password"
+                type={showOldPassword ? 'text' : 'password'}
                 value={oldPassword}
                 onChange={(e) => setOldPassword(e.target.value)}
                 margin="normal"
                 required
+                InputProps={{
+                  endAdornment: (
+                    <IconButton onClick={() => setShowOldPassword(!showOldPassword)}>
+                      {showOldPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  ),
+                }}
               />
               <TextField
                 fullWidth
                 label="New Password"
-                type="password"
+                type={showNewPassword ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 margin="normal"
                 required
+                InputProps={{
+                  endAdornment: (
+                    <IconButton onClick={() => setShowNewPassword(!showNewPassword)}>
+                      {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  ),
+                }}
               />
               <TextField
                 fullWidth
                 label="Confirm New Password"
-                type="password"
+                type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 margin="normal"
                 required
+                InputProps={{
+                  endAdornment: (
+                    <IconButton onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  ),
+                }}
               />
-              <Button 
-                fullWidth 
-                variant="contained" 
-                type="submit"
-                sx={{ mt: 2 }}
-              >
-                Update Password
-              </Button>
             </Box>
           </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setPasswordDialogOpen(false)} variant="containedCancel">Cancel</Button>
+            <Button onClick={handlePasswordChange} variant="containedSuccess">Update Password</Button>
+          </DialogActions>
         </Dialog>
+
+        {/* Delete Account Dialog */}
+        <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+          <DialogTitle>Delete Account</DialogTitle>
+          <DialogContent>
+            <Typography sx={{ mb: 2 }}>
+              Are you sure you want to delete your account? This action cannot be undone.
+            </Typography>
+            {isGoogleAccount ? (
+              <TextField
+                fullWidth
+                label="Type 'delete' to confirm"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                margin="normal"
+                required
+              />
+            ) : (
+              <TextField
+                fullWidth
+                label="Confirm Password"
+                type={showDeletePassword ? 'text' : 'password'}
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                margin="normal"
+                required
+                InputProps={{
+                  endAdornment: (
+                    <IconButton 
+                      onClick={() => setShowDeletePassword(!showDeletePassword)}
+                      edge="end"
+                    >
+                      {showDeletePassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  ),
+                }}
+              />
+            )}
+            {error && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {error}
+              </Alert>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              onClick={() => setDeleteDialogOpen(false)}
+              variant="contained"
+              sx={{ 
+                bgcolor: '#E9A5A5',
+                color: '#000000',
+                '&:hover': {
+                  bgcolor: '#d49494',
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleDeleteAccount}
+              variant="containedCancel"
+              color="error"
+              startIcon={<DeleteForever />}
+            >
+              Delete Account
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Add Delete Account Button */}
+        <Button
+          variant="containedCancel"
+          startIcon={<DeleteForever />}
+          onClick={() => setDeleteDialogOpen(true)}
+        >
+          Delete Account
+        </Button>
       </Paper>
     </Box>
   );
