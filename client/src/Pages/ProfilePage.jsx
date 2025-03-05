@@ -31,8 +31,6 @@ import {
 } from '@mui/icons-material';
 
 //todo
-//boton mostrar contraseña en cambio de contraseña
-//accesibilidad cambiar contraseña
 
 const ProfilePage = () => {
   const { currentUser, changePassword, deleteAccount, logout } = useAuth();
@@ -159,11 +157,10 @@ const ProfilePage = () => {
         Profile
       </Typography>
 
-      <Paper sx={{ 
+      <Paper variant='profile' sx={{ 
         padding: 3, 
         maxWidth: 800, 
         margin: '0 auto',
-        backgroundColor: '#C7ADBE'
       }}>
         {/* Profile Header */}
         <Box sx={{ 
@@ -189,17 +186,9 @@ const ProfilePage = () => {
             </Typography>
           </Box>
           <Button
-            variant="outlinedWhite"
+            variant="logout"
             onClick={handleLogout}
             startIcon={<LogoutIcon />}
-            sx={{ 
-              borderColor: 'black',
-              color: 'black',
-              '&:hover': {
-                borderColor: 'black',
-                backgroundColor: 'rgba(0, 0, 0, 0.1)',
-              }
-            }}
           >
             Logout
           </Button>
@@ -253,10 +242,9 @@ const ProfilePage = () => {
 
         {currentUser?.providerData[0]?.providerId === 'password' && (
           <Button
-            variant="outlined"
+            variant="outlinedBlack"
             startIcon={<LockIcon />}
             onClick={() => setPasswordDialogOpen(true)}
-            sx={{ mt: 2 }}
           >
             Change Password
           </Button>

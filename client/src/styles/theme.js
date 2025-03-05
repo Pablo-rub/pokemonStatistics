@@ -71,6 +71,22 @@ const theme = createTheme({
           color: '#ffffff',
           borderColor: '#ffffff',
         },
+        outlinedBlack: {
+          color: '#000000',
+          borderColor: '#000000',
+          //hover
+          "&:hover": {
+            backgroundColor: '#a9a9a9',
+          },
+        },
+        logout: {
+          borderColor: 'black',
+          color: 'black',
+          '&:hover': {
+            borderColor: 'black',
+            backgroundColor: '#a9a9a9',
+          }
+        },
       },
     },
     MuiDrawer: {
@@ -154,7 +170,7 @@ const theme = createTheme({
           borderRadius: 8,
         },
         replay: {
-          backgroundColor: '#C7ADBE',
+          backgroundColor: '#221FC7',
           padding: 10, 
           marginBottom: 10,
           cursor: 'pointer',
@@ -163,6 +179,12 @@ const theme = createTheme({
             transform: 'scale(1.05)',
             transition: 'all 0.2s ease-in-out',
           },
+        },
+        profile: {
+          padding: 3, 
+          maxWidth: 800, 
+          margin: '0 auto',
+          backgroundColor: '#221FC7'
         },
       },
     },
