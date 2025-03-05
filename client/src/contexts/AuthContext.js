@@ -110,13 +110,15 @@ export function AuthProvider({ children }) {
     
     try {
       if (currentUser.providerData[0].providerId === 'password' && password) {
-        // For email/password users, need to reauthenticate
         const credential = EmailAuthProvider.credential(
           currentUser.email,
           password
         );
         await reauthenticateWithCredential(currentUser, credential);
       }
+      // First delete saved replays
+      await axios.delete(`http://localhost:5000/api/users/${currentUser.uid}/saved-replays`);
+      // Then delete Firebase user
       await deleteUser(currentUser);
     } catch (error) {
       throw error;
