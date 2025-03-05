@@ -23,5 +23,11 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const auth = getAuth(app);
 
+// Configure auth settings for email link
+auth.settings = {
+  url: 'http://localhost:3000/finishSignIn', // Update this with your production URL later
+  handleCodeInApp: true,
+};
+
 // Export the necessary Firebase instances
 export { app, analytics, auth };

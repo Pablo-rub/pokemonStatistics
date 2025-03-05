@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'react-bootstrap';
 
+//todo
+//que solo se muestre vgc
+//sprites
+//mas rankings
+//graficas
+//graficas temporales
+
 const PokemonUsage = () => {
     const [months, setMonths] = useState([]);
     const [month, setMonth] = useState();
