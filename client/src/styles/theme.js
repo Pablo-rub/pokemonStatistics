@@ -1,5 +1,9 @@
 import { createTheme } from "@mui/material/styles";
 
+//todo
+//fondo de sign in negro
+//box de google blanca
+
 const theme = createTheme({
   palette: {
     mode: "light",
@@ -39,8 +43,10 @@ const theme = createTheme({
           borderRadius: 8, // Rounded corners
         },
         containedPrimary: {
+          backgroundColor: '#24CC9F',
+          color: '#ffffff',
           "&:hover": {
-            backgroundColor: "#36554a", // Darken primary color on hover
+            backgroundColor: '#1fb589',
           },
         },
         containedSecondary: {
@@ -48,14 +54,49 @@ const theme = createTheme({
             backgroundColor: "#1e3b54", // Darken secondary color on hover
           },
         },
+        outlinedPrimary: {
+          borderColor: '#E9A5A5',
+          color: '#ffffff',
+          "&:hover": {
+            backgroundColor: 'rgba(233, 165, 165, 0.1)',
+            borderColor: '#d49494',
+          },
+        }
       },
     },
     MuiDrawer: {
       styleOverrides: {
         paper: {
-          backgroundColor: "#52796f", // Example: change drawer background color
-        },
-      },
+          backgroundColor: "#221FC7",
+          color: "#ffffff",
+          "& .MuiListItemIcon-root": {
+            color: "inherit",
+            minWidth: 40,
+          },
+          "& .MuiListItem-root": {
+            height: 56,
+            alignItems: "center",
+            whiteSpace: "nowrap",
+            color: "#ffffff",
+            "&:hover": {
+              backgroundColor: "#1A1896",
+              color: "#ffffff",
+            },
+            "&.auth-item": {
+              backgroundColor: "#221FC7", // Updated to match drawer background
+              "&:hover": {
+                backgroundColor: "#1A1896",
+              }
+            }
+          },
+          "& .MuiTypography-root": {
+            color: "#ffffff"
+          },
+          "& .MuiListItemText-root": {
+            margin: 0,
+          }
+        }
+      }
     },
     MuiListItem: {
       styleOverrides: {
@@ -106,6 +147,47 @@ const theme = createTheme({
         },
       },
     },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: '#000000',
+          '& .MuiDialogTitle-root': {
+            color: '#ffffff'
+          },
+          '& .MuiDialogContent-root': {
+            color: '#ffffff'
+          },
+          '& .MuiTextField-root': {
+            '& .MuiInputLabel-root': {
+              color: '#ffffff',
+              '&.Mui-focused': {
+                color: '#ffffff'
+              }
+            },
+            '& .MuiOutlinedInput-root': {
+              color: '#ffffff',
+              '& fieldset': {
+                borderColor: '#ffffff'
+              },
+              '&:hover fieldset': {
+                borderColor: '#ffffff'
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: '#ffffff'
+              }
+            }
+          },
+          '& .MuiDivider-root': {
+            '&::before, &::after': {
+              borderColor: '#ffffff'
+            }
+          },
+          '& .MuiTypography-root': {
+            color: '#ffffff'
+          }
+        }
+      }
+    }
   },
 });
 
