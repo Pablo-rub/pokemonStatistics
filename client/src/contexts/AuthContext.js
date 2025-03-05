@@ -64,16 +64,13 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const changePassword = async (currentPassword, newPassword) => {
+  const changePassword = async (oldPassword, newPassword) => {
     if (!currentUser) throw new Error('No user logged in');
-    if (currentPassword === newPassword) {
-      throw new Error('New password must be different from current password');
-    }
     
     try {
       const credential = EmailAuthProvider.credential(
         currentUser.email,
-        currentPassword
+        oldPassword
       );
       await reauthenticateWithCredential(currentUser, credential);
       await updatePassword(currentUser, newPassword);
@@ -82,15 +79,18 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const deleteAccount = async (password) => {
+  const deleteAccount = async (password = null) => {
     if (!currentUser) throw new Error('No user logged in');
     
     try {
-      const credential = EmailAuthProvider.credential(
-        currentUser.email,
-        password
-      );
-      await reauthenticateWithCredential(currentUser, credential);
+      if (currentUser.providerData[0].providerId === 'password' && password) {
+        // For email/password users, need to reauthenticate
+        const credential = EmailAuthProvider.credential(
+          currentUser.email,
+          password
+        );
+        await reauthenticateWithCredential(currentUser, credential);
+      }
       await deleteUser(currentUser);
     } catch (error) {
       throw error;
@@ -118,7 +118,10 @@ export function AuthProvider({ children }) {
     logout,
     authError,
     changePassword,
-    deleteAccount
+    deleteAccount,
+    EmailAuthProvider,
+    reauthenticateWithCredential,
+    updatePassword
   };
 
   return (

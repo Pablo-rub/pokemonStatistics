@@ -38,7 +38,7 @@ import {
 //error al intentar eliminar la cuenta de correo: Cannot read properties of undefined (reading 'credential')
 
 const ProfilePage = () => {
-  const { currentUser, logout, reauthenticateWithCredential, updatePassword, EmailAuthProvider, deleteAccount } = useAuth();
+  const { currentUser, changePassword, deleteAccount, logout } = useAuth();
   const navigate = useNavigate();
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
@@ -85,12 +85,7 @@ const ProfilePage = () => {
     }
 
     try {
-      const credential = EmailAuthProvider.credential(
-        currentUser.email,
-        oldPassword
-      );
-      await reauthenticateWithCredential(currentUser, credential);
-      await updatePassword(currentUser, newPassword);
+      await changePassword(oldPassword, newPassword);
       setSuccess('Password updated successfully');
       setTimeout(() => {
         setPasswordDialogOpen(false);
@@ -107,21 +102,21 @@ const ProfilePage = () => {
   const handleDeleteAccount = async (e) => {
     e.preventDefault();
     setError('');
+    
     try {
       if (isGoogleAccount) {
         if (deleteConfirmText !== 'delete') {
           setError('Please type "delete" to confirm');
           return;
         }
+        await deleteAccount();
       } else {
-        // For email/password accounts, verify password
-        const credential = EmailAuthProvider.credential(
-          currentUser.email,
-          deletePassword
-        );
-        await reauthenticateWithCredential(currentUser, credential);
+        if (!deletePassword) {
+          setError('Please enter your password');
+          return;
+        }
+        await deleteAccount(deletePassword);
       }
-      await deleteAccount(currentUser);
       navigate('/');
     } catch (error) {
       setError(getAuthErrorMessage(error));
