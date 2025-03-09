@@ -1,16 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Typography,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Grid,
-  Paper,
-  CircularProgress,
-  Pagination,
-  IconButton
+  Box, Typography, Select, MenuItem, FormControl, InputLabel,
+  Grid, Paper, CircularProgress, Pagination, IconButton
 } from '@mui/material';
 import PokemonSprite from '../components/PokemonSprite';
 import axios from 'axios';
@@ -22,7 +13,6 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 //menos numeros de pagination, 1 2 3 ... 100
 //no solapamiento
 //checks and counters
-//abilities centered horizontally
 //rankings de victoria
 //error 500 algunos formatos
 
@@ -80,24 +70,9 @@ const PokemonUsage = () => {
                         const lastFormat = vgcFormats[0];
                         setFormat(lastFormat);
                         
-                        try {
-                            // 4. Get the initial data for this format
-                            const response = await axios.get(`http://localhost:5000/api/rankings`, {
-                                params: {
-                                    month: latestMonth,
-                                    format: lastFormat,
-                                    chaos: true
-                                }
-                            });
-                            
-                            if (response.data) {
-                                setHistoricalData({ [latestMonth]: response.data });
-                                parseData(response.data);
-                            }
-                        } catch (dataError) {
-                            console.error("Error fetching format data:", dataError);
-                            setError("Error loading format data. Please try again.");
-                        }
+                        // CHANGE: Call handleFormatChange to load all historical data
+                        // instead of just fetching the latest month
+                        handleFormatChange(lastFormat);
                     }
                 }
             } catch (error) {
@@ -111,8 +86,7 @@ const PokemonUsage = () => {
         fetchInitialData();
     }, []);
 
-    const handleFormatChange = async (e) => {
-        const selectedFormat = e.target.value;
+    const handleFormatChange = async (selectedFormat) => {
         setFormat(selectedFormat);
         setIsLoadingDetails(true);
         setSelectedPokemon(null);
@@ -120,35 +94,52 @@ const PokemonUsage = () => {
         
         try {
             // 1. Obtener todos los meses disponibles
+            console.log("Fetching months...");
             const monthsResponse = await axios.get('http://localhost:5000/api/months');
-            const months = monthsResponse.data.sort().reverse(); // Ordenar de más reciente a más antiguo
+            const months = monthsResponse.data.sort().reverse() // Ordenar de más reciente a más antiguo
+            console.log(months);
             const historicalDataObj = {};
             let foundData = false;
+            let consecutiveFailures = 0;
+            // Aumentamos el máximo de fallos consecutivos para asegurar que busca más meses
+            const MAX_CONSECUTIVE_FAILURES = 3; // Aumentado para asegurar que busca más meses
 
             // 2. Iterar por los meses hasta encontrar uno sin datos
             for (const month of months) {
                 try {
+                    console.log(`Buscando datos para ${selectedFormat} en ${month}...`);
                     const response = await axios.get('http://localhost:5000/api/rankings', {
                         params: {
                             month,
-                            format,      // <-- Use the same variable as your useState
+                            format: selectedFormat,
                             chaos: true
                         }
                     });
-                    if (response.data) {
+                    
+                    if (response.data && response.data.data && 
+                        Object.keys(response.data.data).length > 0) {
                         historicalDataObj[month] = response.data;
                         foundData = true;
+                        consecutiveFailures = 0; // Resetear contador de fallos consecutivos
+                        console.log(`Encontrados datos para ${selectedFormat} en ${month}`);
+                    } else {
+                        consecutiveFailures++;
+                        console.log(`No se encontraron datos válidos para ${selectedFormat} en ${month}`);
                     }
                 } catch (fetchError) {
-                    if (
-                        fetchError.response &&
-                        (fetchError.response.status === 404 || fetchError.response.status === 500)
-                    ) {
-                        console.log(`No data found for ${format} in ${month}`);
-                        if (foundData) break;
+                    consecutiveFailures++;
+                    if (fetchError.response &&
+                        (fetchError.response.status === 404 || fetchError.response.status === 500)) {
+                        console.log(`No hay datos para ${selectedFormat} en ${month} (${fetchError.response.status})`);
                     } else {
-                        console.error(`Error fetching data for ${month}:`, fetchError);
+                        console.error(`Error buscando datos para ${month}:`, fetchError);
                     }
+                }
+                
+                // Si ya encontramos datos y tenemos MAX_CONSECUTIVE_FAILURES fallos seguidos, asumimos que hemos terminado
+                if (foundData && consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                    console.log(`Deteniendo búsqueda después de ${MAX_CONSECUTIVE_FAILURES} fallos consecutivos`);
+                    break;
                 }
             }
 
@@ -241,7 +232,7 @@ const PokemonUsage = () => {
             const response = await axios.get(`http://localhost:5000/api/rankings`, {
                 params: {
                     format,
-                    month: latestMonth, // Include the month parameter
+                    month: latestMonth,
                     chaos: true
                 }
             });
@@ -277,17 +268,18 @@ const PokemonUsage = () => {
                         moves: Object.entries(pokemonData.Moves || {}).map(([name, usage]) => ({
                             name,
                             percentage: ((usage / totalMoves) * 100).toFixed(2)
-                        })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage)),
+                        })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage)).slice(0, 10),
                         
                         items: Object.entries(pokemonData.Items || {}).map(([name, usage]) => ({
                             name,
                             percentage: ((usage / totalItems) * 100).toFixed(2)
-                        })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage)),
+                        })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage)).slice(0, 10),
                         
+                        // Limitar spreads a los 10 principales
                         spreads: Object.entries(pokemonData.Spreads || {}).map(([value, usage]) => ({
                             value,
                             percentage: ((usage / totalSpreads) * 100).toFixed(2)
-                        })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage)),
+                        })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage)).slice(0, 10),
 
                         teraTypes: Object.entries(pokemonData["Tera Types"] || {}).map(([type, usage]) => ({
                             type,
@@ -297,7 +289,7 @@ const PokemonUsage = () => {
                         teammates: Object.entries(pokemonData.Teammates || {}).map(([name, usage]) => ({
                             name,
                             percentage: ((usage / totalTeammates) * 100).toFixed(2)
-                        })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage))
+                        })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage)).slice(0, 10)
                     };
 
                     setPokemonDetails(details);
@@ -361,11 +353,21 @@ const PokemonUsage = () => {
       
           // Obtener todos los nombres de elementos únicos de esta categoría a través de todos los meses
           const uniqueItems = new Set();
+          
+          // Limitar el número de elementos según la categoría
+          const itemLimit = categoryKey === 'spreads' ? 10 : (categoryKey === 'abilities' ? 100 : 20);
+          
           Object.entries(historicalData).forEach(([month, monthData]) => {
             if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
               const categoryData = monthData.data[selectedPokemon.name][structureKey];
               if (categoryData) {
-                Object.keys(categoryData).forEach(itemName => uniqueItems.add(itemName));
+                // Ordenar por uso y tomar solo los primeros N elementos
+                const sortedItems = Object.entries(categoryData)
+                    .sort(([, a], [, b]) => b - a)
+                    .slice(0, itemLimit)
+                    .map(([itemName]) => itemName);
+                    
+                sortedItems.forEach(itemName => uniqueItems.add(itemName));
               }
             }
           });
@@ -548,10 +550,7 @@ const PokemonUsage = () => {
             let pokemonData = null;
             
             // Verificar la estructura de datos y buscar el Pokémon de manera apropiada
-            if (Array.isArray(monthData)) {
-                // Si es un array, buscar directamente
-                pokemonData = monthData.find(p => p.name === pokemonName);
-            } else if (monthData && typeof monthData === 'object') {
+            if (monthData && typeof monthData === 'object') {
                 // Si es un objeto con estructura JSON de "chaos"
                 if (monthData.data && typeof monthData.data === 'object') {
                     // Buscar en monthData.data[pokemonName] directamente
@@ -578,7 +577,7 @@ const PokemonUsage = () => {
         return (
             <Box sx={{ mt: 4 }}>
                 <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>
-                    Usage History
+                    Usage History ({usageData.length} months)
                 </Typography>
                 <Box sx={{ height: 300, width: '100%' }}>
                     <ResponsiveContainer width="100%" height="100%">
@@ -621,7 +620,10 @@ const PokemonUsage = () => {
                 <Select
                     value={format}
                     label="Format"
-                    onChange={handleFormatChange}
+                    onChange={(e) => {
+                        console.log("Format selected:", e.target.value);
+                        handleFormatChange(e.target.value);
+                    }}
                 >
                     {formats.map((fmt) => (
                         <MenuItem key={fmt} value={fmt}>{fmt}</MenuItem>
@@ -693,7 +695,7 @@ const PokemonUsage = () => {
                     <Paper sx={{ 
                         p: 3,
                         backgroundColor: '#221FC7',
-                        height: '80vh',
+                        height: '90vh', // Changed from 80vh to 90vh
                         overflow: 'auto'
                     }}>
                         {isLoadingDetails ? (
