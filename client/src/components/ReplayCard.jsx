@@ -55,9 +55,27 @@ const ReplayCard = ({ game }) => {
 
   const formatDate = (timestamp) => {
     try {
-      // Convert BigQuery timestamp (microseconds) to milliseconds
-      const date = new Date(parseInt(timestamp) / 1000);
-      return date.toLocaleDateString();
+      // Handle if timestamp is an object with a value property
+      const dateStr = typeof timestamp === 'object' && timestamp.value 
+        ? timestamp.value 
+        : timestamp;
+
+      const date = new Date(dateStr);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.error("Invalid date:", timestamp);
+        return "Unknown";
+      }
+
+      return date.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
     } catch (error) {
       console.error("Error formatting date:", error);
       return "Unknown";

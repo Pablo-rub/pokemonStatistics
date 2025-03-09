@@ -23,7 +23,7 @@ function PublicGamesPage() {
   const [games, setGames] = useState([]);
   const [numGames, setNumGames] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(50);
+  const [itemsPerPage] = useState(25);
   const [isLoading, setIsLoading] = useState(true);
 
   // Estados para los valores de los filtros en el formulario
