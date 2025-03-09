@@ -403,6 +403,66 @@ const PokemonUsage = () => {
           );
         };
       
+        // Crear un componente de tooltip personalizado ordenado por porcentaje
+        const CustomTooltip = ({ active, payload, label }) => {
+            if (!active || !payload || !payload.length) return null;
+            
+            // Ordenar los datos por porcentaje (de mayor a menor)
+            const sortedData = [...payload].sort((a, b) => b.value - a.value);
+            
+            return (
+              <Box 
+                sx={{
+                  backgroundColor: '#221FC7',
+                  padding: '10px',
+                  border: '1px solid #f5f5f5',
+                  borderRadius: '4px',
+                }}
+              >
+                <Typography sx={{ color: '#fff', fontWeight: 'bold', mb: 1 }}>
+                  {label}
+                </Typography>
+                {sortedData.map((entry, index) => (
+                  <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                    <Box 
+                      sx={{ 
+                        width: 10, 
+                        height: 10, 
+                        backgroundColor: entry.color, 
+                        marginRight: 1,
+                        borderRadius: '50%'
+                      }} 
+                    />
+                    <Typography sx={{ color: '#fff', fontSize: 14 }}>
+                      {entry.name}: {entry.value}%
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            );
+          };
+      
+        // Función para calcular el dominio del eje Y basado en el valor máximo
+        const calculateYAxisDomain = (data, keys) => {
+            if (!data || !data.length) return [0, 100]; // Default to 0-100% if no data
+            
+            // Encuentra el valor máximo entre todos los datos
+            let maxValue = 0;
+            data.forEach(dataPoint => {
+              keys.forEach(key => {
+                if (dataPoint[key] && dataPoint[key] > maxValue) {
+                  maxValue = dataPoint[key];
+                }
+              });
+            });
+            
+            // Redondea al siguiente múltiplo de 20
+            const roundedMax = Math.ceil(maxValue / 20) * 20;
+            
+            // Retorna dominio con mínimo 0 y máximo el valor redondeado
+            return [0, roundedMax];
+          };
+      
         // Renderizar gráfico de líneas para la categoría actual
         const renderCategoryTimeSeries = (categoryKey) => {
           const seriesData = generateTimeSeriesData(categoryKey);
@@ -431,6 +491,18 @@ const PokemonUsage = () => {
             return dataPoint;
           });
       
+          // Obtener todas las claves que no sean 'month'
+          const dataKeys = Object.keys(graphData[0] || {}).filter(key => key !== 'month');
+          
+          // Calcular el dominio del eje Y
+          const yDomain = calculateYAxisDomain(graphData, dataKeys);
+          
+          // Generar los ticks basados en el máximo
+          const yTicks = [];
+          for (let i = 0; i <= yDomain[1]; i += 20) {
+            yTicks.push(i);
+          }
+          
           return (
             <Box sx={{ 
               height: 400, 
@@ -446,15 +518,11 @@ const PokemonUsage = () => {
                   <XAxis dataKey="month" stroke="#fff" />
                   <YAxis 
                     stroke="#fff" 
-                    domain={[0, 100]}
-                    ticks={[0, 20, 40, 60, 80, 100]}
+                    domain={yDomain}
+                    ticks={yTicks}
                     tickFormatter={(value) => `${value}%`}
                   />
-                  <Tooltip 
-                    formatter={(value) => `${value}%`}
-                    contentStyle={{ backgroundColor: '#221FC7' }}
-                    labelStyle={{ color: '#fff' }}
-                  />
+                  <Tooltip content={<CustomTooltip />} />
                   <Legend />
                   {seriesData.map((series, index) => (
                     <Line 
@@ -574,6 +642,14 @@ const PokemonUsage = () => {
         // Ordenar por fecha
         usageData.sort((a, b) => a.month.localeCompare(b.month));
         
+        // Calcular el dominio del eje Y para este gráfico
+        const maxUsage = Math.max(...usageData.map(d => d.usage), 0);
+        const yMax = Math.ceil(maxUsage / 20) * 20;
+        const yTicks = [];
+        for (let i = 0; i <= yMax; i += 20) {
+          yTicks.push(i);
+        }
+        
         return (
             <Box sx={{ mt: 4 }}>
                 <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>
@@ -584,12 +660,12 @@ const PokemonUsage = () => {
                         <LineChart data={usageData}>
                             <XAxis dataKey="month" stroke="#fff" />
                             <YAxis 
-                                domain={[0, 100]} 
+                                domain={[0, yMax]} 
                                 stroke="#fff" 
-                                ticks={[0, 20, 40, 60, 80, 100]}
+                                ticks={yTicks}
                                 tickFormatter={(value) => `${value}%`}
                             />
-                            <Tooltip 
+                            <Tooltip
                                 formatter={(value) => `${value}%`}
                                 contentStyle={{ backgroundColor: '#221FC7' }}
                                 labelStyle={{ color: '#fff' }}
