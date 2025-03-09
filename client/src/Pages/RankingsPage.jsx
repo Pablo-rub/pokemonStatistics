@@ -5,16 +5,15 @@ import {
 } from '@mui/material';
 import PokemonSprite from '../components/PokemonSprite';
 import axios from 'axios';
-import { XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
 //todo
 //menos numeros de pagination, 1 2 3 ... 100
-//no solapamiento
 //checks and counters
 //rankings de victoria
-//error 500 algunos formatos
+//leyendas no cortadas
 
 const PokemonUsage = () => {
     const [formats, setFormats] = useState([]);
@@ -345,62 +344,136 @@ const PokemonUsage = () => {
             'moves': 'Moves',
             'items': 'Items',
             'spreads': 'Spreads',
-            'teraTypes': 'Tera Types'
+            'teraTypes': 'Tera Types',
+            'teammates': 'Teammates'
           };
       
           const structureKey = categoryKeys[categoryKey];
           if (!structureKey) return [];
       
-          // Obtener todos los nombres de elementos únicos de esta categoría a través de todos los meses
-          const uniqueItems = new Set();
+          // Limitamos los elementos según la categoría
+          const itemLimit = categoryKey === 'spreads' ? 10 : 
+                            (categoryKey === 'abilities' ? 100 : 20);
           
-          // Limitar el número de elementos según la categoría
-          const itemLimit = categoryKey === 'spreads' ? 10 : (categoryKey === 'abilities' ? 100 : 20);
-          
-          Object.entries(historicalData).forEach(([month, monthData]) => {
-            if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
-              const categoryData = monthData.data[selectedPokemon.name][structureKey];
-              if (categoryData) {
-                // Ordenar por uso y tomar solo los primeros N elementos
-                const sortedItems = Object.entries(categoryData)
+          // Para spreads, necesitamos un enfoque especial para limitar a los 10 más usados en general
+          if (categoryKey === 'spreads') {
+            // Recolectar todos los spreads con su uso promedio a lo largo del tiempo
+            const spreadUsageAverages = {};
+            let totalMonths = 0;
+            
+            // Primero recolectamos datos de uso para cada spread en cada mes
+            Object.entries(historicalData).forEach(([month, monthData]) => {
+              if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
+                const categoryData = monthData.data[selectedPokemon.name][structureKey];
+                if (categoryData) {
+                  totalMonths++;
+                  const total = Object.values(categoryData).reduce((sum, val) => sum + parseFloat(val), 0);
+                  
+                  Object.entries(categoryData).forEach(([spreadName, usage]) => {
+                    if (!spreadUsageAverages[spreadName]) {
+                      spreadUsageAverages[spreadName] = 0;
+                    }
+                    spreadUsageAverages[spreadName] += (usage / total * 100);
+                  });
+                }
+              }
+            });
+            
+            // Calcular promedios
+            Object.keys(spreadUsageAverages).forEach(spreadName => {
+              spreadUsageAverages[spreadName] /= totalMonths;
+            });
+            
+            // Ordenar spreads por uso promedio y tomar los 10 principales
+            const topSpreads = Object.entries(spreadUsageAverages)
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 10)
+              .map(([name]) => name);
+            
+            // Crear un Set para búsqueda rápida
+            const topSpreadsSet = new Set(topSpreads);
+            
+            // Ahora procedemos normalmente pero solo con los top spreads
+            const uniqueItems = topSpreadsSet;
+            
+            // Resto de la lógica para generar datos de series temporales
+            const seriesData = Array.from(uniqueItems).map(itemName => {
+              const dataPoints = [];
+              Object.entries(historicalData)
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .forEach(([month, monthData]) => {
+                  if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
+                    const categoryData = monthData.data[selectedPokemon.name][structureKey];
+                    const total = Object.values(categoryData || {}).reduce((sum, val) => sum + parseFloat(val), 0);
+                    const value = categoryData && categoryData[itemName] ? 
+                      parseFloat((categoryData[itemName] / total * 100).toFixed(2)) : 0;
+                    
+                    dataPoints.push({
+                      month,
+                      [itemName]: value
+                    });
+                  }
+                });
+              
+              return {
+                name: itemName,
+                data: dataPoints
+              };
+            });
+            
+            return seriesData.filter(series => 
+              series.data.some(point => point[series.name] > 0)
+            );
+          } else {
+            // Para otras categorías, mantener la lógica existente
+            // Obtener todos los nombres de elementos únicos de esta categoría a través de todos los meses
+            const uniqueItems = new Set();
+            
+            Object.entries(historicalData).forEach(([month, monthData]) => {
+              if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
+                const categoryData = monthData.data[selectedPokemon.name][structureKey];
+                if (categoryData) {
+                  // Ordenar por uso y tomar solo los primeros N elementos
+                  const sortedItems = Object.entries(categoryData)
                     .sort(([, a], [, b]) => b - a)
                     .slice(0, itemLimit)
                     .map(([itemName]) => itemName);
                     
-                sortedItems.forEach(itemName => uniqueItems.add(itemName));
-              }
-            }
-          });
-      
-          // Para cada elemento, crear una serie de datos con su uso a lo largo del tiempo
-          const seriesData = Array.from(uniqueItems).map(itemName => {
-            const dataPoints = [];
-            Object.entries(historicalData)
-              .sort((a, b) => a[0].localeCompare(b[0])) // Ordenar por fecha
-              .forEach(([month, monthData]) => {
-                if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
-                  const categoryData = monthData.data[selectedPokemon.name][structureKey];
-                  const total = Object.values(categoryData || {}).reduce((sum, val) => sum + parseFloat(val), 0);
-                  const value = categoryData && categoryData[itemName] ? 
-                    parseFloat((categoryData[itemName] / total * 100).toFixed(2)) : 0;
-                  
-                  dataPoints.push({
-                    month,
-                    [itemName]: value
-                  });
+                  sortedItems.forEach(itemName => uniqueItems.add(itemName));
                 }
-              });
+              }
+            });
             
-            return {
-              name: itemName,
-              data: dataPoints
-            };
-          });
-      
-          // Filtrar series con datos para mostrar solo las que tienen uso
-          return seriesData.filter(series => 
-            series.data.some(point => point[series.name] > 0)
-          );
+            // Para cada elemento, crear una serie de datos con su uso a lo largo del tiempo
+            const seriesData = Array.from(uniqueItems).map(itemName => {
+              const dataPoints = [];
+              Object.entries(historicalData)
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .forEach(([month, monthData]) => {
+                  if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
+                    const categoryData = monthData.data[selectedPokemon.name][structureKey];
+                    const total = Object.values(categoryData || {}).reduce((sum, val) => sum + parseFloat(val), 0);
+                    const value = categoryData && categoryData[itemName] ? 
+                      parseFloat((categoryData[itemName] / total * 100).toFixed(2)) : 0;
+                    
+                    dataPoints.push({
+                      month,
+                      [itemName]: value
+                    });
+                  }
+                });
+              
+              return {
+                name: itemName,
+                data: dataPoints
+              };
+            });
+            
+            // Filtrar series con datos para mostrar solo las que tienen uso
+            return seriesData.filter(series => 
+              series.data.some(point => point[series.name] > 0)
+            );
+          }
         };
       
         // Crear un componente de tooltip personalizado ordenado por porcentaje
@@ -505,16 +578,27 @@ const PokemonUsage = () => {
           
           return (
             <Box sx={{ 
-              height: 400, 
+              height: 'calc(100% - 80px)', // Reducir la resta de 120px a 80px para maximizar altura
               width: '100%', 
-              mt: 4,
-              mb: 4
+              mt: 1, // Reducir margin-top de 2 a 1
+              mb: 2, // Reducir margin-bottom de 3 a 2
+              overflow: 'hidden'
             }}>
-              <Typography variant="h6" sx={{ mb: 2, color: 'white', textAlign: 'center' }}>
+              <Typography variant="h6" sx={{ 
+                mb: 1, 
+                color: 'white', 
+                textAlign: 'center',
+                fontSize: '1.1rem',
+                fontWeight: 500
+              }}>
                 {category.name} - Evolución Histórica
               </Typography>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={graphData}>
+                <LineChart 
+                  data={graphData} 
+                  margin={{ top: 5, right: 5, left: 5, bottom: 35 }} // Incrementar el margen inferior para la leyenda
+                  style={{ overflow: 'hidden' }}
+                >
                   <XAxis dataKey="month" stroke="#fff" />
                   <YAxis 
                     stroke="#fff" 
@@ -523,7 +607,19 @@ const PokemonUsage = () => {
                     tickFormatter={(value) => `${value}%`}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend />
+                  <Legend 
+                    layout="horizontal"
+                    verticalAlign="bottom"
+                    align="center"
+                    wrapperStyle={{ 
+                      paddingTop: 10,
+                      bottom: 0,
+                      fontSize: '0.75rem', // Reducir ligeramente el tamaño de fuente para que quepa mejor
+                      lineHeight: '14px' // Ajustar la altura de línea para compactar la leyenda
+                    }}
+                    iconSize={8} // Reducir el tamaño del icono para ahorrar espacio
+                    iconType="circle" // Usar círculos en lugar de rectángulos para ahorrar espacio
+                  />
                   {seriesData.map((series, index) => (
                     <Line 
                       key={series.name}
@@ -531,8 +627,8 @@ const PokemonUsage = () => {
                       dataKey={series.name} 
                       stroke={COLORS[index % COLORS.length]}
                       strokeWidth={2}
-                      dot={{ r: 4 }}
-                      activeDot={{ r: 6 }}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
                     />
                   ))}
                 </LineChart>
@@ -541,149 +637,40 @@ const PokemonUsage = () => {
           );
         };
       
+        // En el return de renderCategoryContent, ajustar el contenedor principal
         return (
           <Box sx={{ 
             display: 'flex', 
             flexDirection: 'column',
-            height: '100%'
+            height: '100%' // Asegurar que utiliza toda la altura disponible
           }}>
-            {/* Navigation controls */}
+            {/* Navigation controls - más compacto */}
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center',
               justifyContent: 'space-between',
-              mb: 2 
+              mb: 0.5 // Reducir el margen inferior para dar más espacio a la gráfica
             }}>
-              <IconButton onClick={handlePrevCategory} sx={{ color: 'white' }}>
-                <ArrowBackIcon />
+              <IconButton onClick={handlePrevCategory} sx={{ color: 'white', padding: 0.5 }}> {/* Reducir padding */}
+                <ArrowBackIcon fontSize="small" /> {/* Icono más pequeño */}
               </IconButton>
-              <Typography variant="h6" sx={{ color: 'white' }}>
+              <Typography variant="subtitle1" sx={{ color: 'white' }}>
                 {category.name}
               </Typography>
-              <IconButton onClick={handleNextCategory} sx={{ color: 'white' }}>
-                <ArrowForwardIcon />
+              <IconButton onClick={handleNextCategory} sx={{ color: 'white', padding: 0.5 }}> {/* Reducir padding */}
+                <ArrowForwardIcon fontSize="small" /> {/* Icono más pequeño */}
               </IconButton>
             </Box>
             
-            <Box sx={{ flexGrow: 1 }}>
-              {/* Render category time series chart */}
+            <Box sx={{ 
+              flexGrow: 1, 
+              height: 'calc(100% - 40px)' // Reservar espacio solo para los controles de navegación
+            }}>
               {renderCategoryTimeSeries(category.key)}
-              
-              {/* Render current month data pie chart (mantenemos esta funcionalidad) */}
-              {category.key === "abilities" && pokemonDetails && (
-                <Box sx={{ height: 400, width: '100%' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pokemonDetails.abilities.filter(a => parseFloat(a.percentage) > 0)}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={true}
-                        label={({ name, percentage }) => `${name} (${percentage}%)`}
-                        outerRadius={150}
-                        dataKey="percentage"
-                        nameKey="name"
-                      >
-                        {pokemonDetails.abilities.filter(a => parseFloat(a.percentage) > 0).map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value) => `${value}%`}
-                        contentStyle={{ backgroundColor: '#221FC7' }}
-                        labelStyle={{ color: '#fff' }}
-                      />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </Box>
-              )}
-              
-              {/* Repetir para otras categorías (moves, items, etc.) */}
-              {/* ... */}
             </Box>
           </Box>
         );
       };
-
-    const renderHistoricalChart = (pokemonName) => {
-        if (!historicalData || Object.keys(historicalData).length === 0) {
-            return null;
-        }
-
-        const usageData = [];
-        
-        // Procesar datos históricos para el pokemon seleccionado
-        Object.entries(historicalData).forEach(([month, monthData]) => {
-            let pokemonData = null;
-            
-            // Verificar la estructura de datos y buscar el Pokémon de manera apropiada
-            if (monthData && typeof monthData === 'object') {
-                // Si es un objeto con estructura JSON de "chaos"
-                if (monthData.data && typeof monthData.data === 'object') {
-                    // Buscar en monthData.data[pokemonName] directamente
-                    if (monthData.data[pokemonName]) {
-                        pokemonData = {
-                            name: pokemonName,
-                            usagePercentage: (monthData.data[pokemonName].usage * 100).toFixed(2)
-                        };
-                    }
-                }
-            }
-            
-            if (pokemonData) {
-                usageData.push({
-                    month,
-                    usage: parseFloat(pokemonData.usagePercentage)
-                });
-            }
-        });
-        
-        // Ordenar por fecha
-        usageData.sort((a, b) => a.month.localeCompare(b.month));
-        
-        // Calcular el dominio del eje Y para este gráfico
-        const maxUsage = Math.max(...usageData.map(d => d.usage), 0);
-        const yMax = Math.ceil(maxUsage / 20) * 20;
-        const yTicks = [];
-        for (let i = 0; i <= yMax; i += 20) {
-          yTicks.push(i);
-        }
-        
-        return (
-            <Box sx={{ mt: 4 }}>
-                <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>
-                    Usage History ({usageData.length} months)
-                </Typography>
-                <Box sx={{ height: 300, width: '100%' }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={usageData}>
-                            <XAxis dataKey="month" stroke="#fff" />
-                            <YAxis 
-                                domain={[0, yMax]} 
-                                stroke="#fff" 
-                                ticks={yTicks}
-                                tickFormatter={(value) => `${value}%`}
-                            />
-                            <Tooltip
-                                formatter={(value) => `${value}%`}
-                                contentStyle={{ backgroundColor: '#221FC7' }}
-                                labelStyle={{ color: '#fff' }}
-                            />
-                            <Line 
-                                type="monotone" 
-                                dataKey="usage" 
-                                stroke="#24CC9F" 
-                                strokeWidth={2}
-                                dot={{ r: 4 }}
-                                activeDot={{ r: 6 }}
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </Box>
-            </Box>
-        );
-    };
 
     return (
         <Box sx={{ padding: 2 }}>
@@ -771,44 +758,35 @@ const PokemonUsage = () => {
                     <Paper sx={{ 
                         p: 3,
                         backgroundColor: '#221FC7',
-                        height: '90vh', // Changed from 80vh to 90vh
-                        overflow: 'auto'
+                        height: 'calc(100vh - 100px)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        overflow: 'hidden',  // Mantener hidden
+                        '& *': {
+                            // Aplicar globalmente a todos los elementos dentro
+                            scrollbarWidth: 'none',
+                            '&::-webkit-scrollbar': {
+                                display: 'none'
+                            },
+                            '-ms-overflow-style': 'none'
+                        }
                     }}>
+                        {/* Contenido existente... */}
                         {isLoadingDetails ? (
                             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                                 <CircularProgress />
                             </Box>
                         ) : selectedPokemon && pokemonDetails ? (
-                            <Box>
-                                {/* Header con nombre y sprite */}
-                                <Box sx={{ 
-                                    position: 'sticky',
-                                    top: 0,
-                                    backgroundColor: '#221FC7',
-                                    zIndex: 10,
-                                    pb: 2,
-                                    borderBottom: '2px solid rgba(255, 255, 255, 0.2)'
-                                }}>
-                                    <Box sx={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center',
-                                        gap: 2,
-                                        mb: 2
-                                    }}>
-                                        <PokemonSprite pokemon={{ name: selectedPokemon.name }} />
-                                        <Typography variant="h4" sx={{ color: 'white' }}>
-                                            {selectedPokemon.name}
-                                        </Typography>
-                                        <Typography variant="h6" sx={{ ml: 'auto', color: 'white' }}>
-                                            Usage: {selectedPokemon.usagePercentage}%
-                                        </Typography>
-                                    </Box>
-                                </Box>
+                            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                {/* Header existente... */}
 
-                                {/* Contenido con gráficas */}
-                                <Box sx={{ mt: 4 }}>
+                                {/* 2. Modificar el Box del contenido */}
+                                <Box sx={{ 
+                                    flexGrow: 1,
+                                    overflow: 'hidden', // Cambiar de 'auto' a 'hidden'
+                                    mt: 1,
+                                }}>
                                     {renderCategoryContent()}
-                                    {renderHistoricalChart(selectedPokemon.name)}
                                 </Box>
                             </Box>
                         ) : (
