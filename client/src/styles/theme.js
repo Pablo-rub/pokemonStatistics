@@ -4,6 +4,7 @@ import { createTheme } from "@mui/material/styles";
 //eliminar sx
 //filters
 //change password
+//replaycard text white
 
 const theme = createTheme({
   palette: {
