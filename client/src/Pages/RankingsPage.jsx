@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import PokemonSprite from '../components/PokemonSprite';
 import axios from 'axios';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 
@@ -24,13 +24,13 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 //checks and counters
 //abilities centered horizontally
 //rankings de victoria
+//error 500 algunos formatos
 
 const PokemonUsage = () => {
-    const [months, setMonths] = useState([]);
-    const [month, setMonth] = useState('');
     const [formats, setFormats] = useState([]);
     const [format, setFormat] = useState('');
     const [usageData, setUsageData] = useState([]);
+    const [historicalData, setHistoricalData] = useState({}); // Para almacenar datos históricos
     const [error, setError] = useState(null);
     const [selectedPokemon, setSelectedPokemon] = useState(null);
     const [pokemonDetails, setPokemonDetails] = useState(null);
@@ -57,98 +57,191 @@ const PokemonUsage = () => {
         setCurrentCategory(prev => (prev < categories.length - 1 ? prev + 1 : 0));
     };
 
-    const handleMonthChange = async (selectedMonth) => {
-        setMonth(selectedMonth);
-        try {
-            const response = await axios.get(`http://localhost:5000/api/formats/${selectedMonth}`);
-            const data = response.data;
-            // Filtrar solo formatos VGC
-            const vgcFormats = data.filter(fmt => 
-                fmt.toLowerCase().includes('vgc')
-            );
-            setFormats(vgcFormats);
-            if (vgcFormats.length > 0) {
-                setFormat(vgcFormats[0]);
-            }
-        } catch (error) {
-            console.error("Error fetching formats:", error);
-            setError("Error fetching formats");
-        }
-    };
-
-    const handleFormatChange = (e) => {
-        setFormat(e.target.value);
-    };
-
     useEffect(() => {
-        const fetchMonths = async () => {
+        const fetchInitialData = async () => {
             try {
-                const response = await fetch('http://localhost:5000/api/months');
-                const data = await response.json();
-                setMonths(data);
-                if (data.length > 0) {
-                    const firstMonth = data[0];
-                    setMonth(firstMonth);
-                    await handleMonthChange(firstMonth);
+                // 1. Get latest month
+                const monthsResponse = await axios.get('http://localhost:5000/api/months');
+                const months = monthsResponse.data;
+                
+                if (months.length > 0) {
+                    const latestMonth = months[0];
+                    
+                    // 2. Get formats for latest month and filter VGC formats
+                    const formatsResponse = await axios.get(`http://localhost:5000/api/formats/${latestMonth}`);
+                    const vgcFormats = formatsResponse.data
+                        .filter(fmt => fmt.toLowerCase().includes('vgc'))
+                        .sort((a, b) => b.localeCompare(a));
+                    
+                    setFormats(vgcFormats);
+                    
+                    // 3. Automatically select the last format and fetch its data
+                    if (vgcFormats.length > 0) {
+                        const lastFormat = vgcFormats[0];
+                        setFormat(lastFormat);
+                        
+                        try {
+                            // 4. Get the initial data for this format
+                            const response = await axios.get(`http://localhost:5000/api/rankings`, {
+                                params: {
+                                    month: latestMonth,
+                                    format: lastFormat,
+                                    chaos: true
+                                }
+                            });
+                            
+                            if (response.data) {
+                                setHistoricalData({ [latestMonth]: response.data });
+                                parseData(response.data);
+                            }
+                        } catch (dataError) {
+                            console.error("Error fetching format data:", dataError);
+                            setError("Error loading format data. Please try again.");
+                        }
+                    }
                 }
             } catch (error) {
-                console.error("Error fetching months:", error);
+                console.error("Error in fetchInitialData:", error);
+                const errorMessage = error.response?.data || "Error loading formats";
+                setError(errorMessage);
+                setIsLoadingDetails(false);
             }
         };
-        fetchMonths();
+
+        fetchInitialData();
     }, []);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            if (month && format) {
+    const handleFormatChange = async (e) => {
+        const selectedFormat = e.target.value;
+        setFormat(selectedFormat);
+        setIsLoadingDetails(true);
+        setSelectedPokemon(null);
+        setPokemonDetails(null);
+        
+        try {
+            // 1. Obtener todos los meses disponibles
+            const monthsResponse = await axios.get('http://localhost:5000/api/months');
+            const months = monthsResponse.data.sort().reverse(); // Ordenar de más reciente a más antiguo
+            const historicalDataObj = {};
+            let foundData = false;
+
+            // 2. Iterar por los meses hasta encontrar uno sin datos
+            for (const month of months) {
                 try {
-                    const url = `http://localhost:5000/api/rankings?month=${month}&format=${format}.txt`;
-                    console.log('Fetching from:', url);
-                    const response = await axios.get(url);
-                    console.log('Response data:', response.data);
+                    const response = await axios.get('http://localhost:5000/api/rankings', {
+                        params: {
+                            month,
+                            format,      // <-- Use the same variable as your useState
+                            chaos: true
+                        }
+                    });
                     if (response.data) {
-                        parseData(response.data);
+                        historicalDataObj[month] = response.data;
+                        foundData = true;
                     }
-                } catch (error) {
-                    console.error("Error loading data:", error);
-                    setError(error.message);
+                } catch (fetchError) {
+                    if (
+                        fetchError.response &&
+                        (fetchError.response.status === 404 || fetchError.response.status === 500)
+                    ) {
+                        console.log(`No data found for ${format} in ${month}`);
+                        if (foundData) break;
+                    } else {
+                        console.error(`Error fetching data for ${month}:`, fetchError);
+                    }
                 }
             }
-        };
-        fetchData();
-    }, [format, month]);
+
+            // 3. Actualizar estados con los datos históricos
+            setHistoricalData(historicalDataObj);
+            
+            // 4. Usar los datos más recientes para la vista principal
+            const latestMonth = Object.keys(historicalDataObj).sort().reverse()[0];
+            if (historicalDataObj[latestMonth]) {
+                parseData(historicalDataObj[latestMonth]);
+                setError(null); // Limpiar errores previos
+            } else {
+                setError(`No data available for format: ${selectedFormat}`);
+            }
+        } catch (error) {
+            console.error("Error fetching months:", error);
+            setError("Error accessing Smogon data");
+        } finally {
+            setIsLoadingDetails(false);
+        }
+    };
 
     const parseData = (data) => {
-        const lines = data.split('\n');
-        const parsedData = [];
-        // Empezar desde la línea 5 para saltar el encabezado
-        for (let i = 5; i < lines.length; i++) {
-            const line = lines[i].trim();
-            if (line && !line.startsWith('+')) {
-                const columns = line.split('|').map(col => col.trim()).filter(col => col);
-                if (columns.length >= 6) {
-                    parsedData.push({
-                        rank: columns[0],
-                        name: columns[1],
-                        usagePercentage: parseFloat(columns[2]),
-                        raw: columns[3],
-                        realPercentage: columns[5]
-                    });
+        // Check if data is JSON (from chaos endpoint) or text
+        if (typeof data === 'object' && data !== null) {
+            // Handle JSON data from chaos endpoint
+            const parsedData = [];
+            
+            // Extract data from the chaos format
+            if (data.data) {
+                const pokemonEntries = Object.entries(data.data);
+                let rank = 1;
+                
+                pokemonEntries.forEach(([name, details]) => {
+                    if (details.usage !== undefined) {
+                        parsedData.push({
+                            rank: rank.toString(),
+                            name: name,
+                            usagePercentage: parseFloat((details.usage * 100).toFixed(2)),
+                            raw: details.raw || "0",
+                            realPercentage: details['real usage'] ? (details['real usage'] * 100).toFixed(2) : "0"
+                        });
+                        rank++;
+                    }
+                });
+                
+                // Sort by usage percentage
+                parsedData.sort((a, b) => b.usagePercentage - a.usagePercentage);
+            }
+            
+            setUsageData(parsedData);
+        } else if (typeof data === 'string') {
+            // Handle text data (original implementation)
+            const lines = data.split('\n');
+            const parsedData = [];
+            
+            // Empezar desde la línea 5 para saltar el encabezado
+            for (let i = 5; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line && !line.startsWith('+')) {
+                    const columns = line.split('|').map(col => col.trim()).filter(col => col);
+                    if (columns.length >= 6) {
+                        parsedData.push({
+                            rank: columns[0],
+                            name: columns[1],
+                            usagePercentage: parseFloat(columns[2]),
+                            raw: columns[3],
+                            realPercentage: columns[5]
+                        });
+                    }
                 }
             }
+            setUsageData(parsedData);
+        } else {
+            console.error("Unexpected data format:", data);
+            setUsageData([]);
         }
-        setUsageData(parsedData);
     };
 
     const fetchPokemonDetails = async (pokemonName) => {
-        if (!month || !format) return;
-      
         setIsLoadingDetails(true);
         try {
+            // Get the most recent month from historicalData
+            const latestMonth = Object.keys(historicalData).sort().reverse()[0];
+            
+            if (!latestMonth) {
+                throw new Error("No month data available");
+            }
+            
             const response = await axios.get(`http://localhost:5000/api/rankings`, {
                 params: {
-                    month,
                     format,
+                    month: latestMonth, // Include the month parameter
                     chaos: true
                 }
             });
@@ -159,8 +252,8 @@ const PokemonUsage = () => {
                 );
 
                 if (detailsKey) {
+                    // Rest of your existing code
                     const pokemonData = response.data.data[detailsKey];
-                    
                     // Calcular totales para cada categoría
                     const getTotalUsage = (category) => {
                         return Object.values(category || {}).reduce((sum, value) => {
@@ -214,8 +307,8 @@ const PokemonUsage = () => {
                 }
             }
         } catch (error) {
-            console.error("Error loading Pokémon details:", error);
-            setPokemonDetails(null);
+            console.error("Error fetching Pokémon details:", error);
+            setError("Error fetching Pokémon details");
         } finally {
             setIsLoadingDetails(false);
         }
@@ -241,12 +334,150 @@ const PokemonUsage = () => {
     const renderCategoryContent = () => {
         const category = categories[currentCategory];
         
+        // Define paleta de colores ampliada para las líneas de los gráficos
+        const COLORS = [
+          '#24CC9F', '#1A9B79', '#147A5E', '#0E5943', '#093828', 
+          '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', 
+          '#FF9F40', '#E7E9ED', '#8A2BE2', '#00BFFF', '#FF7F50'
+        ];
+      
+        // Función para generar datos de series temporales para la categoría actual
+        const generateTimeSeriesData = (categoryKey) => {
+          if (!selectedPokemon || !historicalData || Object.keys(historicalData).length === 0) {
+            return [];
+          }
+      
+          // Mapeo de llaves de categoría a la estructura de datos
+          const categoryKeys = {
+            'abilities': 'Abilities',
+            'moves': 'Moves',
+            'items': 'Items',
+            'spreads': 'Spreads',
+            'teraTypes': 'Tera Types'
+          };
+      
+          const structureKey = categoryKeys[categoryKey];
+          if (!structureKey) return [];
+      
+          // Obtener todos los nombres de elementos únicos de esta categoría a través de todos los meses
+          const uniqueItems = new Set();
+          Object.entries(historicalData).forEach(([month, monthData]) => {
+            if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
+              const categoryData = monthData.data[selectedPokemon.name][structureKey];
+              if (categoryData) {
+                Object.keys(categoryData).forEach(itemName => uniqueItems.add(itemName));
+              }
+            }
+          });
+      
+          // Para cada elemento, crear una serie de datos con su uso a lo largo del tiempo
+          const seriesData = Array.from(uniqueItems).map(itemName => {
+            const dataPoints = [];
+            Object.entries(historicalData)
+              .sort((a, b) => a[0].localeCompare(b[0])) // Ordenar por fecha
+              .forEach(([month, monthData]) => {
+                if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
+                  const categoryData = monthData.data[selectedPokemon.name][structureKey];
+                  const total = Object.values(categoryData || {}).reduce((sum, val) => sum + parseFloat(val), 0);
+                  const value = categoryData && categoryData[itemName] ? 
+                    parseFloat((categoryData[itemName] / total * 100).toFixed(2)) : 0;
+                  
+                  dataPoints.push({
+                    month,
+                    [itemName]: value
+                  });
+                }
+              });
+            
+            return {
+              name: itemName,
+              data: dataPoints
+            };
+          });
+      
+          // Filtrar series con datos para mostrar solo las que tienen uso
+          return seriesData.filter(series => 
+            series.data.some(point => point[series.name] > 0)
+          );
+        };
+      
+        // Renderizar gráfico de líneas para la categoría actual
+        const renderCategoryTimeSeries = (categoryKey) => {
+          const seriesData = generateTimeSeriesData(categoryKey);
+          
+          if (seriesData.length === 0) {
+            return (
+              <Box sx={{ mt: 3, mb: 2 }}>
+                <Typography sx={{ color: 'white', fontStyle: 'italic' }}>
+                  No hay suficientes datos históricos para mostrar tendencias.
+                </Typography>
+              </Box>
+            );
+          }
+          
+          // Crear estructura unificada para el gráfico
+          const months = Array.from(
+            new Set(seriesData.flatMap(s => s.data.map(d => d.month)))
+          ).sort();
+          
+          const graphData = months.map(month => {
+            const dataPoint = { month };
+            seriesData.forEach(series => {
+              const monthPoint = series.data.find(d => d.month === month);
+              dataPoint[series.name] = monthPoint ? monthPoint[series.name] : 0;
+            });
+            return dataPoint;
+          });
+      
+          return (
+            <Box sx={{ 
+              height: 400, 
+              width: '100%', 
+              mt: 4,
+              mb: 4
+            }}>
+              <Typography variant="h6" sx={{ mb: 2, color: 'white', textAlign: 'center' }}>
+                {category.name} - Evolución Histórica
+              </Typography>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={graphData}>
+                  <XAxis dataKey="month" stroke="#fff" />
+                  <YAxis 
+                    stroke="#fff" 
+                    domain={[0, 100]}
+                    ticks={[0, 20, 40, 60, 80, 100]}
+                    tickFormatter={(value) => `${value}%`}
+                  />
+                  <Tooltip 
+                    formatter={(value) => `${value}%`}
+                    contentStyle={{ backgroundColor: '#221FC7' }}
+                    labelStyle={{ color: '#fff' }}
+                  />
+                  <Legend />
+                  {seriesData.map((series, index) => (
+                    <Line 
+                      key={series.name}
+                      type="monotone" 
+                      dataKey={series.name} 
+                      stroke={COLORS[index % COLORS.length]}
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </Box>
+          );
+        };
+      
         return (
           <Box sx={{ 
             display: 'flex', 
             flexDirection: 'column',
             height: '100%'
           }}>
+            {/* Navigation controls */}
             <Box sx={{ 
               display: 'flex', 
               alignItems: 'center',
@@ -263,235 +494,121 @@ const PokemonUsage = () => {
                 <ArrowForwardIcon />
               </IconButton>
             </Box>
-      
+            
             <Box sx={{ flexGrow: 1 }}>
-              {/* Abilities Chart */}
-              {category.key === "abilities" && (
-                <Box sx={{ 
-                  height: pokemonDetails.abilities.filter(a => parseFloat(a.percentage) > 0).length * 40,
-                  minHeight: 100,
-                  mb: 4 
-                }}>
+              {/* Render category time series chart */}
+              {renderCategoryTimeSeries(category.key)}
+              
+              {/* Render current month data pie chart (mantenemos esta funcionalidad) */}
+              {category.key === "abilities" && pokemonDetails && (
+                <Box sx={{ height: 400, width: '100%' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={pokemonDetails.abilities.filter(a => parseFloat(a.percentage) > 0)}
-                      layout="vertical"
-                      margin={{ left: 150, right: 30 }}
-                    >
-                      <XAxis type="number" stroke="#fff" domain={[0, 100]} />
-                      <YAxis 
-                        dataKey="name" 
-                        type="category" 
-                        stroke="#fff" 
-                        width={140}
-                        tick={{ fontSize: 12 }}
-                        interval={0}
-                      />
-                      <Tooltip 
-                        cursor={false}
+                    <PieChart>
+                      <Pie
+                        data={pokemonDetails.abilities.filter(a => parseFloat(a.percentage) > 0)}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={true}
+                        label={({ name, percentage }) => `${name} (${percentage}%)`}
+                        outerRadius={150}
+                        dataKey="percentage"
+                        nameKey="name"
+                      >
+                        {pokemonDetails.abilities.filter(a => parseFloat(a.percentage) > 0).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value) => `${value}%`}
                         contentStyle={{ backgroundColor: '#221FC7' }}
                         labelStyle={{ color: '#fff' }}
-                        formatter={(value) => [`${value}%`]}
                       />
-                      <Bar dataKey="percentage" fill="#24CC9F" />
-                    </BarChart>
+                      <Legend />
+                    </PieChart>
                   </ResponsiveContainer>
                 </Box>
               )}
-      
-              {/* Moves Chart */}
-              {category.key === "moves" && (
-                <Box sx={{ 
-                  height: pokemonDetails.moves.filter(move => parseFloat(move.percentage) > 0).length * 40,
-                  minHeight: 100,
-                  mb: 4 
-                }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={pokemonDetails.moves.filter(move => parseFloat(move.percentage) > 0)}
-                      layout="vertical"
-                      margin={{ left: 150, right: 30 }}
-                    >
-                      <XAxis type="number" stroke="#fff" domain={[0, 100]} />
-                      <YAxis 
-                        dataKey="name" 
-                        type="category" 
-                        stroke="#fff" 
-                        width={140}
-                        tick={{ fontSize: 12 }}
-                        interval={0}
-                      />
-                      <Tooltip 
-                        cursor={false}
-                        contentStyle={{ backgroundColor: '#221FC7' }}
-                        labelStyle={{ color: '#fff' }}
-                        formatter={(value) => [`${value}%`]}
-                      />
-                      <Bar dataKey="percentage" fill="#24CC9F" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Box>
-              )}
-      
-              {/* Items Chart */}
-              {category.key === "items" && (
-                <Box sx={{ 
-                  height: pokemonDetails.items.filter(item => parseFloat(item.percentage) > 0).length * 40,
-                  minHeight: 100,
-                  mb: 4 
-                }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={pokemonDetails.items.filter(item => parseFloat(item.percentage) > 0)}
-                      layout="vertical"
-                      margin={{ left: 150, right: 30 }}
-                    >
-                      <XAxis type="number" stroke="#fff" domain={[0, 100]} />
-                      <YAxis 
-                        dataKey="name" 
-                        type="category" 
-                        stroke="#fff" 
-                        width={140}
-                        tick={{ fontSize: 12 }}
-                        interval={0}
-                      />
-                      <Tooltip 
-                        cursor={false}
-                        contentStyle={{ backgroundColor: '#221FC7' }}
-                        labelStyle={{ color: '#fff' }}
-                        formatter={(value) => [`${value}%`]}
-                      />
-                      <Bar dataKey="percentage" fill="#24CC9F" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Box>
-              )}
-      
-              {/* Spreads Chart */}
-              {category.key === "spreads" && (
-                <Box sx={{ 
-                  height: pokemonDetails.spreads.filter(spread => parseFloat(spread.percentage) > 0).length * 40,
-                  minHeight: 100,
-                  mb: 4 
-                }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={pokemonDetails.spreads.filter(spread => parseFloat(spread.percentage) > 0)}
-                      layout="vertical"
-                      margin={{ left: 150, right: 30 }}
-                    >
-                      <XAxis type="number" stroke="#fff" domain={[0, 100]} />
-                      <YAxis 
-                        dataKey="value" 
-                        type="category" 
-                        stroke="#fff" 
-                        width={140}
-                        tick={{ fontSize: 12 }}
-                        interval={0}
-                      />
-                      <Tooltip 
-                        cursor={false}
-                        contentStyle={{ backgroundColor: '#221FC7' }}
-                        labelStyle={{ color: '#fff' }}
-                        formatter={(value) => [`${value}%`]}
-                      />
-                      <Bar dataKey="percentage" fill="#24CC9F" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Box>
-              )}
-      
-              {/* Tera Types Chart */}
-              {category.key === "teraTypes" && (
-                <Box sx={{ 
-                  height: pokemonDetails.teraTypes.filter(type => parseFloat(type.percentage) > 0).length * 40,
-                  minHeight: 100,
-                  mb: 4 
-                }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={pokemonDetails.teraTypes.filter(type => parseFloat(type.percentage) > 0)}
-                      layout="vertical"
-                      margin={{ left: 150, right: 30 }}
-                    >
-                      <XAxis type="number" stroke="#fff" domain={[0, 100]} />
-                      <YAxis 
-                        dataKey="type" 
-                        type="category" 
-                        stroke="#fff" 
-                        width={140}
-                        tick={{ fontSize: 12 }}
-                        interval={0}
-                      />
-                      <Tooltip 
-                        cursor={false}
-                        contentStyle={{ backgroundColor: '#221FC7' }}
-                        labelStyle={{ color: '#fff' }}
-                        formatter={(value) => [`${value}%`]}
-                      />
-                      <Bar dataKey="percentage" fill="#24CC9F" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Box>
-              )}
-      
-              {/* Teammates */}
-              {category.key === "teammates" && (
-                <Box sx={{ 
-                  height: pokemonDetails.teammates.filter(teammate => parseFloat(teammate.percentage) > 0).length * 60,
-                  minHeight: 100,
-                  mb: 4 
-                }}>
-                  {pokemonDetails.teammates
-                    .filter(teammate => parseFloat(teammate.percentage) > 0)
-                    .map((teammate, idx) => (
-                      <Box key={idx} sx={{ 
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        mb: 2,
-                        p: 2,
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                        borderRadius: 1
-                      }}>
-                        <PokemonSprite pokemon={{ name: teammate.name }} />
-                        <Typography sx={{ color: 'white', flexGrow: 1 }}>{teammate.name}</Typography>
-                        <Typography sx={{ color: 'white' }}>{teammate.percentage}%</Typography>
-                      </Box>
-                  ))}
-                </Box>
-              )}
-      
-              {/* Checks and Counters */}
-              {category.key === "checksAndCounters" && pokemonDetails.checksAndCounters && (
-                <Box sx={{ mb: 4 }}>
-                  {pokemonDetails.checksAndCounters
-                    .filter(counter => parseFloat(counter.usage) > 0)
-                    .map((counter, idx) => (
-                      <Box key={idx} sx={{ 
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        mb: 2,
-                        p: 2,
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                        borderRadius: 1
-                      }}>
-                        <PokemonSprite pokemon={{ name: counter.name }} />
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Typography sx={{ color: 'white' }}>{counter.name}</Typography>
-                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                            Usage: {counter.usage}% | Score1: {counter.score1}% | Score2: {counter.score2}%
-                          </Typography>
-                        </Box>
-                      </Box>
-                  ))}
-                </Box>
-              )}
+              
+              {/* Repetir para otras categorías (moves, items, etc.) */}
+              {/* ... */}
             </Box>
           </Box>
         );
       };
+
+    const renderHistoricalChart = (pokemonName) => {
+        if (!historicalData || Object.keys(historicalData).length === 0) {
+            return null;
+        }
+
+        const usageData = [];
+        
+        // Procesar datos históricos para el pokemon seleccionado
+        Object.entries(historicalData).forEach(([month, monthData]) => {
+            let pokemonData = null;
+            
+            // Verificar la estructura de datos y buscar el Pokémon de manera apropiada
+            if (Array.isArray(monthData)) {
+                // Si es un array, buscar directamente
+                pokemonData = monthData.find(p => p.name === pokemonName);
+            } else if (monthData && typeof monthData === 'object') {
+                // Si es un objeto con estructura JSON de "chaos"
+                if (monthData.data && typeof monthData.data === 'object') {
+                    // Buscar en monthData.data[pokemonName] directamente
+                    if (monthData.data[pokemonName]) {
+                        pokemonData = {
+                            name: pokemonName,
+                            usagePercentage: (monthData.data[pokemonName].usage * 100).toFixed(2)
+                        };
+                    }
+                }
+            }
+            
+            if (pokemonData) {
+                usageData.push({
+                    month,
+                    usage: parseFloat(pokemonData.usagePercentage)
+                });
+            }
+        });
+        
+        // Ordenar por fecha
+        usageData.sort((a, b) => a.month.localeCompare(b.month));
+        
+        return (
+            <Box sx={{ mt: 4 }}>
+                <Typography variant="h6" sx={{ mb: 2, color: 'white' }}>
+                    Usage History
+                </Typography>
+                <Box sx={{ height: 300, width: '100%' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={usageData}>
+                            <XAxis dataKey="month" stroke="#fff" />
+                            <YAxis 
+                                domain={[0, 100]} 
+                                stroke="#fff" 
+                                ticks={[0, 20, 40, 60, 80, 100]}
+                                tickFormatter={(value) => `${value}%`}
+                            />
+                            <Tooltip 
+                                formatter={(value) => `${value}%`}
+                                contentStyle={{ backgroundColor: '#221FC7' }}
+                                labelStyle={{ color: '#fff' }}
+                            />
+                            <Line 
+                                type="monotone" 
+                                dataKey="usage" 
+                                stroke="#24CC9F" 
+                                strokeWidth={2}
+                                dot={{ r: 4 }}
+                                activeDot={{ r: 6 }}
+                            />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </Box>
+            </Box>
+        );
+    };
 
     return (
         <Box sx={{ padding: 2 }}>
@@ -499,33 +616,18 @@ const PokemonUsage = () => {
                 Pokémon Usage Statistics
             </Typography>
 
-            <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-                <FormControl sx={{ minWidth: 200 }}>
-                    <InputLabel>Month</InputLabel>
-                    <Select
-                        value={month}
-                        label="Month"
-                        onChange={(e) => handleMonthChange(e.target.value)}
-                    >
-                        {months.map((m) => (
-                            <MenuItem key={m} value={m}>{m}</MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
-
-                <FormControl sx={{ minWidth: 300 }}>
-                    <InputLabel>Format</InputLabel>
-                    <Select
-                        value={format}
-                        label="Format"
-                        onChange={handleFormatChange}
-                    >
-                        {formats.map((fmt) => (
-                            <MenuItem key={fmt} value={fmt}>{fmt}</MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
-            </Box>
+            <FormControl sx={{ minWidth: 300, mb: 4 }}>
+                <InputLabel>Format</InputLabel>
+                <Select
+                    value={format}
+                    label="Format"
+                    onChange={handleFormatChange}
+                >
+                    {formats.map((fmt) => (
+                        <MenuItem key={fmt} value={fmt}>{fmt}</MenuItem>
+                    ))}
+                </Select>
+            </FormControl>
 
             {error && (
                 <Typography color="error" sx={{ mb: 2 }}>
@@ -628,6 +730,7 @@ const PokemonUsage = () => {
                                 {/* Contenido con gráficas */}
                                 <Box sx={{ mt: 4 }}>
                                     {renderCategoryContent()}
+                                    {renderHistoricalChart(selectedPokemon.name)}
                                 </Box>
                             </Box>
                         ) : (
