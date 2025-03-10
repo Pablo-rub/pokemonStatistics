@@ -760,7 +760,7 @@ const calculateMonthlyChange = (pokemonName, categoryKey, itemName) => {
             return (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                     <Typography sx={{ color: 'white' }}>
-                        No hay suficientes datos históricos para mostrar tendencias
+                        No historical usage data available for {selectedPokemon.name}
                     </Typography>
                 </Box>
             );
@@ -787,7 +787,7 @@ const calculateMonthlyChange = (pokemonName, categoryKey, itemName) => {
                             />
                             <YAxis 
                                 label={{ 
-                                    value: 'Uso %', 
+                                    value: 'Usage %', 
                                     angle: -90, 
                                     position: 'insideLeft',
                                     fill: 'white' 
