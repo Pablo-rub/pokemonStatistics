@@ -19,11 +19,13 @@ const PokemonUsage = () => {
     const [formats, setFormats] = useState([]);
     const [format, setFormat] = useState('');
     const [usageData, setUsageData] = useState([]);
-    const [historicalData, setHistoricalData] = useState({}); // Para almacenar datos históricos
+    const [historicalData, setHistoricalData] = useState({});
     const [error, setError] = useState(null);
     const [selectedPokemon, setSelectedPokemon] = useState(null);
     const [pokemonDetails, setPokemonDetails] = useState(null);
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+    const [isLoadingInitial, setIsLoadingInitial] = useState(true); // Nuevo estado para carga inicial
+    const [isLoadingFormat, setIsLoadingFormat] = useState(false); // Nuevo estado para cambio de formato
     const [page, setPage] = useState(1);
     const itemsPerPage = 6;
     const [currentCategory, setCurrentCategory] = useState(0);
@@ -48,6 +50,7 @@ const PokemonUsage = () => {
 
     useEffect(() => {
         const fetchInitialData = async () => {
+            setIsLoadingInitial(true);
             try {
                 // 1. Get latest month
                 const monthsResponse = await axios.get('http://localhost:5000/api/months');
@@ -71,14 +74,15 @@ const PokemonUsage = () => {
                         
                         // CHANGE: Call handleFormatChange to load all historical data
                         // instead of just fetching the latest month
-                        handleFormatChange(lastFormat);
+                        await handleFormatChange(lastFormat);
                     }
                 }
             } catch (error) {
                 console.error("Error in fetchInitialData:", error);
                 const errorMessage = error.response?.data || "Error loading formats";
                 setError(errorMessage);
-                setIsLoadingDetails(false);
+            } finally {
+                setIsLoadingInitial(false);
             }
         };
 
@@ -87,7 +91,7 @@ const PokemonUsage = () => {
 
     const handleFormatChange = async (selectedFormat) => {
         setFormat(selectedFormat);
-        setIsLoadingDetails(true);
+        setIsLoadingFormat(true);
         setSelectedPokemon(null);
         setPokemonDetails(null);
         
@@ -95,7 +99,7 @@ const PokemonUsage = () => {
             // 1. Obtener todos los meses disponibles
             console.log("Fetching months...");
             const monthsResponse = await axios.get('http://localhost:5000/api/months');
-            const months = monthsResponse.data.sort().reverse() // Ordenar de más reciente a más antiguo
+            const months = monthsResponse.data.sort((a, b) => b.localeCompare(a)) // Ordenar de más reciente a más antiguo
             console.log(months);
             const historicalDataObj = {};
             let foundData = false;
@@ -146,7 +150,7 @@ const PokemonUsage = () => {
             setHistoricalData(historicalDataObj);
             
             // 4. Usar los datos más recientes para la vista principal
-            const latestMonth = Object.keys(historicalDataObj).sort().reverse()[0];
+            const latestMonth = Object.keys(historicalDataObj).sort((a, b) => b.localeCompare(a))[0];
             if (historicalDataObj[latestMonth]) {
                 parseData(historicalDataObj[latestMonth]);
                 setError(null); // Limpiar errores previos
@@ -157,7 +161,7 @@ const PokemonUsage = () => {
             console.error("Error fetching months:", error);
             setError("Error accessing Smogon data");
         } finally {
-            setIsLoadingDetails(false);
+            setIsLoadingFormat(false);
         }
     };
 
@@ -242,7 +246,6 @@ const PokemonUsage = () => {
                 );
 
                 if (detailsKey) {
-                    // Rest of your existing code
                     const pokemonData = response.data.data[detailsKey];
                     // Calcular totales para cada categoría
                     const getTotalUsage = (category) => {
@@ -274,7 +277,6 @@ const PokemonUsage = () => {
                             percentage: ((usage / totalItems) * 100).toFixed(2)
                         })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage)).slice(0, 10),
                         
-                        // Limitar spreads a los 10 principales
                         spreads: Object.entries(pokemonData.Spreads || {}).map(([value, usage]) => ({
                             value,
                             percentage: ((usage / totalSpreads) * 100).toFixed(2)
@@ -292,9 +294,6 @@ const PokemonUsage = () => {
                     };
 
                     setPokemonDetails(details);
-                } else {
-                    console.warn("No se encontró la clave correspondiente para:", pokemonName);
-                    setPokemonDetails(null);
                 }
             }
         } catch (error) {
@@ -332,148 +331,76 @@ const PokemonUsage = () => {
           '#FF9F40', '#E7E9ED', '#8A2BE2', '#00BFFF', '#FF7F50'
         ];
       
-        // Función para generar datos de series temporales para la categoría actual
+        // 2. Modificar generateTimeSeriesData para limitar los teammates en los gráficos históricos
         const generateTimeSeriesData = (categoryKey) => {
-          if (!selectedPokemon || !historicalData || Object.keys(historicalData).length === 0) {
-            return [];
-          }
-      
-          // Mapeo de llaves de categoría a la estructura de datos
-          const categoryKeys = {
-            'abilities': 'Abilities',
-            'moves': 'Moves',
-            'items': 'Items',
-            'spreads': 'Spreads',
-            'teraTypes': 'Tera Types',
-            'teammates': 'Teammates'
-          };
-      
-          const structureKey = categoryKeys[categoryKey];
-          if (!structureKey) return [];
-      
-          // Limitamos los elementos según la categoría
-          const itemLimit = categoryKey === 'spreads' ? 10 : 
-                            (categoryKey === 'abilities' ? 100 : 20);
-          
-          // Para spreads, necesitamos un enfoque especial para limitar a los 10 más usados en general
-          if (categoryKey === 'spreads') {
-            // Recolectar todos los spreads con su uso promedio a lo largo del tiempo
-            const spreadUsageAverages = {};
-            let totalMonths = 0;
-            
-            // Primero recolectamos datos de uso para cada spread en cada mes
-            Object.entries(historicalData).forEach(([month, monthData]) => {
-              if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
-                const categoryData = monthData.data[selectedPokemon.name][structureKey];
-                if (categoryData) {
-                  totalMonths++;
-                  const total = Object.values(categoryData).reduce((sum, val) => sum + parseFloat(val), 0);
-                  
-                  Object.entries(categoryData).forEach(([spreadName, usage]) => {
-                    if (!spreadUsageAverages[spreadName]) {
-                      spreadUsageAverages[spreadName] = 0;
-                    }
-                    spreadUsageAverages[spreadName] += (usage / total * 100);
-                  });
-                }
-              }
-            });
-            
-            // Calcular promedios
-            Object.keys(spreadUsageAverages).forEach(spreadName => {
-              spreadUsageAverages[spreadName] /= totalMonths;
-            });
-            
-            // Ordenar spreads por uso promedio y tomar los 10 principales
-            const topSpreads = Object.entries(spreadUsageAverages)
-              .sort(([, a], [, b]) => b - a)
-              .slice(0, 10)
-              .map(([name]) => name);
-            
-            // Crear un Set para búsqueda rápida
-            const topSpreadsSet = new Set(topSpreads);
-            
-            // Ahora procedemos normalmente pero solo con los top spreads
-            const uniqueItems = topSpreadsSet;
-            
-            // Resto de la lógica para generar datos de series temporales
-            const seriesData = Array.from(uniqueItems).map(itemName => {
-              const dataPoints = [];
-              Object.entries(historicalData)
-                .sort((a, b) => a[0].localeCompare(b[0]))
-                .forEach(([month, monthData]) => {
-                  if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
-                    const categoryData = monthData.data[selectedPokemon.name][structureKey];
-                    const total = Object.values(categoryData || {}).reduce((sum, val) => sum + parseFloat(val), 0);
-                    const value = categoryData && categoryData[itemName] ? 
-                      parseFloat((categoryData[itemName] / total * 100).toFixed(2)) : 0;
-                    
-                    dataPoints.push({
-                      month,
-                      [itemName]: value
-                    });
-                  }
-                });
-              
-              return {
-                name: itemName,
-                data: dataPoints
-              };
-            });
-            
-            return seriesData.filter(series => 
-              series.data.some(point => point[series.name] > 0)
-            );
-          } else {
-            // Para otras categorías, mantener la lógica existente
+            if (!selectedPokemon || !historicalData || Object.keys(historicalData).length === 0) {
+                return [];
+            }
+        
+            // Mapeo de llaves de categoría a la estructura de datos
+            const categoryKeys = {
+                'abilities': 'Abilities',
+                'moves': 'Moves',
+                'items': 'Items',
+                'spreads': 'Spreads',
+                'teraTypes': 'Tera Types',
+                'teammates': 'Teammates'
+            };
+        
+            const structureKey = categoryKeys[categoryKey];
+            if (!structureKey) return [];
+        
+            // Limitamos los elementos según la categoría
+            const itemLimit = categoryKey === 'spreads' || categoryKey === 'teammates' ? 10 : 
+                               (categoryKey === 'abilities' ? 100 : 20);
+        
             // Obtener todos los nombres de elementos únicos de esta categoría a través de todos los meses
             const uniqueItems = new Set();
             
             Object.entries(historicalData).forEach(([month, monthData]) => {
-              if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
-                const categoryData = monthData.data[selectedPokemon.name][structureKey];
-                if (categoryData) {
-                  // Ordenar por uso y tomar solo los primeros N elementos
-                  const sortedItems = Object.entries(categoryData)
-                    .sort(([, a], [, b]) => b - a)
-                    .slice(0, itemLimit)
-                    .map(([itemName]) => itemName);
-                    
-                  sortedItems.forEach(itemName => uniqueItems.add(itemName));
+                if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
+                    const categoryData = monthData.data[selectedPokemon.name][structureKey];
+                    if (categoryData) {
+                        // Ordenar por uso y tomar solo los primeros N elementos
+                        const sortedItems = Object.entries(categoryData)
+                            .sort(([, a], [, b]) => b - a)
+                            .slice(0, itemLimit)
+                            .map(([itemName]) => itemName);
+                            
+                        sortedItems.forEach(itemName => uniqueItems.add(itemName));
+                    }
                 }
-              }
             });
             
             // Para cada elemento, crear una serie de datos con su uso a lo largo del tiempo
             const seriesData = Array.from(uniqueItems).map(itemName => {
-              const dataPoints = [];
-              Object.entries(historicalData)
-                .sort((a, b) => a[0].localeCompare(b[0]))
-                .forEach(([month, monthData]) => {
-                  if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
-                    const categoryData = monthData.data[selectedPokemon.name][structureKey];
-                    const total = Object.values(categoryData || {}).reduce((sum, val) => sum + parseFloat(val), 0);
-                    const value = categoryData && categoryData[itemName] ? 
-                      parseFloat((categoryData[itemName] / total * 100).toFixed(2)) : 0;
-                    
-                    dataPoints.push({
-                      month,
-                      [itemName]: value
+                const dataPoints = [];
+                Object.entries(historicalData)
+                    .sort((a, b) => a[0].localeCompare(b[0]))
+                    .forEach(([month, monthData]) => {
+                        if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
+                            const categoryData = monthData.data[selectedPokemon.name][structureKey];
+                            const total = Object.values(categoryData || {}).reduce((sum, val) => sum + parseFloat(val), 0);
+                            const value = categoryData && categoryData[itemName] ? 
+                                parseFloat((categoryData[itemName] / total * 100).toFixed(2)) : 0;
+                            
+                            dataPoints.push({
+                                month,
+                                [itemName]: value
+                            });
+                        }
                     });
-                  }
-                });
-              
-              return {
-                name: itemName,
-                data: dataPoints
-              };
+                
+                return {
+                    name: itemName,
+                    data: dataPoints
+                };
             });
             
             // Filtrar series con datos para mostrar solo las que tienen uso
             return seriesData.filter(series => 
-              series.data.some(point => point[series.name] > 0)
+                series.data.some(point => point[series.name] > 0)
             );
-          }
         };
       
         // Crear un componente de tooltip personalizado ordenado por porcentaje
@@ -687,11 +614,23 @@ const PokemonUsage = () => {
                         console.log("Format selected:", e.target.value);
                         handleFormatChange(e.target.value);
                     }}
+                    disabled={isLoadingFormat} // Deshabilitar durante la carga
                 >
                     {formats.map((fmt) => (
                         <MenuItem key={fmt} value={fmt}>{fmt}</MenuItem>
                     ))}
                 </Select>
+                {isLoadingFormat && (
+                    <CircularProgress 
+                        size={24} 
+                        sx={{ 
+                            position: 'absolute', 
+                            right: -30, 
+                            top: '50%', 
+                            marginTop: '-12px' 
+                        }} 
+                    />
+                )}
             </FormControl>
 
             {error && (
@@ -700,110 +639,143 @@ const PokemonUsage = () => {
                 </Typography>
             )}
 
-            <Grid container spacing={2}>
-                {/* Pokémon list */}
-                <Grid item xs={12} md={3}>
-                    <Box sx={{ 
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 2
-                    }}>
-                        {getPaginatedData().map((pokemon) => (
-                            <Paper
-                                key={pokemon.rank}
-                                onClick={() => handlePokemonSelect(pokemon)}
-                                sx={{
-                                    p: 2,
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    backgroundColor: selectedPokemon?.name === pokemon.name ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                                    '&:hover': {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.05)'
-                                    }
-                                }}
-                            >
-                                <Box sx={{ 
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 2,
-                                    width: '100%'
-                                }}>
-                                    <PokemonSprite pokemon={{ name: pokemon.name }} />
-                                    <Box sx={{ flexGrow: 1 }}>
-                                        <Typography>{pokemon.name}</Typography>
-                                        <Typography variant="caption">{pokemon.usagePercentage}%</Typography>
+            {isLoadingInitial ? (
+                <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
+                    <CircularProgress />
+                </Box>
+            ) : (
+                <Grid container spacing={2}>
+                    {/* Pokémon list */}
+                    <Grid item xs={12} md={3}>
+                        <Box sx={{ 
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 2
+                        }}>
+                            {isLoadingFormat ? (
+                                <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+                                    <CircularProgress />
+                                </Box>
+                            ) : (
+                                <>
+                                    {getPaginatedData().map((pokemon) => (
+                                        <Paper
+                                            key={pokemon.rank}
+                                            onClick={() => handlePokemonSelect(pokemon)}
+                                            sx={{
+                                                p: 2,
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                backgroundColor: selectedPokemon?.name === pokemon.name ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                                                }
+                                            }}
+                                        >
+                                            <Box sx={{ 
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 2,
+                                                width: '100%'
+                                            }}>
+                                                <PokemonSprite pokemon={{ name: pokemon.name }} />
+                                                <Box sx={{ flexGrow: 1 }}>
+                                                    <Typography>{pokemon.name}</Typography>
+                                                    <Typography variant="caption">{pokemon.usagePercentage}%</Typography>
+                                                </Box>
+                                                <Typography variant="caption">#{pokemon.rank}</Typography>
+                                            </Box>
+                                        </Paper>
+                                    ))}
+                                    <Pagination 
+                                        count={Math.ceil(usageData.length / itemsPerPage)}
+                                        page={page}
+                                        onChange={handlePageChange}
+                                        color="primary"
+                                        siblingCount={1}
+                                        sx={{
+                                            '& .MuiPaginationItem-root': {
+                                                color: 'white'
+                                            }
+                                        }}
+                                    />
+                                </>
+                            )}
+                        </Box>
+                    </Grid>
+
+                    {/* Details panel */}
+                    <Grid item xs={12} md={9}>
+                        <Paper sx={{ 
+                            p: 3,
+                            backgroundColor: '#221FC7',
+                            height: 'calc(100vh - 100px)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            overflow: 'hidden',  // Mantener hidden
+                            '& *': {
+                                // Aplicar globalmente a todos los elementos dentro
+                                scrollbarWidth: 'none',
+                                '&::-webkit-scrollbar': {
+                                    display: 'none'
+                                },
+                                '-ms-overflow-style': 'none'
+                            }
+                        }}>
+                            {isLoadingFormat ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                                    <CircularProgress />
+                                </Box>
+                            ) : isLoadingDetails ? (
+                                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                                    <CircularProgress />
+                                </Box>
+                            ) : selectedPokemon && pokemonDetails ? (
+                                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                    {/* Header con nombre y sprite */}
+                                    <Box sx={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center',
+                                        borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                                        pb: 2,
+                                        mb: 2
+                                    }}>
+                                        <PokemonSprite pokemon={{ name: selectedPokemon.name }} size={60} />
+                                        <Box sx={{ ml: 2 }}>
+                                            <Typography variant="h5" sx={{ color: 'white' }}>
+                                                {selectedPokemon.name}
+                                            </Typography>
+                                            <Typography variant="subtitle1" sx={{ color: 'white' }}>
+                                                Rank #{selectedPokemon.rank} • Usage: {selectedPokemon.usagePercentage}%
+                                            </Typography>
+                                        </Box>
                                     </Box>
-                                    <Typography variant="caption">#{pokemon.rank}</Typography>
+
+                                    <Box sx={{ 
+                                        flexGrow: 1,
+                                        overflow: 'hidden',
+                                        mt: 1,
+                                    }}>
+                                        {renderCategoryContent()}
+                                    </Box>
                                 </Box>
-                            </Paper>
-                        ))}
-                        <Pagination 
-                            count={Math.ceil(usageData.length / itemsPerPage)}
-                            page={page}
-                            onChange={handlePageChange}
-                            color="primary"
-                            siblingCount={1}
-                            sx={{
-                                '& .MuiPaginationItem-root': {
-                                    color: 'white'
-                                }
-                            }}
-                        />
-                    </Box>
-                </Grid>
-
-                {/* Details panel */}
-                <Grid item xs={12} md={9}>
-                    <Paper sx={{ 
-                        p: 3,
-                        backgroundColor: '#221FC7',
-                        height: 'calc(100vh - 100px)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        overflow: 'hidden',  // Mantener hidden
-                        '& *': {
-                            // Aplicar globalmente a todos los elementos dentro
-                            scrollbarWidth: 'none',
-                            '&::-webkit-scrollbar': {
-                                display: 'none'
-                            },
-                            '-ms-overflow-style': 'none'
-                        }
-                    }}>
-                        {/* Contenido existente... */}
-                        {isLoadingDetails ? (
-                            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                                <CircularProgress />
-                            </Box>
-                        ) : selectedPokemon && pokemonDetails ? (
-                            <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                {/* Header existente... */}
-
-                                {/* 2. Modificar el Box del contenido */}
+                            ) : (
                                 <Box sx={{ 
-                                    flexGrow: 1,
-                                    overflow: 'hidden', // Cambiar de 'auto' a 'hidden'
-                                    mt: 1,
+                                    display: 'flex', 
+                                    justifyContent: 'center', 
+                                    alignItems: 'center', 
+                                    height: '100%' 
                                 }}>
-                                    {renderCategoryContent()}
+                                    <Typography sx={{ color: 'white' }}>
+                                        Select a Pokémon to see details
+                                    </Typography>
                                 </Box>
-                            </Box>
-                        ) : (
-                            <Box sx={{ 
-                                display: 'flex', 
-                                justifyContent: 'center', 
-                                alignItems: 'center', 
-                                height: '100%' 
-                            }}>
-                                <Typography sx={{ color: 'white' }}>
-                                    Select a Pokémon to see details
-                                </Typography>
-                            </Box>
-                        )}
-                    </Paper>
+                            )}
+                        </Paper>
+                    </Grid>
                 </Grid>
-            </Grid>
+            )}
         </Box>
     );
 };
