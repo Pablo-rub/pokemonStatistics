@@ -378,7 +378,7 @@ function combineData(usageData, movesetData) {
     return result;
 }
 
-// Corrige la función parseMovesetText para manejar correctamente los datos de spreads y teammates
+// Function to parse moveset data from Smogon with correct teammate and spread handling
 function parseMovesetText(text) {
     const pokemonData = {};
     
@@ -442,52 +442,60 @@ function parseMovesetText(text) {
                 data.viabilityCeiling = parseInt(ceilingMatch[1]);
             }
             
-            // Extract sections with improved regex patterns
-            const sections = ["Abilities", "Items", "Spreads", "Moves", "Tera Types", "Teammates"];
+            // Process each section separately
+            const sectionHeaders = [
+                "Abilities", 
+                "Items", 
+                "Spreads", 
+                "Moves", 
+                "Tera Types", 
+                "Teammates", 
+                "Checks and Counters"
+            ];
             
-            for (const section of sections) {
-                // Find section data with clear boundary pattern
-                let sectionRegex;
+            for (const section of sectionHeaders) {
+                // Find the section start position
+                const sectionStartIndex = pokemonBlock.indexOf(`| ${section}`);
+                if (sectionStartIndex === -1) continue;
                 
-                if (section === "Teammates" || section === "Spreads") {
-                    // Special handling for Teammates and Spreads which often have different formatting
-                    sectionRegex = new RegExp(`\\| ${section}\\s*\\|(.*?)\\+[-]{40,}\\+`, "s");
-                } else {
-                    sectionRegex = new RegExp(`\\| ${section}\\s*\\|(.*?)\\+[-]{40,}\\+`, "s");
+                // Find the section end position (next section or end of block)
+                let sectionEndIndex = pokemonBlock.length;
+                for (const nextSection of sectionHeaders) {
+                    if (nextSection === section) continue;
+                    
+                    const nextSectionIndex = pokemonBlock.indexOf(`| ${nextSection}`, sectionStartIndex);
+                    if (nextSectionIndex !== -1 && nextSectionIndex < sectionEndIndex) {
+                        sectionEndIndex = nextSectionIndex;
+                    }
                 }
                 
-                const sectionMatch = pokemonBlock.match(sectionRegex);
+                // Extract section content
+                const sectionContent = pokemonBlock.substring(sectionStartIndex, sectionEndIndex);
+                const sectionLines = sectionContent.split('\n');
                 
-                if (sectionMatch && sectionMatch[1]) {
-                    // Extract data lines with percentage
-                    const dataLines = sectionMatch[1].split('\n').filter(line => line.includes('%'));
+                // Process each line in the section
+                for (let j = 1; j < sectionLines.length; j++) { // Skip the header line
+                    const line = sectionLines[j].trim();
+                    if (!line || !line.includes('%') || !line.includes('|')) continue;
                     
-                    dataLines.forEach(line => {
-                        // Different regex patterns based on the section
-                        let dataMatch;
-                        
-                        if (section === "Spreads") {
-                            // Pattern for spreads like: | Adamant:4/252/0/0/0/252 22.547% |
-                            dataMatch = line.match(/\|\s*([^|0-9%]+?[^|%]+?)\s+([0-9.]+)%/);
-                        } else if (section === "Teammates") {
-                            // Pattern for teammates like: | Incineroar 51.044% |
-                            dataMatch = line.match(/\|\s*([^|0-9%]+?)\s+([0-9.]+)%/);
-                        } else {
-                            // General pattern for other sections
-                            dataMatch = line.match(/\|\s*([^|0-9]+?)\s+([0-9.]+)%/);
-                        }
-                        
-                        if (dataMatch) {
-                            const name = dataMatch[1].trim();
-                            const percentage = parseFloat(dataMatch[2]);
-                            
-                            data[section][name] = percentage;
-                        }
-                    });
+                    let match;
+                    if (section === "Spreads") {
+                        match = line.match(/\|\s*([^|]+?)\s+([0-9.]+)%/);
+                    } else if (section === "Teammates") {
+                        match = line.match(/\|\s*([^|0-9]+?)\s+([0-9.]+)%/);
+                    } else {
+                        match = line.match(/\|\s*([^|0-9]+?)\s+([0-9.]+)%/);
+                    }
+                    
+                    if (match) {
+                        const name = match[1].trim();
+                        const percentage = parseFloat(match[2]);
+                        data[section][name] = percentage;
+                    }
                 }
             }
             
-            // Store data
+            // Store processed data
             pokemonData[pokemonName] = data;
         }
     } catch (error) {
