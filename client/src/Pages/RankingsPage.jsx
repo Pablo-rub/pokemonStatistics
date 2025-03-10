@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Select, MenuItem, FormControl, InputLabel,
-  Grid, Paper, CircularProgress, Pagination, IconButton
+  Grid, Paper, CircularProgress, IconButton
 } from '@mui/material';
 import PokemonSprite from '../components/PokemonSprite';
 import axios from 'axios';
-import { XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { 
+    XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend, CartesianGrid
+} from 'recharts';
 import FirstPageIcon from '@mui/icons-material/FirstPage';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
@@ -15,7 +15,6 @@ import LastPageIcon from '@mui/icons-material/LastPage';
 
 //todo
 //menos numeros de pagination, 1 2 3 ... 100
-//checks and counters
 //rankings de victoria
 //leyendas no cortadas
 
@@ -40,8 +39,7 @@ const PokemonUsage = () => {
         { name: "Items", key: "items" },
         { name: "Spreads", key: "spreads" },
         { name: "Tera Types", key: "teraTypes" },
-        { name: "Teammates", key: "teammates" },
-        { name: "Checks & Counters", key: "checksAndCounters" }
+        { name: "Teammates", key: "teammates" }
     ];
 
     const handlePrevCategory = () => {
@@ -119,7 +117,7 @@ const PokemonUsage = () => {
                         params: {
                             month,
                             format: selectedFormat,
-                            chaos: true
+                            moveset: true
                         }
                     });
                     
@@ -169,13 +167,14 @@ const PokemonUsage = () => {
         }
     };
 
+    // Fix the parseData function to not multiply percentages again
     const parseData = (data) => {
-        // Check if data is JSON (from chaos endpoint) or text
+        // Check if data is JSON (from moveset endpoint) or text
         if (typeof data === 'object' && data !== null) {
-            // Handle JSON data from chaos endpoint
+            // Handle JSON data from moveset endpoint
             const parsedData = [];
             
-            // Extract data from the chaos format
+            // Extract data from the moveset format
             if (data.data) {
                 const pokemonEntries = Object.entries(data.data);
                 let rank = 1;
@@ -185,18 +184,15 @@ const PokemonUsage = () => {
                         parsedData.push({
                             rank: rank.toString(),
                             name: name,
-                            usagePercentage: parseFloat((details.usage * 100).toFixed(2)),
+                            // FIXED: Don't multiply by 100 again - the value is already a percentage
+                            usagePercentage: parseFloat(details.usage.toFixed(2)),
                             raw: details.raw || "0",
                             realPercentage: details['real usage'] ? (details['real usage'] * 100).toFixed(2) : "0"
                         });
                         rank++;
                     }
                 });
-                
-                // Sort by usage percentage
-                parsedData.sort((a, b) => b.usagePercentage - a.usagePercentage);
             }
-            
             setUsageData(parsedData);
         } else if (typeof data === 'string') {
             // Handle text data (original implementation)
@@ -229,80 +225,85 @@ const PokemonUsage = () => {
     const fetchPokemonDetails = async (pokemonName) => {
         setIsLoadingDetails(true);
         try {
-            // Get the most recent month from historicalData
+            // Get the most recent month - if historicalData is empty, use a default
             const latestMonth = Object.keys(historicalData).sort().reverse()[0];
             
-            if (!latestMonth) {
-                throw new Error("No month data available");
-            }
+            console.log(`Fetching details for ${pokemonName} in ${format} (${latestMonth})`);
             
             const response = await axios.get(`http://localhost:5000/api/rankings`, {
                 params: {
-                    format,
+                    format: format,
                     month: latestMonth,
-                    chaos: true
+                    moveset: true
                 }
             });
-
+            
+            console.log("API Response received, status:", response.status);
+            
             if (response.data && response.data.data) {
-                const detailsKey = Object.keys(response.data.data).find(
+                // Find the Pokémon in the response data - try exact match first, then case-insensitive
+                let detailsKey = Object.keys(response.data.data).find(
                     key => key === pokemonName
                 );
-
+                
+                if (!detailsKey) {
+                    detailsKey = Object.keys(response.data.data).find(
+                        key => key.toLowerCase() === pokemonName.toLowerCase()
+                    );
+                }
+                
                 if (detailsKey) {
                     const pokemonData = response.data.data[detailsKey];
-                    // Calcular totales para cada categoría
-                    const getTotalUsage = (category) => {
-                        return Object.values(category || {}).reduce((sum, value) => {
-                            return typeof value === 'number' ? sum + value : sum;
-                        }, 0);
-                    };
-
-                    const totalAbilities = getTotalUsage(pokemonData.Abilities);
-                    const totalMoves = getTotalUsage(pokemonData.Moves);
-                    const totalItems = getTotalUsage(pokemonData.Items);
-                    const totalSpreads = getTotalUsage(pokemonData.Spreads);
-                    const totalTeraTypes = getTotalUsage(pokemonData["Tera Types"]);
-                    const totalTeammates = getTotalUsage(pokemonData.Teammates);
-
+                    console.log("Found Pokémon data:", JSON.stringify(pokemonData, null, 2));
+                    
+                    // Create the details object with proper parsing
                     const details = {
                         abilities: Object.entries(pokemonData.Abilities || {}).map(([name, usage]) => ({
                             name,
-                            percentage: ((usage / totalAbilities) * 100).toFixed(2)
-                        })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage)),
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage),
                         
                         moves: Object.entries(pokemonData.Moves || {}).map(([name, usage]) => ({
                             name,
-                            percentage: ((usage / totalMoves) * 100).toFixed(2)
-                        })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage)).slice(0, 10),
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
                         
                         items: Object.entries(pokemonData.Items || {}).map(([name, usage]) => ({
                             name,
-                            percentage: ((usage / totalItems) * 100).toFixed(2)
-                        })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage)).slice(0, 10),
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
                         
                         spreads: Object.entries(pokemonData.Spreads || {}).map(([value, usage]) => ({
                             value,
-                            percentage: ((usage / totalSpreads) * 100).toFixed(2)
-                        })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage)).slice(0, 10),
-
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
+                        
                         teraTypes: Object.entries(pokemonData["Tera Types"] || {}).map(([type, usage]) => ({
                             type,
-                            percentage: ((usage / totalTeraTypes) * 100).toFixed(2)
-                        })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage)),
-
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage),
+                        
                         teammates: Object.entries(pokemonData.Teammates || {}).map(([name, usage]) => ({
                             name,
-                            percentage: ((usage / totalTeammates) * 100).toFixed(2)
-                        })).sort((a, b) => parseFloat(b.percentage) - parseFloat(a.percentage)).slice(0, 10)
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10)
                     };
-
+                    
+                    console.log("Processed details:", details);
                     setPokemonDetails(details);
+                } else {
+                    console.error(`No data found for Pokémon: ${pokemonName}`);
+                    console.log("Available Pokémon:", Object.keys(response.data.data));
+                    setPokemonDetails(null);
                 }
+            } else {
+                console.error("Invalid response structure:", response.data);
+                setPokemonDetails(null);
             }
         } catch (error) {
             console.error("Error fetching Pokémon details:", error);
             setError("Error fetching Pokémon details");
+            setPokemonDetails(null);
         } finally {
             setIsLoadingDetails(false);
         }
@@ -328,280 +329,197 @@ const PokemonUsage = () => {
     const renderCategoryContent = () => {
         const category = categories[currentCategory];
         
-        // Define paleta de colores ampliada para las líneas de los gráficos
-        const COLORS = [
-          '#24CC9F', '#1A9B79', '#147A5E', '#0E5943', '#093828', 
-          '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', 
-          '#FF9F40', '#E7E9ED', '#8A2BE2', '#00BFFF', '#FF7F50'
-        ];
-      
-        // 2. Modificar generateTimeSeriesData para limitar los teammates en los gráficos históricos
-        const generateTimeSeriesData = (categoryKey) => {
-            if (!selectedPokemon || !historicalData || Object.keys(historicalData).length === 0) {
-                return [];
-            }
-        
-            // Mapeo de llaves de categoría a la estructura de datos
-            const categoryKeys = {
-                'abilities': 'Abilities',
-                'moves': 'Moves',
-                'items': 'Items',
-                'spreads': 'Spreads',
-                'teraTypes': 'Tera Types',
-                'teammates': 'Teammates'
-            };
-        
-            const structureKey = categoryKeys[categoryKey];
-            if (!structureKey) return [];
-        
-            // Limitamos los elementos según la categoría
-            const itemLimit = categoryKey === 'spreads' || categoryKey === 'teammates' ? 10 : 
-                               (categoryKey === 'abilities' ? 100 : 20);
-        
-            // Obtener todos los nombres de elementos únicos de esta categoría a través de todos los meses
-            const uniqueItems = new Set();
-            
-            Object.entries(historicalData).forEach(([month, monthData]) => {
-                if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
-                    const categoryData = monthData.data[selectedPokemon.name][structureKey];
-                    if (categoryData) {
-                        // Ordenar por uso y tomar solo los primeros N elementos
-                        const sortedItems = Object.entries(categoryData)
-                            .sort(([, a], [, b]) => b - a)
-                            .slice(0, itemLimit)
-                            .map(([itemName]) => itemName);
-                            
-                        sortedItems.forEach(itemName => uniqueItems.add(itemName));
-                    }
-                }
-            });
-            
-            // Para cada elemento, crear una serie de datos con su uso a lo largo del tiempo
-            const seriesData = Array.from(uniqueItems).map(itemName => {
-                const dataPoints = [];
-                Object.entries(historicalData)
-                    .sort((a, b) => a[0].localeCompare(b[0]))
-                    .forEach(([month, monthData]) => {
-                        if (monthData && monthData.data && monthData.data[selectedPokemon.name]) {
-                            const categoryData = monthData.data[selectedPokemon.name][structureKey];
-                            const total = Object.values(categoryData || {}).reduce((sum, val) => sum + parseFloat(val), 0);
-                            const value = categoryData && categoryData[itemName] ? 
-                                parseFloat((categoryData[itemName] / total * 100).toFixed(2)) : 0;
-                            
-                            dataPoints.push({
-                                month,
-                                [itemName]: value
-                            });
-                        }
-                    });
-                
-                return {
-                    name: itemName,
-                    data: dataPoints
-                };
-            });
-            
-            // Filtrar series con datos para mostrar solo las que tienen uso
-            return seriesData.filter(series => 
-                series.data.some(point => point[series.name] > 0)
-            );
-        };
-      
-        // Crear un componente de tooltip personalizado ordenado por porcentaje
-        const CustomTooltip = ({ active, payload, label }) => {
-            if (!active || !payload || !payload.length) return null;
-            
-            // Ordenar los datos por porcentaje (de mayor a menor)
-            const sortedData = [...payload].sort((a, b) => b.value - a.value);
-            
+        // Check if we have selected Pokemon and details
+        if (!selectedPokemon || !pokemonDetails) {
             return (
-              <Box 
-                sx={{
-                  backgroundColor: '#221FC7',
-                  padding: '10px',
-                  border: '1px solid #f5f5f5',
-                  borderRadius: '4px',
-                }}
-              >
-                <Typography sx={{ color: '#fff', fontWeight: 'bold', mb: 1 }}>
-                  {label}
-                </Typography>
-                {sortedData.map((entry, index) => (
-                  <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                    <Box 
-                      sx={{ 
-                        width: 10, 
-                        height: 10, 
-                        backgroundColor: entry.color, 
-                        marginRight: 1,
-                        borderRadius: '50%'
-                      }} 
-                    />
-                    <Typography sx={{ color: '#fff', fontSize: 14 }}>
-                      {entry.name}: {entry.value}%
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                    <Typography sx={{ color: 'white' }}>
+                        {!selectedPokemon ? "Select a Pokémon to see details" : "Loading details..."}
                     </Typography>
-                  </Box>
-                ))}
-              </Box>
+                </Box>
             );
-          };
-      
-        // Función para calcular el dominio del eje Y basado en el valor máximo
-        const calculateYAxisDomain = (data, keys) => {
-            if (!data || !data.length) return [0, 100]; // Default to 0-100% if no data
-            
-            // Encuentra el valor máximo entre todos los datos
-            let maxValue = 0;
-            data.forEach(dataPoint => {
-              keys.forEach(key => {
-                if (dataPoint[key] && dataPoint[key] > maxValue) {
-                  maxValue = dataPoint[key];
-                }
-              });
-            });
-            
-            // Redondea al siguiente múltiplo de 20
-            const roundedMax = Math.ceil(maxValue / 20) * 20;
-            
-            // Retorna dominio con mínimo 0 y máximo el valor redondeado
-            return [0, roundedMax];
-          };
-      
-        // Renderizar gráfico de líneas para la categoría actual
-        const renderCategoryTimeSeries = (categoryKey) => {
-          const seriesData = generateTimeSeriesData(categoryKey);
-          
-          if (seriesData.length === 0) {
+        }
+        
+        console.log(`Rendering ${category.key} data:`, pokemonDetails[category.key]);
+        
+        // Get data for the current category
+        const categoryData = pokemonDetails[category.key];
+        
+        if (!categoryData || categoryData.length === 0) {
             return (
-              <Box sx={{ mt: 3, mb: 2 }}>
-                <Typography sx={{ color: 'white', fontStyle: 'italic' }}>
-                  No hay suficientes datos históricos para mostrar tendencias.
-                </Typography>
-              </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                    <Typography sx={{ color: 'white' }}>
+                        No hay datos disponibles para {category.name.toLowerCase()}
+                    </Typography>
+                </Box>
             );
-          }
-          
-          // Crear estructura unificada para el gráfico
-          const months = Array.from(
-            new Set(seriesData.flatMap(s => s.data.map(d => d.month)))
-          ).sort();
-          
-          const graphData = months.map(month => {
-            const dataPoint = { month };
-            seriesData.forEach(series => {
-              const monthPoint = series.data.find(d => d.month === month);
-              dataPoint[series.name] = monthPoint ? monthPoint[series.name] : 0;
-            });
-            return dataPoint;
-          });
-      
-          // Obtener todas las claves que no sean 'month'
-          const dataKeys = Object.keys(graphData[0] || {}).filter(key => key !== 'month');
-          
-          // Calcular el dominio del eje Y
-          const yDomain = calculateYAxisDomain(graphData, dataKeys);
-          
-          // Generar los ticks basados en el máximo
-          const yTicks = [];
-          for (let i = 0; i <= yDomain[1]; i += 20) {
-            yTicks.push(i);
-          }
-          
-          return (
-            <Box sx={{ 
-              height: 'calc(100% - 80px)', // Reducir la resta de 120px a 80px para maximizar altura
-              width: '100%', 
-              mt: 1, // Reducir margin-top de 2 a 1
-              mb: 2, // Reducir margin-bottom de 3 a 2
-              overflow: 'hidden'
-            }}>
-              <Typography variant="h6" sx={{ 
-                mb: 1, 
-                color: 'white', 
-                textAlign: 'center',
-                fontSize: '1.1rem',
-                fontWeight: 500
-              }}>
-                {category.name} - Evolución Histórica
-              </Typography>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart 
-                  data={graphData} 
-                  margin={{ top: 5, right: 5, left: 5, bottom: 35 }} // Incrementar el margen inferior para la leyenda
-                  style={{ overflow: 'hidden' }}
-                >
-                  <XAxis dataKey="month" stroke="#fff" />
-                  <YAxis 
-                    stroke="#fff" 
-                    domain={yDomain}
-                    ticks={yTicks}
-                    tickFormatter={(value) => `${value}%`}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend 
-                    layout="horizontal"
-                    verticalAlign="bottom"
-                    align="center"
-                    wrapperStyle={{ 
-                      paddingTop: 10,
-                      bottom: 0,
-                      fontSize: '0.75rem', // Reducir ligeramente el tamaño de fuente para que quepa mejor
-                      lineHeight: '14px' // Ajustar la altura de línea para compactar la leyenda
-                    }}
-                    iconSize={8} // Reducir el tamaño del icono para ahorrar espacio
-                    iconType="circle" // Usar círculos en lugar de rectángulos para ahorrar espacio
-                  />
-                  {seriesData.map((series, index) => (
-                    <Line 
-                      key={series.name}
-                      type="monotone" 
-                      dataKey={series.name} 
-                      stroke={COLORS[index % COLORS.length]}
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                      activeDot={{ r: 5 }}
-                    />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </Box>
-          );
-        };
-      
-        // En el return de renderCategoryContent, ajustar el contenedor principal
+        }
+        
+        // Set overflow to 'auto' instead of 'hidden' to make content scrollable
         return (
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            height: '100%' // Asegurar que utiliza toda la altura disponible
-          }}>
-            {/* Navigation controls - más compacto */}
-            <Box sx={{ 
-              display: 'flex', 
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              mb: 0.5 // Reducir el margen inferior para dar más espacio a la gráfica
-            }}>
-              <IconButton onClick={handlePrevCategory} sx={{ color: 'white', padding: 0.5 }}> {/* Reducir padding */}
-                <ArrowBackIcon fontSize="small" /> {/* Icono más pequeño */}
-              </IconButton>
-              <Typography variant="subtitle1" sx={{ color: 'white' }}>
-                {category.name}
-              </Typography>
-              <IconButton onClick={handleNextCategory} sx={{ color: 'white', padding: 0.5 }}> {/* Reducir padding */}
-                <ArrowForwardIcon fontSize="small" /> {/* Icono más pequeño */}
-              </IconButton>
+            <Box sx={{ height: '100%', overflow: 'auto', pr: 1 }}>
+                <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                    {category.name}
+                </Typography>
+                {categoryData.map((item, index) => (
+                    <Box key={index} sx={{ mb: 1.5 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                            <Typography variant="body2" sx={{ color: 'white' }}>
+                                {category.key === 'teraTypes' ? item.type : (item.name || item.value)}
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: 'white' }}>
+                                {parseFloat(item.percentage).toFixed(2)}%
+                            </Typography>
+                        </Box>
+                        <Box sx={{ 
+                            width: '100%', 
+                            height: '8px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            borderRadius: '4px',
+                            overflow: 'hidden'
+                        }}>
+                            <Box sx={{ 
+                                width: `${Math.min(item.percentage, 100)}%`, 
+                                height: '100%',
+                                backgroundColor: category.key === 'abilities' ? '#24CC9F' : 
+                                              category.key === 'moves' ? '#FF6384' : 
+                                              category.key === 'items' ? '#36A2EB' :
+                                              category.key === 'spreads' ? '#FFCE56' :
+                                              category.key === 'teraTypes' ? '#9966FF' : '#FF9F40',
+                                borderRadius: '4px'
+                            }} />
+                        </Box>
+                    </Box>
+                ))}
             </Box>
-            
-            <Box sx={{ 
-              flexGrow: 1, 
-              height: 'calc(100% - 40px)' // Reservar espacio solo para los controles de navegación
-            }}>
-              {renderCategoryTimeSeries(category.key)}
-            </Box>
-          </Box>
         );
-      };
+    };
+
+    // Add navigation between categories
+    const renderCategoryNavigation = () => (
+        <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 2,
+            borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+            pb: 1
+        }}>
+            <IconButton 
+                onClick={handlePrevCategory}
+                disabled={currentCategory === 0}
+                sx={{ color: 'white' }}
+            >
+                <NavigateBeforeIcon />
+            </IconButton>
+            <Typography variant="h6" sx={{ color: 'white' }}>
+                {categories[currentCategory].name}
+            </Typography>
+            <IconButton 
+                onClick={handleNextCategory}
+                disabled={currentCategory === categories.length - 1}
+                sx={{ color: 'white' }}
+            >
+                <NavigateNextIcon />
+            </IconButton>
+        </Box>
+    );
+
+    // Add this function to prepare historical data for charts
+    const prepareHistoricalChartData = (pokemonName) => {
+        if (!historicalData || !pokemonName) return [];
+        
+        const chartData = [];
+        // Get months sorted in chronological order
+        const months = Object.keys(historicalData).sort();
+        
+        months.forEach(month => {
+            if (historicalData[month] && 
+                historicalData[month].data) {
+                
+                // Try to find the Pokemon with exact or case-insensitive match
+                const pokemonData = historicalData[month].data[pokemonName] || 
+                    Object.entries(historicalData[month].data)
+                        .find(([key]) => key.toLowerCase() === pokemonName.toLowerCase())?.[1];
+                
+                if (pokemonData) {
+                    // Format the month for display (e.g., "2023-01" to "Jan 2023")
+                    const [year, monthNum] = month.split('-');
+                    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const formattedMonth = `${monthNames[parseInt(monthNum) - 1]} ${year}`;
+                    
+                    chartData.push({
+                        month: formattedMonth,
+                        usage: pokemonData.usage
+                    });
+                }
+            }
+        });
+        
+        return chartData;
+    };
+
+    // Add this function to render the usage trend chart
+    const renderUsageTrendChart = () => {
+        if (!selectedPokemon) return null;
+        
+        const chartData = prepareHistoricalChartData(selectedPokemon.name);
+        
+        if (chartData.length <= 1) {
+            return (
+                <Box sx={{ mt: 3, textAlign: 'center' }}>
+                    <Typography variant="body1" sx={{ color: 'white' }}>
+                        Not enough historical data to display trends
+                    </Typography>
+                </Box>
+            );
+        }
+        
+        return (
+            <Box sx={{ mt: 4, height: 300 }}>
+                <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                    Monthly Usage Trend
+                </Typography>
+                <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                        data={chartData}
+                        margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                        <XAxis 
+                            dataKey="month" 
+                            tick={{ fill: 'white' }}
+                        />
+                        <YAxis 
+                            label={{ 
+                                value: 'Usage %', 
+                                angle: -90, 
+                                position: 'insideLeft',
+                                fill: 'white' 
+                            }}
+                            tick={{ fill: 'white' }}
+                        />
+                        <Tooltip 
+                            contentStyle={{ 
+                                backgroundColor: '#221FC7',
+                                borderColor: '#1A1896',
+                                color: 'white'
+                            }}
+                        />
+                        <Legend />
+                        <Line 
+                            type="monotone" 
+                            dataKey="usage" 
+                            stroke="#24CC9F" 
+                            activeDot={{ r: 8 }}
+                            name="Usage %"
+                        />
+                    </LineChart>
+                </ResponsiveContainer>
+            </Box>
+        );
+    };
 
     return (
         <Box sx={{ padding: 2 }}>
@@ -755,7 +673,7 @@ const PokemonUsage = () => {
                                 '&::-webkit-scrollbar': {
                                     display: 'none'
                                 },
-                                '-ms-overflow-style': 'none'
+                                msOverflowStyle: 'none'  // Fixed: kebab-case to camelCase
                             }
                         }}>
                             {isLoadingFormat ? (
@@ -768,7 +686,7 @@ const PokemonUsage = () => {
                                 </Box>
                             ) : selectedPokemon && pokemonDetails ? (
                                 <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                    {/* Header con nombre y sprite */}
+                                    {/* Pokemon header with name, sprite and usage */}
                                     <Box sx={{ 
                                         display: 'flex', 
                                         alignItems: 'center',
@@ -787,13 +705,19 @@ const PokemonUsage = () => {
                                         </Box>
                                     </Box>
 
+                                    {/* Category navigation */}
+                                    {renderCategoryNavigation()}
+
+                                    {/* Content area */}
                                     <Box sx={{ 
                                         flexGrow: 1,
                                         overflow: 'hidden',
                                         mt: 1,
                                     }}>
                                         {renderCategoryContent()}
+                                        {renderUsageTrendChart()}
                                     </Box>
+
                                 </Box>
                             ) : (
                                 <Box sx={{ 
