@@ -8,6 +8,10 @@ import axios from 'axios';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import FirstPageIcon from '@mui/icons-material/FirstPage';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import LastPageIcon from '@mui/icons-material/LastPage';
 
 //todo
 //menos numeros de pagination, 1 2 3 ... 100
@@ -688,18 +692,49 @@ const PokemonUsage = () => {
                                             </Box>
                                         </Paper>
                                     ))}
-                                    <Pagination 
-                                        count={Math.ceil(usageData.length / itemsPerPage)}
-                                        page={page}
-                                        onChange={handlePageChange}
-                                        color="primary"
-                                        siblingCount={1}
-                                        sx={{
-                                            '& .MuiPaginationItem-root': {
-                                                color: 'white'
-                                            }
-                                        }}
-                                    />
+                                    <Box sx={{ 
+                                        display: 'flex', 
+                                        justifyContent: 'center', 
+                                        alignItems: 'center',
+                                        gap: 2,
+                                        mt: 2
+                                    }}>
+                                        <IconButton 
+                                            onClick={() => handlePageChange(null, 1)} 
+                                            disabled={page === 1}
+                                            sx={{ color: 'white' }}
+                                        >
+                                            <FirstPageIcon />
+                                        </IconButton>
+                                        
+                                        <IconButton 
+                                            onClick={() => handlePageChange(null, page - 1)} 
+                                            disabled={page === 1}
+                                            sx={{ color: 'white' }}
+                                        >
+                                            <NavigateBeforeIcon />
+                                        </IconButton>
+                                        
+                                        <Typography sx={{ color: 'white', mx: 1, minWidth: '60px', textAlign: 'center' }}>
+                                            {page}/{Math.ceil(usageData.length / itemsPerPage)}
+                                        </Typography>
+                                        
+                                        <IconButton 
+                                            onClick={() => handlePageChange(null, page + 1)} 
+                                            disabled={page >= Math.ceil(usageData.length / itemsPerPage)}
+                                            sx={{ color: 'white' }}
+                                        >
+                                            <NavigateNextIcon />
+                                        </IconButton>
+                                        
+                                        <IconButton 
+                                            onClick={() => handlePageChange(null, Math.ceil(usageData.length / itemsPerPage))} 
+                                            disabled={page >= Math.ceil(usageData.length / itemsPerPage)}
+                                            sx={{ color: 'white' }}
+                                        >
+                                            <LastPageIcon />
+                                        </IconButton>
+                                    </Box>
                                 </>
                             )}
                         </Box>
