@@ -266,86 +266,40 @@ const PokemonUsage = () => {
                     const pokemonData = response.data.data[detailsKey];
                     console.log("Found Pokémon data:", pokemonData);
                     
-                    // Create details object with proper structure for each category
+                    // Create the details object with proper parsing
                     const details = {
-                        abilities: [],
-                        moves: [],
-                        items: [],
-                        spreads: [],
-                        teraTypes: [],
-                        teammates: []
+                        abilities: Object.entries(pokemonData.Abilities || {}).map(([name, usage]) => ({
+                            name,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage),
+                        
+                        moves: Object.entries(pokemonData.Moves || {}).map(([name, usage]) => ({
+                            name,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
+                        
+                        items: Object.entries(pokemonData.Items || {}).map(([name, usage]) => ({
+                            name,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
+                        
+                        // Ensure correct handling of Spreads data
+                        spreads: Object.entries(pokemonData.Spreads || {}).map(([value, usage]) => ({
+                            value, // Keep as value, not name
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
+                        
+                        teraTypes: Object.entries(pokemonData["Tera Types"] || {}).map(([type, usage]) => ({
+                            type,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage),
+                        
+                        // Ensure correct handling of Teammates data
+                        teammates: Object.entries(pokemonData.Teammates || {}).map(([name, usage]) => ({
+                            name,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10)
                     };
-                    
-                    // Process each category in the data
-                    Object.entries(pokemonData).forEach(([category, data]) => {
-                        if (typeof data === 'object' && data !== null) {
-                            const normalizedCategory = category.toLowerCase();
-                            let targetCategory;
-                            
-                            // Map the category to our internal keys
-                            if (normalizedCategory === 'items') targetCategory = 'items';
-                            else if (normalizedCategory === 'abilities') targetCategory = 'abilities';
-                            else if (normalizedCategory === 'moves') targetCategory = 'moves';
-                            else if (normalizedCategory === 'spreads') targetCategory = 'spreads';
-                            else if (normalizedCategory === 'tera types') targetCategory = 'teraTypes';
-                            else if (normalizedCategory === 'teammates') targetCategory = 'teammates';
-                            
-                            if (targetCategory) {
-                                // Process each item in the category
-                                Object.entries(data).forEach(([key, value]) => {
-                                    if (key.toLowerCase() !== 'other') {  // Handle "Other" specially
-                                        // Format the data based on the category
-                                        if (targetCategory === 'teraTypes') {
-                                            details[targetCategory].push({
-                                                type: key,
-                                                percentage: parseFloat(value.toFixed(2))
-                                            });
-                                        } else if (targetCategory === 'spreads') {
-                                            details[targetCategory].push({
-                                                value: key,
-                                                percentage: parseFloat(value.toFixed(2))
-                                            });
-                                        } else {
-                                            details[targetCategory].push({
-                                                name: key,
-                                                percentage: parseFloat(value.toFixed(2))
-                                            });
-                                        }
-                                    }
-                                });
-                                
-                                // Sort by percentage in descending order
-                                details[targetCategory].sort((a, b) => b.percentage - a.percentage);
-                                
-                                // Check for "Other" entry in the current category
-                                const otherEntry = Object.entries(data).find(([key]) => 
-                                    key.toLowerCase() === 'other'
-                                );
-                                
-                                if (otherEntry) {
-                                    const [_, value] = otherEntry;
-                                    
-                                    // Add "Other" with the appropriate structure for the category
-                                    if (targetCategory === 'teraTypes') {
-                                        details[targetCategory].push({
-                                            type: "Other",
-                                            percentage: parseFloat(value.toFixed(2))
-                                        });
-                                    } else if (targetCategory === 'spreads') {
-                                        details[targetCategory].push({
-                                            value: "Other",
-                                            percentage: parseFloat(value.toFixed(2))
-                                        });
-                                    } else {
-                                        details[targetCategory].push({
-                                            name: "Other",
-                                            percentage: parseFloat(value.toFixed(2))
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    });
                     
                     console.log("Processed details:", details);
                     setPokemonDetails(details);

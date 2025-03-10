@@ -378,7 +378,7 @@ function combineData(usageData, movesetData) {
     return result;
 }
 
-// Corrige la función parseMovesetText para manejar correctamente los porcentajes
+// Corrige la función parseMovesetText para manejar correctamente los datos de spreads y teammates
 function parseMovesetText(text) {
     const pokemonData = {};
     
@@ -447,7 +447,15 @@ function parseMovesetText(text) {
             
             for (const section of sections) {
                 // Find section data with clear boundary pattern
-                const sectionRegex = new RegExp(`\\| ${section}\\s*\\|(.*?)\\+[-]{40,}\\+`, "s");
+                let sectionRegex;
+                
+                if (section === "Teammates" || section === "Spreads") {
+                    // Special handling for Teammates and Spreads which often have different formatting
+                    sectionRegex = new RegExp(`\\| ${section}\\s*\\|(.*?)\\+[-]{40,}\\+`, "s");
+                } else {
+                    sectionRegex = new RegExp(`\\| ${section}\\s*\\|(.*?)\\+[-]{40,}\\+`, "s");
+                }
+                
                 const sectionMatch = pokemonBlock.match(sectionRegex);
                 
                 if (sectionMatch && sectionMatch[1]) {
@@ -455,15 +463,25 @@ function parseMovesetText(text) {
                     const dataLines = sectionMatch[1].split('\n').filter(line => line.includes('%'));
                     
                     dataLines.forEach(line => {
-                        // Match pattern: | Name 12.345% |
-                        const dataMatch = line.match(/\|\s*([^|0-9]+?)\s+([0-9.]+)%/);
+                        // Different regex patterns based on the section
+                        let dataMatch;
+                        
+                        if (section === "Spreads") {
+                            // Pattern for spreads like: | Adamant:4/252/0/0/0/252 22.547% |
+                            dataMatch = line.match(/\|\s*([^|0-9%]+?[^|%]+?)\s+([0-9.]+)%/);
+                        } else if (section === "Teammates") {
+                            // Pattern for teammates like: | Incineroar 51.044% |
+                            dataMatch = line.match(/\|\s*([^|0-9%]+?)\s+([0-9.]+)%/);
+                        } else {
+                            // General pattern for other sections
+                            dataMatch = line.match(/\|\s*([^|0-9]+?)\s+([0-9.]+)%/);
+                        }
+                        
                         if (dataMatch) {
                             const name = dataMatch[1].trim();
                             const percentage = parseFloat(dataMatch[2]);
                             
-                            if (!name.toLowerCase().startsWith("other")) {
-                                data[section][name] = percentage;
-                            }
+                            data[section][name] = percentage;
                         }
                     });
                 }
