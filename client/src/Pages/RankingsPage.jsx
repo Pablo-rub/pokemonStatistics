@@ -18,8 +18,6 @@ import RemoveIcon from '@mui/icons-material/Remove';
 
 //todo
 //rankings de victoria
-//other
-//teammates and spreads
 
 const PokemonUsage = () => {
     const [formats, setFormats] = useState([]);
