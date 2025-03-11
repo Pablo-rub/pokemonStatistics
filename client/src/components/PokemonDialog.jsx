@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Dialog,
   DialogTitle,
@@ -11,42 +11,43 @@ import {
   IconButton
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import useDraggable from '../hooks/useDraggable';
 
 const PokemonDialog = ({ open, onClose, position, onSelectPokemon }) => {
   const [pokemonList, setPokemonList] = useState([]);
   const [selectedPokemon, setSelectedPokemon] = useState(null);
   const [loading, setLoading] = useState(false);
   
-  // Draggable dialog states
-  const [dialogPosition, setDialogPosition] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  // Use the draggable hook
+  const { ref, style, handleMouseDown, resetPosition, isDragging } = useDraggable();
   
-  const paperRef = useRef(null);
-  
+  // Effect to fetch Pokémon data and reset position when dialog opens/closes
   useEffect(() => {
-    const fetchPokemonList = async () => {
-      setLoading(true);
-      try {
-        // In a real implementation, fetch from your API
-        // For now, using a sample list
-        const samplePokemonList = [
-          "Urshifu-Rapid-Strike", "Ogerpon", "Raging Bolt", "Iron Thorns", 
-          "Chi-Yu", "Flutter Mane", "Chien-Pao", "Landorus-Therian", 
-          "Incineroar", "Tornadus", "Archaludon", "Amoonguss"
-        ];
-        setPokemonList(samplePokemonList.sort());
-      } catch (error) {
-        console.error("Error fetching Pokémon list:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (open) {
+      const fetchPokemonList = async () => {
+        setLoading(true);
+        try {
+          // In a real implementation, fetch from your API
+          // For now, using a sample list
+          const samplePokemonList = [
+            "Urshifu-Rapid-Strike", "Ogerpon", "Raging Bolt", "Iron Thorns", 
+            "Chi-Yu", "Flutter Mane", "Chien-Pao", "Landorus-Therian", 
+            "Incineroar", "Tornadus", "Archaludon", "Amoonguss"
+          ];
+          setPokemonList(samplePokemonList.sort());
+        } catch (error) {
+          console.error("Error fetching Pokémon list:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
       fetchPokemonList();
+    } else {
+      resetPosition();
+      setSelectedPokemon(null);
     }
-  }, [open]);
+  }, [open, resetPosition]);
 
   const handleSelectPokemon = () => {
     if (selectedPokemon) {
@@ -64,66 +65,6 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon }) => {
       default: return "Select Pokémon";
     }
   };
-  
-  // Reset position and state when dialog closes
-  useEffect(() => {
-    if (!open) {
-      setDialogPosition(null);
-      setIsDragging(false);
-    }
-  }, [open]);
-  
-  // Mouse down handler to start dragging
-  const handleMouseDown = (e) => {
-    if (e.target.closest('.MuiDialogTitle-root')) {
-      const rect = paperRef.current?.getBoundingClientRect();
-      if (rect) {
-        // Set initial position if not already set
-        if (!dialogPosition) {
-          setDialogPosition({
-            x: rect.left,
-            y: rect.top
-          });
-        }
-        setIsDragging(true);
-        // Calculate offset between cursor and dialog top-left corner
-        setDragOffset({
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top
-        });
-      }
-    }
-  };
-
-  // Mouse move handler for dragging
-  const handleMouseMove = useCallback((e) => {
-    if (isDragging) {
-      setDialogPosition({
-        x: e.clientX - dragOffset.x,
-        y: e.clientY - dragOffset.y
-      });
-    }
-  }, [isDragging, dragOffset]);
-
-  // Mouse up handler to stop dragging
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  // Add and remove event listeners
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    } else {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    }
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, handleMouseMove]);
 
   return (
     <Dialog 
@@ -131,36 +72,35 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon }) => {
       onClose={onClose}
       fullWidth
       maxWidth="sm"
-      onMouseDown={handleMouseDown}
       PaperProps={{
-        ref: paperRef,
-        sx: {
+        ref,
+        style: {
+          ...style,
           backgroundColor: '#221FC7',
-          position: dialogPosition ? 'fixed' : 'static',
-          left: dialogPosition?.x,
-          top: dialogPosition?.y,
-          cursor: isDragging ? 'grabbing' : 'default',
-          margin: dialogPosition ? 0 : 'auto',
-          transition: 'none',
+          transition: 'none'
+        },
+        onMouseDown: handleMouseDown,
+        sx: {
           '& .MuiDialogTitle-root': {
-            cursor: 'grab',
-            userSelect: 'none'
+            cursor: isDragging ? 'grabbing' : 'grab',
+            userSelect: 'none',
+            padding: '16px 24px',
+            color: 'white'
           }
         }
       }}
     >
-      <DialogTitle sx={{ 
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        color: 'white',
-        backgroundColor: isDragging ? 'rgba(26, 24, 150, 0.8)' : 'transparent',
-        transition: 'background-color 0.2s'
-      }}>
-        {positionName(position)}
-        <IconButton onClick={onClose} sx={{ color: 'white' }}>
-          <CloseIcon />
-        </IconButton>
+      <DialogTitle>
+        <Box sx={{ 
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          {positionName(position)}
+          <IconButton onClick={onClose} sx={{ color: 'white' }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
       </DialogTitle>
 
       <DialogContent>
