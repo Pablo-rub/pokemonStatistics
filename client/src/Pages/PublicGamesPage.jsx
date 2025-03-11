@@ -15,7 +15,6 @@ import ReplayCard from "../components/ReplayCard";
 import { useAuth } from "../contexts/AuthContext";
 
 //todo
-//improve performance
 //filtrar por formato
 
 function PublicGamesPage() {

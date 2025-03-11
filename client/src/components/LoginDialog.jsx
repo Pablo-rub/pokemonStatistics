@@ -19,7 +19,6 @@ import { Visibility, VisibilityOff } from '@mui/icons-material';
 
 //todo
 //recuperar contraseña
-//que no se ponga blanco al hacer hover sobre una sugerencia
 
 export default function LoginDialog({ open, onClose, isSignUp = false }) {
   const [email, setEmail] = useState('');
