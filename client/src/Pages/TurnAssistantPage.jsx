@@ -12,7 +12,6 @@ import BattleField from "../components/BattleField";
 
 //todo
 //analyze battle e icono blanco
-//mover dialog
 //select format
 //order de los pokemon del select por porcentaje de uso en ese formato
 

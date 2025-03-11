@@ -313,7 +313,61 @@ const theme = createTheme({
       '& .MuiTypography-root': {
         color: '#ffffff'
       }
-    }
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: '#221FC7', // Match your app's blue background
+          '& .MuiMenuItem-root': {
+            color: '#ffffff', // White text for menu items
+            '&:hover': {
+              backgroundColor: '#1A1896', // Darker blue on hover
+            },
+            '&.Mui-selected': {
+              backgroundColor: '#1A1896', // Dark blue for selected item
+              '&:hover': {
+                backgroundColor: '#15137A', // Even darker on hover when selected
+              }
+            }
+          },
+          // Add a border to make the dropdown stand out
+          border: '1px solid rgba(255, 255, 255, 0.2)'
+        }
+      }
+    },
+    MuiAutocomplete: {
+      styleOverrides: {
+        popper: {
+          '& .MuiPaper-root': {
+            backgroundColor: '#221FC7',
+            color: '#ffffff',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            '& .MuiAutocomplete-option': {
+              '&:hover': {
+                backgroundColor: '#1A1896',
+              },
+              '&[aria-selected="true"]': {
+                backgroundColor: '#1A1896',
+                '&:hover': {
+                  backgroundColor: '#15137A',
+                }
+              },
+            },
+            '& .MuiAutocomplete-listbox': {
+              '& .MuiAutocomplete-option': {
+                color: '#ffffff',
+              }
+            },
+            '& .MuiAutocomplete-noOptions': {
+              color: '#ffffff',
+            },
+            '& .MuiListSubheader-root': {
+              color: 'rgba(255, 255, 255, 0.7)',
+            }
+          },
+        },
+      }
+    },
   },
 });
 
