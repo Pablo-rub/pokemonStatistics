@@ -8,7 +8,7 @@ import {
 import PokemonDialog from './PokemonDialog';
 import PokemonSprite from './PokemonSprite';
 
-const BattleField = ({ onPokemonSelect }) => {
+const BattleField = ({ onPokemonSelect, pokemonList = [] }) => {
   const [dialogOpen, setDialogOpen] = useState({
     topLeft: false,
     topRight: false,
@@ -101,6 +101,7 @@ const BattleField = ({ onPokemonSelect }) => {
             onClose={() => handleCloseDialog('topLeft')}
             position="topLeft"
             onSelectPokemon={handleSelectPokemon}
+            pokemonList={pokemonList}
           />
         </Grid>
         <Grid item xs={6}>
@@ -110,6 +111,7 @@ const BattleField = ({ onPokemonSelect }) => {
             onClose={() => handleCloseDialog('topRight')}
             position="topRight"
             onSelectPokemon={handleSelectPokemon}
+            pokemonList={pokemonList}
           />
         </Grid>
       </Grid>
@@ -137,6 +139,7 @@ const BattleField = ({ onPokemonSelect }) => {
             onClose={() => handleCloseDialog('bottomLeft')}
             position="bottomLeft"
             onSelectPokemon={handleSelectPokemon}
+            pokemonList={pokemonList}
           />
         </Grid>
         <Grid item xs={6}>
@@ -146,6 +149,7 @@ const BattleField = ({ onPokemonSelect }) => {
             onClose={() => handleCloseDialog('bottomRight')}
             position="bottomRight"
             onSelectPokemon={handleSelectPokemon}
+            pokemonList={pokemonList}
           />
         </Grid>
       </Grid>
