@@ -56,9 +56,38 @@ app.get('/api/games', async (req, res) => {
     const playerFilter = req.query.playerFilter || '';
     const ratingFilter = req.query.ratingFilter || 'all';
     const dateFilter = req.query.dateFilter || 'all';
+    const userId = req.query.userId;
+    const showSaved = req.query.showSaved || 'all';
     const offset = (page - 1) * limit;
 
     let whereClause = [];
+    let joinClause = '';
+
+    // Filtro para partidas no guardadas
+    if (userId && showSaved === 'unsaved') {
+      joinClause = `
+        LEFT JOIN (
+          SELECT replay_id 
+          FROM \`pokemon-statistics.pokemon_replays.saved_replays\`,
+          UNNEST(replays_saved) as replays
+          WHERE user_id = '${userId}'
+        ) saved ON r.replay_id = saved.replay_id
+      `;
+      whereClause.push('saved.replay_id IS NULL');
+    }
+
+    // Nuevo: Filtro para partidas guardadas
+    if (userId && showSaved === 'saved') {
+      joinClause = `
+        INNER JOIN (
+          SELECT replay_id 
+          FROM \`pokemon-statistics.pokemon_replays.saved_replays\`,
+          UNNEST(replays_saved) as replays
+          WHERE user_id = '${userId}'
+        ) saved ON r.replay_id = saved.replay_id
+      `;
+    }
+
     let orderBy = 'date DESC';
 
     // Sort clause
@@ -109,7 +138,8 @@ app.get('/api/games', async (req, res) => {
     // Get filtered count
     const countQuery = `
       SELECT COUNT(*) as count
-      FROM \`pokemon-statistics.pokemon_replays.replays\`
+      FROM \`pokemon-statistics.pokemon_replays.replays\` r
+      ${joinClause}
       ${whereClauseString}
     `;
     const [countRows] = await bigQuery.query(countQuery);
@@ -117,8 +147,9 @@ app.get('/api/games', async (req, res) => {
 
     // Get paginated results
     const dataQuery = `
-      SELECT *
-      FROM \`pokemon-statistics.pokemon_replays.replays\`
+      SELECT r.*
+      FROM \`pokemon-statistics.pokemon_replays.replays\` r
+      ${joinClause}
       ${whereClauseString}
       ORDER BY ${orderBy}
       LIMIT ${limit}
@@ -199,7 +230,7 @@ app.get('/api/formats/:month', async (req, res) => {
     }
 });
 
-// Endpoint to get the rankings
+// Modify the /api/rankings endpoint to fetch both sources
 app.get('/api/rankings', async (req, res) => {
     const { format, month } = req.query;
 
@@ -208,16 +239,272 @@ app.get('/api/rankings', async (req, res) => {
         return;
     }
 
-    const url = `https://www.smogon.com/stats/${month}/${format}`;
-    console.log("Fetching data from:", url);
     try {
-        const response = await axios.get(url);
-        res.send(response.data);
+        // First fetch usage data for proper sorting
+        const baseUrl = 'https://www.smogon.com/stats';
+        const monthPath = `/${month}`;
+        
+        // 1. Fetch the usage data (no "moveset/" in the path)
+        const usageUrl = `${baseUrl}${monthPath}/${format}.txt`;
+        console.log('Fetching usage stats from URL:', usageUrl);
+        
+        const usageResponse = await axios.get(usageUrl);
+        const usageData = parseUsageData(usageResponse.data);
+        
+        // 2. Fetch the moveset data for details
+        const movesetUrl = `${baseUrl}${monthPath}/moveset/${format}.txt`;
+        console.log('Fetching moveset data from URL:', movesetUrl);
+        
+        const movesetResponse = await axios.get(movesetUrl);
+        const movesetData = parseMovesetText(movesetResponse.data);
+        
+        // 3. Combine the data, prioritizing the order from usage data
+        const combinedData = combineData(usageData, movesetData);
+        
+        // Log para depuración
+        console.log(`Sending data with ${Object.keys(combinedData.data).length} Pokémon entries`);
+        // Opcional: log de ejemplo para el primer Pokémon
+        if (Object.keys(combinedData.data).length > 0) {
+            const firstPokemon = Object.keys(combinedData.data)[0];
+            console.log(`Sample: ${firstPokemon} with usage ${combinedData.data[firstPokemon].usage}%`);
+        }
+        
+        res.send(combinedData);
     } catch (error) {
-        console.error("Error al obtener datos de Smogon:", error);
-        res.status(500).send("Error al obtener datos de Smogon");
+        console.error("Error fetching data from Smogon:", error);
+        console.error("Error details:", error.message);
+        
+        // Intentar con formato base si hay un error (sin -1760)
+        try {
+            if (format.includes('-')) {
+                const baseFormat = format.split('-')[0];
+                const baseUrl = 'https://www.smogon.com/stats';
+                const monthPath = `/${month}`;
+                
+                // Try both sources with base format
+                const usageUrl = `${baseUrl}${monthPath}/${baseFormat}.txt`;
+                const movesetUrl = `${baseUrl}${monthPath}/moveset/${baseFormat}.txt`;
+                
+                console.log('Trying fallback usage URL:', usageUrl);
+                
+                const usageResponse = await axios.get(usageUrl);
+                const usageData = parseUsageData(usageResponse.data);
+                
+                console.log('Trying fallback moveset URL:', movesetUrl);
+                
+                const movesetResponse = await axios.get(movesetUrl);
+                const movesetData = parseMovesetText(movesetResponse.data);
+                
+                const combinedData = combineData(usageData, movesetData);
+                
+                res.send(combinedData);
+                return;
+            }
+        } catch (fallbackError) {
+            console.error("Fallback also failed:", fallbackError.message);
+        }
+        
+        res.status(500).send("Error fetching data from Smogon");
     }
 });
+
+// Function to parse usage data from Smogon
+function parseUsageData(text) {
+    const usageData = [];
+    const lines = text.split('\n');
+    
+    // Find the start of the data section
+    let dataStartLine = 0;
+    for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes('| Rank | Pokemon') && lines[i].includes('| Usage %')) {
+            dataStartLine = i + 2; // Start 2 lines after the header
+            break;
+        }
+    }
+    
+    // Parse each data line
+    for (let i = dataStartLine; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.startsWith('|') && !line.startsWith('+-')) {
+            // Parse line like: "| 1 | Urshifu-Rapid-Strike | 32.27% |"
+            const parts = line.split('|').filter(part => part.trim());
+            if (parts.length >= 3) {
+                const rank = parts[0].trim();
+                const name = parts[1].trim();
+                // Extract percentage without % symbol
+                const usageMatch = parts[2].trim().match(/([0-9.]+)%/);
+                if (usageMatch) {
+                    const usagePercentage = parseFloat(usageMatch[1]);
+                    usageData.push({
+                        rank,
+                        name,
+                        usagePercentage
+                    });
+                }
+            }
+        }
+        
+        // Stop parsing when we reach the end of the data table
+        if (line.startsWith('+-')) {
+            const nextLine = lines[i + 1] ? lines[i + 1].trim() : '';
+            if (!nextLine.startsWith('|')) {
+                break;
+            }
+        }
+    }
+    
+    return usageData;
+}
+
+// Function to combine usage data with moveset details
+function combineData(usageData, movesetData) {
+    const result = {
+        data: {}
+    };
+    
+    // First, add all Pokemon from the usage data to maintain the correct order
+    for (const pokemon of usageData) {
+        const movesetInfo = movesetData.data[pokemon.name] || {};
+        
+        // Create entry with usage data and any available moveset data
+        result.data[pokemon.name] = {
+            ...movesetInfo,
+            // Keep the usage percentage as is - don't multiply again
+            usage: pokemon.usagePercentage,
+            rank: parseInt(pokemon.rank)
+        };
+    }
+    
+    return result;
+}
+
+// Function to parse moveset data from Smogon with correct teammate and spread handling
+function parseMovesetText(text) {
+    const pokemonData = {};
+    
+    try {
+        // Modified regex to only match actual Pokémon headers
+        const pokemonRegex = /\+[-]{40,}\+\s*\n\s*\| ([^|]+?) \|\s*\n\s*\+[-]{40,}\+/g;
+        
+        // Get all Pokémon header positions
+        const pokemonPositions = [];
+        let match;
+        while ((match = pokemonRegex.exec(text)) !== null) {
+            pokemonPositions.push({
+                name: match[1].trim(),
+                position: match.index
+            });
+        }
+        
+        // Process each Pokémon block
+        for (let i = 0; i < pokemonPositions.length; i++) {
+            const pokemonName = pokemonPositions[i].name;
+            
+            // Skip "Checks and Counters" section headers
+            if (pokemonName === "Checks and Counters") continue;
+            
+            const startPos = pokemonPositions[i].position;
+            const endPos = (i < pokemonPositions.length - 1) ? 
+                            pokemonPositions[i + 1].position : 
+                            text.length;
+            
+            const pokemonBlock = text.substring(startPos, endPos);
+            
+            // Initialize data structure
+            const data = {
+                rawCount: 0,
+                avgWeight: 0,
+                viabilityCeiling: 0,
+                usage: 0,
+                Abilities: {},
+                Items: {},
+                Spreads: {},
+                Moves: {},
+                "Tera Types": {},
+                Teammates: {},
+                "Checks and Counters": {}
+            };
+            
+            // Extract basic data
+            const rawCountMatch = pokemonBlock.match(/\| Raw count: (\d+)/);
+            if (rawCountMatch) {
+                data.rawCount = parseInt(rawCountMatch[1]);
+            }
+            
+            const weightMatch = pokemonBlock.match(/\| Avg\. weight: ([0-9.e-]+)/);
+            if (weightMatch) {
+                data.avgWeight = parseFloat(weightMatch[1]);
+                data.usage = parseFloat((data.avgWeight * 100).toFixed(2)); // Convert to percentage
+            }
+            
+            const ceilingMatch = pokemonBlock.match(/\| Viability Ceiling: (\d+)/);
+            if (ceilingMatch) {
+                data.viabilityCeiling = parseInt(ceilingMatch[1]);
+            }
+            
+            // Process each section separately
+            const sectionHeaders = [
+                "Abilities", 
+                "Items", 
+                "Spreads", 
+                "Moves", 
+                "Tera Types", 
+                "Teammates", 
+                "Checks and Counters"
+            ];
+            
+            for (const section of sectionHeaders) {
+                // Find the section start position
+                const sectionStartIndex = pokemonBlock.indexOf(`| ${section}`);
+                if (sectionStartIndex === -1) continue;
+                
+                // Find the section end position (next section or end of block)
+                let sectionEndIndex = pokemonBlock.length;
+                for (const nextSection of sectionHeaders) {
+                    if (nextSection === section) continue;
+                    
+                    const nextSectionIndex = pokemonBlock.indexOf(`| ${nextSection}`, sectionStartIndex);
+                    if (nextSectionIndex !== -1 && nextSectionIndex < sectionEndIndex) {
+                        sectionEndIndex = nextSectionIndex;
+                    }
+                }
+                
+                // Extract section content
+                const sectionContent = pokemonBlock.substring(sectionStartIndex, sectionEndIndex);
+                const sectionLines = sectionContent.split('\n');
+                
+                // Process each line in the section
+                for (let j = 1; j < sectionLines.length; j++) { // Skip the header line
+                    const line = sectionLines[j].trim();
+                    if (!line || !line.includes('%') || !line.includes('|')) continue;
+                    
+                    let match;
+                    if (section === "Spreads") {
+                        match = line.match(/\|\s*([^|]+?)\s+([0-9.]+)%/);
+                    } else if (section === "Teammates") {
+                        match = line.match(/\|\s*([^|0-9]+?)\s+([0-9.]+)%/);
+                    } else {
+                        match = line.match(/\|\s*([^|0-9]+?)\s+([0-9.]+)%/);
+                    }
+                    
+                    if (match) {
+                        const name = match[1].trim();
+                        const percentage = parseFloat(match[2]);
+                        data[section][name] = percentage;
+                    }
+                }
+            }
+            
+            // Store processed data
+            pokemonData[pokemonName] = data;
+        }
+    } catch (error) {
+        console.error("Error parsing moveset data:", error);
+        console.error(error.stack);
+    }
+    
+    return { data: pokemonData };
+}
 
 // Mount the obtainGameData router on the /api/replays path
 app.use('/api/replays', obtainGameDataRouter);

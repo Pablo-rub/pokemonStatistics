@@ -12,20 +12,17 @@ import {
   Button,
 } from "@mui/material";
 import ReplayCard from "../components/ReplayCard";
+import { useAuth } from "../contexts/AuthContext";
 
-// todo
-// accesible filters
-// improve performance
-// si no has iniciado sesion, no puedes guardar replay (pulsar corazon)
-// filtro para solo ver las no guardadas
-// no hacer tanto zoom en el hover
+//todo
+//filtrar por formato
 
 function PublicGamesPage() {
   // Estados actuales
   const [games, setGames] = useState([]);
   const [numGames, setNumGames] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(50);
+  const [itemsPerPage] = useState(25);
   const [isLoading, setIsLoading] = useState(true);
 
   // Estados para los valores de los filtros en el formulario
@@ -33,13 +30,16 @@ function PublicGamesPage() {
   const [playerFilter, setPlayerFilter] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
+  const [showSaved, setShowSaved] = useState('all');
+  const { currentUser } = useAuth();
 
   // Estados para los filtros activos (los que realmente se aplican)
   const [activeFilters, setActiveFilters] = useState({
     sortBy: "date DESC",
     playerFilter: "",
     ratingFilter: "all",
-    dateFilter: "all"
+    dateFilter: "all",
+    showSaved: "all"
   });
 
   const fetchPublicGames = useCallback(async (page, filters) => {
@@ -49,7 +49,9 @@ function PublicGamesPage() {
         params: { 
           page, 
           limit: itemsPerPage, 
-          ...filters
+          ...filters,
+          userId: currentUser?.uid,
+          showSaved: filters.showSaved
         },
       });
       
@@ -64,7 +66,7 @@ function PublicGamesPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [itemsPerPage]);
+  }, [itemsPerPage, currentUser]);
 
   const applyFilters = () => {
     setCurrentPage(1);
@@ -72,7 +74,8 @@ function PublicGamesPage() {
       sortBy,
       playerFilter,
       ratingFilter,
-      dateFilter
+      dateFilter,
+      showSaved
     });
   };
 
@@ -81,12 +84,14 @@ function PublicGamesPage() {
     setPlayerFilter("");
     setRatingFilter("all");
     setDateFilter("all");
+    setShowSaved("all");
     setCurrentPage(1);
     setActiveFilters({
       sortBy: "date DESC",
       playerFilter: "",
       ratingFilter: "all",
-      dateFilter: "all"
+      dateFilter: "all",
+      showSaved: "all"
     });
   };
 
@@ -170,6 +175,21 @@ function PublicGamesPage() {
               <MenuItem value="year">Last Year</MenuItem>
             </Select>
           </FormControl>
+
+          {/* Show saved filter */}
+          {currentUser && (
+            <FormControl>
+              <Select
+                value={showSaved}
+                onChange={(e) => setShowSaved(e.target.value)}
+                displayEmpty
+                renderValue={(value) => `Show: ${value}`}
+              >
+                <MenuItem value="all">All Replays</MenuItem>
+                <MenuItem value="unsaved">Unsaved Only</MenuItem>
+              </Select>
+            </FormControl>
+          )}
 
           {/* Apply button */}
           <Button

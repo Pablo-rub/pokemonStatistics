@@ -1,185 +1,190 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
   Box,
   Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
   TextField,
   Typography,
-  Divider,
-  Alert,
-  IconButton
 } from '@mui/material';
 import GoogleIcon from '@mui/icons-material/Google';
+import CloseIcon from '@mui/icons-material/Close';
+import IconButton from '@mui/material/IconButton';
 import { useAuth } from '../contexts/AuthContext';
-import { getAuthErrorMessage } from '../utils/errorMessages';
-import PasswordStrengthBar from 'react-password-strength-bar';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
-
-//todo
-//poder mover la ventana
-//recuperar contraseña
-//que no se ponga blanco al hacer hover sobre una sugerencia
+import useDraggable from '../hooks/useDraggable';
 
 export default function LoginDialog({ open, onClose, isSignUp = false }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const { login, signup, loginWithGoogle } = useAuth();
 
-  const handleEmailAuth = async (e) => {
-    e.preventDefault();
-    setError('');
-    try {
-      if (isSignUp) {
-        if (password.length < 6) {
-          setError('Password must be at least 6 characters long.');
-          return;
-        }
-        await signUpWithEmail(email, password, displayName);
-      } else {
-        await signInWithEmail(email, password);
-      }
-      onClose();
-    } catch (error) {
-      setError(getAuthErrorMessage(error));
-    }
-  };
+  // Use the draggable hook
+  const { ref, style, handleMouseDown, resetPosition, isDragging } = useDraggable();
 
-  const handleGoogleSignIn = async () => {
-    try {
-      await signInWithGoogle();
-      onClose(); // Close dialog after successful Google sign in
-    } catch (error) {
-      setError(error.message);
-    }
-  };
-
-  const resetFields = () => {
+  // Handle closing dialog
+  const handleClose = () => {
+    resetPosition();
     setEmail('');
     setPassword('');
-    setDisplayName('');
     setError('');
-    setShowPassword(false);
+    onClose();
   };
 
-  useEffect(() => {
-    if (!open) {
-      resetFields();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email || !password) {
+      return setError('Please enter both email and password.');
     }
-  }, [open]);
+
+    try {
+      setLoading(true);
+      if (isSignUp) {
+        await signup(email, password);
+      } else {
+        await login(email, password);
+      }
+      handleClose();
+    } catch (error) {
+      console.error('Auth error:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true);
+      await loginWithGoogle();
+      handleClose();
+    } catch (error) {
+      console.error('Google login error:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose}
+    <Dialog
+      open={open}
+      onClose={handleClose}
       maxWidth="sm"
       fullWidth
-      variant="login"
+      PaperProps={{
+        ref,
+        style: {
+          ...style,
+          backgroundColor: '#221FC7',
+          transition: 'none'
+        },
+        onMouseDown: handleMouseDown,
+        sx: {
+          '& .MuiDialogTitle-root': {
+            cursor: isDragging ? 'grabbing' : 'grab',
+            userSelect: 'none',
+            padding: '16px 24px',
+            color: 'white'
+          }
+        }
+      }}
     >
       <DialogTitle>
-        {isSignUp ? 'Create Account' : 'Sign In'}
+        <Box sx={{ 
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          {isSignUp ? 'Create Account' : 'Sign In'}
+          <IconButton onClick={handleClose} sx={{ color: 'white' }}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
       </DialogTitle>
+      
       <DialogContent>
-        {(
-          <Box component="form" onSubmit={handleEmailAuth} sx={{ mt: 2 }}>
-            {error && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
-            )}
-            
-            {isSignUp && (
-              <>
-                <TextField
-                  fullWidth
-                  label="Display Name"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  margin="normal"
-                  required
-                />
-              </>
-            )}
-            
-            <TextField
-              fullWidth
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              margin="normal"
-              required
-            />
-            
-            <TextField
-              fullWidth
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              margin="normal"
-              required
-              InputProps={{
-                endAdornment: (
-                  <IconButton
-                    onClick={() => setShowPassword(!showPassword)}
-                    edge="end"
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                ),
-              }}
-            />
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          {error && (
+            <Typography color="error" variant="body2" sx={{ mb: 2 }}>
+              {error}
+            </Typography>
+          )}
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="email"
+            label="Email Address"
+            name="email"
+            autoComplete="email"
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            sx={{
+              color: 'white',
+              '& .MuiInputLabel-root': {
+                color: 'white',
+              },
+              '& .MuiInputBase-input': {
+                color: 'white',
+              }
+            }}
+          />
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Password"
+            type="password"
+            id="password"
+            autoComplete={isSignUp ? 'new-password' : 'current-password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            sx={{
+              color: 'white',
+              '& .MuiInputLabel-root': {
+                color: 'white',
+              },
+              '& .MuiInputBase-input': {
+                color: 'white',
+              }
+            }}
+          />
+          <Button
+            type="submit"
+            fullWidth
+            variant="containedSuccess"
+            sx={{ mt: 3, mb: 2 }}
+            disabled={loading}
+          >
+            {isSignUp ? 'Create Account' : 'Sign In'}
+          </Button>
 
-            {isSignUp && password.length > 0 && (
-              <Box sx={{ mt: 1 }}>
-                <PasswordStrengthBar
-                  password={password}
-                  minLength={6}
-                  scoreWords={['Too weak', 'Weak', 'Okay', 'Good', 'Strong']}
-                  shortScoreWord={'Too short'}
-                />
-              </Box>
-            )}
+          <Divider sx={{ my: 2, color: 'white', '&::before, &::after': { borderColor: 'white' } }}>or</Divider>
 
-            <Box sx={{ display: 'flex', gap: 2, mt: 3, mb: 2 }}>
-              <Button
-                type="submit"
-                fullWidth
-                variant="containedSuccess"
-              >
-                {isSignUp ? 'Sign Up' : 'Sign In'}
-              </Button>
-              <Button
-                onClick={onClose}
-                fullWidth
-                variant="containedCancel"
-              >
-                Cancel
-              </Button>
-            </Box>
-            
-            <Divider sx={{ my: 2 }}>
-              <Typography variant="body2" sx={{ color: '#000000' }}>
-                OR
-              </Typography>
-            </Divider>
-
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<GoogleIcon />}
-              onClick={handleGoogleSignIn}
-            >
-              Continue with Google
-            </Button>
-          </Box>
-        )}
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<GoogleIcon />}
+            onClick={handleGoogleLogin}
+            sx={{ mt: 1, mb: 2, color: 'white', borderColor: 'white' }}
+            disabled={loading}
+          >
+            {isSignUp ? 'Sign up with Google' : 'Sign in with Google'}
+          </Button>
+        </Box>
       </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClose} sx={{ color: 'white' }}>Cancel</Button>
+      </DialogActions>
     </Dialog>
   );
 }

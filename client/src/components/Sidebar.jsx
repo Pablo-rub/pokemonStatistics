@@ -11,7 +11,6 @@ import {
 } from '@mui/material';
 import { Link, useNavigate } from 'react-router-dom';
 import HomeIcon from '@mui/icons-material/Home';
-import GamesIcon from '@mui/icons-material/Games';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import PublicIcon from '@mui/icons-material/Public';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
@@ -47,7 +46,6 @@ const Sidebar = () => {
 
   const menuItems = [
     { text: 'Home', path: '/', icon: <HomeIcon /> },
-    { text: 'Games', path: '/my-games', icon: <GamesIcon /> },
     { text: 'Saved Games', path: '/saved-games', icon: <BookmarkIcon /> },
     { text: 'Public Games', path: '/public-games', icon: <PublicIcon /> },
     { text: 'Rankings', path: '/rankings', icon: <LeaderboardIcon /> },

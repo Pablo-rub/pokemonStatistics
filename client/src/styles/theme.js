@@ -3,7 +3,8 @@ import { createTheme } from "@mui/material/styles";
 //todo
 //eliminar sx
 //filters
-//login textfields, google sorrounding
+//change password
+//replaycard text white
 
 const theme = createTheme({
   palette: {
@@ -176,7 +177,7 @@ const theme = createTheme({
           cursor: 'pointer',
           '&:hover': {
             boxShadow: 6,
-            transform: 'scale(1.05)',
+            transform: 'scale(1.005)',
             transition: 'all 0.2s ease-in-out',
           },
         },
@@ -194,10 +195,10 @@ const theme = createTheme({
           borderRadius: 8,
         },
         login: {
-          backgroundColor: '#C7ADBE',
+          backgroundColor: '#221FC7',
         },
         paper: {
-          backgroundColor: '#000000',
+          backgroundColor: '#221FC7', // Cambiado de '#000000' a '#221FC7'
           '& .MuiDialogTitle-root': {
             color: '#ffffff'
           },
@@ -275,20 +276,20 @@ const theme = createTheme({
         root: {
           mb: 2,
           '& .MuiInputLabel-root': {
-            color: '#000',
+            color: '#ffffff', // Cambiado de '#000' a '#ffffff'
             '&.Mui-focused': {
-              color: '#1976d2',
+              color: '#ffffff', // Cambiado de '#1976d2' a '#ffffff'
             },
           },
           '& .MuiOutlinedInput-root': {
             '& fieldset': {
-              borderColor: '#000',
+              borderColor: '#ffffff', // Cambiado de '#000' a '#ffffff'
             },
             '&:hover fieldset': {
-              borderColor: '#1976d2',
+              borderColor: '#ffffff', // Cambiado de '#1976d2' a '#ffffff'
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#1976d2',
+              borderColor: '#ffffff', // Cambiado de '#1976d2' a '#ffffff'
               borderWidth: '2px',
             },
           },
@@ -300,6 +301,71 @@ const theme = createTheme({
             color: '#ffffff',
           },
         }
+      }
+    },
+    Typography: {
+      color: '#ffffff', // Añade esto para asegurar que todo el texto sea blanco
+      '& .MuiDivider-root': {
+        '&::before, &::after': {
+          borderColor: '#ffffff'
+        }
+      },
+      '& .MuiTypography-root': {
+        color: '#ffffff'
+      }
+    },
+    MuiMenu: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: '#221FC7', // Match your app's blue background
+          '& .MuiMenuItem-root': {
+            color: '#ffffff', // White text for menu items
+            '&:hover': {
+              backgroundColor: '#1A1896', // Darker blue on hover
+            },
+            '&.Mui-selected': {
+              backgroundColor: '#1A1896', // Dark blue for selected item
+              '&:hover': {
+                backgroundColor: '#15137A', // Even darker on hover when selected
+              }
+            }
+          },
+          // Add a border to make the dropdown stand out
+          border: '1px solid rgba(255, 255, 255, 0.2)'
+        }
+      }
+    },
+    MuiAutocomplete: {
+      styleOverrides: {
+        popper: {
+          '& .MuiPaper-root': {
+            backgroundColor: '#221FC7',
+            color: '#ffffff',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            '& .MuiAutocomplete-option': {
+              '&:hover': {
+                backgroundColor: '#1A1896',
+              },
+              '&[aria-selected="true"]': {
+                backgroundColor: '#1A1896',
+                '&:hover': {
+                  backgroundColor: '#15137A',
+                }
+              },
+            },
+            '& .MuiAutocomplete-listbox': {
+              '& .MuiAutocomplete-option': {
+                color: '#ffffff',
+              }
+            },
+            '& .MuiAutocomplete-noOptions': {
+              color: '#ffffff',
+            },
+            '& .MuiListSubheader-root': {
+              color: 'rgba(255, 255, 255, 0.7)',
+            }
+          },
+        },
       }
     },
   },

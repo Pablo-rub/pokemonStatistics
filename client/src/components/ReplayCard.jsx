@@ -12,6 +12,8 @@ import { useAuth } from '../contexts/AuthContext';
 const ReplayCard = ({ game }) => {
   const { currentUser } = useAuth();
   const [isSaved, setIsSaved] = useState(false);
+  const [showMessage, setShowMessage] = useState(false);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     // Check if replay is saved for current user
@@ -33,22 +35,47 @@ const ReplayCard = ({ game }) => {
     try {
       if (isSaved) {
         await axios.delete(`http://localhost:5000/api/users/${currentUser.uid}/saved-replays/${game.replay_id}`);
+        setMessage('Replay removed');
       } else {
         await axios.post(`http://localhost:5000/api/users/${currentUser.uid}/saved-replays`, {
           replayId: game.replay_id
         });
+        setMessage('Replay saved');
       }
       setIsSaved(!isSaved);
+      setShowMessage(true);
+      setTimeout(() => setShowMessage(false), 2000);
     } catch (error) {
       console.error('Error toggling save:', error);
+      setMessage('Error');
+      setShowMessage(true);
+      setTimeout(() => setShowMessage(false), 2000);
     }
   };
 
   const formatDate = (timestamp) => {
     try {
-      // Convert BigQuery timestamp (microseconds) to milliseconds
-      const date = new Date(parseInt(timestamp) / 1000);
-      return date.toLocaleDateString();
+      // Handle if timestamp is an object with a value property
+      const dateStr = typeof timestamp === 'object' && timestamp.value 
+        ? timestamp.value 
+        : timestamp;
+
+      const date = new Date(dateStr);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.error("Invalid date:", timestamp);
+        return "Unknown";
+      }
+
+      return date.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
     } catch (error) {
       console.error("Error formatting date:", error);
       return "Unknown";
@@ -106,19 +133,40 @@ const ReplayCard = ({ game }) => {
 
         {/* Right side - Heart checkbox */}
         {currentUser && (
-          <Checkbox 
-            icon={<FavoriteBorder />} 
-            checkedIcon={<Favorite />}
-            checked={isSaved}
-            onChange={handleSaveToggle}
-            className="MuiCheckbox-root"
-            sx={{
-              color: '#000000',
-              '&.Mui-checked': {
+          <Box sx={{ position: 'relative' }}>
+            <Checkbox 
+              icon={<FavoriteBorder />} 
+              checkedIcon={<Favorite />}
+              checked={isSaved}
+              onChange={handleSaveToggle}
+              className="MuiCheckbox-root"
+              sx={{
                 color: '#000000',
-              },
-            }}
-          />
+                '&.Mui-checked': {
+                  color: '#000000',
+                },
+              }}
+            />
+            {showMessage && (
+              <Typography
+                sx={{
+                  position: 'absolute',
+                  top: -20,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  color: 'white',
+                  padding: '4px 8px',
+                  borderRadius: 1,
+                  fontSize: '0.75rem',
+                  whiteSpace: 'nowrap',
+                  zIndex: 1,
+                }}
+              >
+                {message}
+              </Typography>
+            )}
+          </Box>
         )}
       </Box>
     </Paper>
