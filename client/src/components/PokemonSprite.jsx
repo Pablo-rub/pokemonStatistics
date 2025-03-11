@@ -19,6 +19,7 @@ const PokemonSprite = ({ pokemon }) => {
       'Necrozma-Dusk-Mane': 'necrozma-duskmane',
       'Toxtricity-Low-Key': 'toxtricity-lowkey',
       'Kommo-o': 'kommoo',
+      'Porygon-Z': 'porygonz',
     };
 
     // Comprobar si es un caso especial
