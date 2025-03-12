@@ -652,6 +652,8 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
           t.starts_with.player2 as player2_pokemon,
           t.moves_done.player1 as player1_moves,
           t.moves_done.player2 as player2_moves,
+          t.revealed_pokemon.player1 as player1_revealed,
+          t.revealed_pokemon.player2 as player2_revealed,
           r.winner,
           r.player1,
           r.player2
@@ -676,6 +678,8 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
         m.player2_pokemon,
         m.player1_moves,
         m.player2_moves,
+        m.player1_revealed,
+        m.player2_revealed,
         CASE 
           -- Determine if "your" Pokémon are player1 or player2
           WHEN '${yourPokemon[0]}' IN UNNEST(m.player1_pokemon) AND '${yourPokemon[1]}' IN UNNEST(m.player1_pokemon)
@@ -715,12 +719,15 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
 
 // Helper function to analyze matching scenarios
 function analyzeMatchingScenarios(scenarios, yourPokemon) {
+  console.log("Analyzing scenarios:", scenarios.length);
+  console.log("Your Pokémon:", yourPokemon);
+  
   // Count total games and wins
   const totalGames = scenarios.length;
   const wins = scenarios.filter(s => s.your_team_won).length;
   const winRate = (wins / totalGames) * 100;
 
-  // Track move frequency and win rates
+  // Track move frequency and win rates - now including tera status
   const moveStats = {
     [yourPokemon[0]]: {},
     [yourPokemon[1]]: {}
@@ -731,83 +738,157 @@ function analyzeMatchingScenarios(scenarios, yourPokemon) {
 
   // For each scenario, analyze the moves used
   scenarios.forEach(scenario => {
-    // Determine which player's moves to analyze based on where "your" Pokémon are
-    let yourMoves;
-    
-    if (scenario.player1_pokemon[0] === yourPokemon[0] && 
-        scenario.player1_pokemon[1] === yourPokemon[1]) {
-      // Your Pokémon are player1's Pokémon
-      yourMoves = [
-        { pokemon: yourPokemon[0], move: cleanMoveName(scenario.player1_moves[0]) },
-        { pokemon: yourPokemon[1], move: cleanMoveName(scenario.player1_moves[1]) }
-      ];
-    } else {
-      // Your Pokémon are player2's Pokémon
-      yourMoves = [
-        { pokemon: yourPokemon[0], move: cleanMoveName(scenario.player2_moves[0]) },
-        { pokemon: yourPokemon[1], move: cleanMoveName(scenario.player2_moves[1]) }
-      ];
-    }
-    
-    // Skip if moves are empty (could be switching or passing turn)
-    if (!yourMoves[0].move || !yourMoves[1].move) {
-      return;
-    }
-    
-    // Track individual move usage and win rates
-    yourMoves.forEach(({ pokemon, move }) => {
-      if (!move) return; // Skip empty moves
+    try {
+      // Determine which player has your Pokémon and which has the opponent's
+      let yourSide, opponentSide;
+      let yourMoves, opponentMoves;
+      let yourRevealed;
       
-      if (!moveStats[pokemon][move]) {
-        moveStats[pokemon][move] = { total: 0, wins: 0 };
+      if (Array.isArray(scenario.player1_pokemon) &&
+          scenario.player1_pokemon.includes(yourPokemon[0]) && 
+          scenario.player1_pokemon.includes(yourPokemon[1])) {
+        yourSide = "player1";
+        opponentSide = "player2";
+        yourMoves = scenario.player1_moves;
+        opponentMoves = scenario.player2_moves;
+        yourRevealed = scenario.player1_revealed;
+      } else {
+        yourSide = "player2";
+        opponentSide = "player1";
+        yourMoves = scenario.player2_moves;
+        opponentMoves = scenario.player1_moves;
+        yourRevealed = scenario.player2_revealed;
       }
       
-      moveStats[pokemon][move].total++;
-      
-      if (scenario.your_team_won) {
-        moveStats[pokemon][move].wins++;
+      // Get the state of your Pokémon (including if they're terastallized)
+      const yourPokemonState = {};
+      if (Array.isArray(yourRevealed)) {
+        yourRevealed.forEach(pokemon => {
+          if (pokemon && yourPokemon.includes(pokemon.name)) {
+            yourPokemonState[pokemon.name] = {
+              teraActive: pokemon.tera && pokemon.tera.active === true
+            };
+          }
+        });
       }
-    });
-    
-    // Track move combinations
-    const comboKey = `${yourMoves[0].move}:${yourMoves[1].move}`;
-    
-    if (!moveComboStats[comboKey]) {
-      moveComboStats[comboKey] = { 
-        total: 0, 
-        wins: 0,
-        move1: yourMoves[0].move,
-        move2: yourMoves[1].move
-      };
-    }
-    
-    moveComboStats[comboKey].total++;
-    
-    if (scenario.your_team_won) {
-      moveComboStats[comboKey].wins++;
+
+      // Get active Pokémon at the start of the turn
+      const activePokemon = scenario[`${yourSide}_pokemon`];
+      if (!Array.isArray(activePokemon) || activePokemon.length < 2) {
+        return; // Skip if we don't have the expected data structure
+      }
+
+      // Get move data for each Pokémon
+      if (!Array.isArray(yourMoves)) {
+        return; // Skip if move data is missing
+      }
+
+      // Create a map to associate each move with its user
+      const pokemonMoves = {};
+      
+      // Process each move
+      yourMoves.forEach(moveString => {
+        if (!moveString) return;
+        
+        const result = parseMoveString(moveString);
+        if (!result || !result.move) return;
+        
+        // If the move has an explicit target, use that to determine the user
+        if (result.targetPokemon) {
+          for (const pokemon of activePokemon) {
+            if (pokemon !== result.targetPokemon) {
+              // The user is the one not targeted
+              const userPokemon = pokemon;
+              if (yourPokemon.includes(userPokemon)) {
+                const isTeraActive = yourPokemonState[userPokemon]?.teraActive || false;
+                const moveKey = isTeraActive ? `${result.move} (Tera)` : result.move;
+                pokemonMoves[userPokemon] = moveKey;
+              }
+              break;
+            }
+          }
+        } 
+        // If it's a spread move, we need to find the user from context
+        else if (result.isSpreadMove) {
+          // For spread moves, look for explicit "used by" information
+          if (moveString.includes('used by')) {
+            const usedByMatch = moveString.match(/used by ([^,\s]+)/);
+            if (usedByMatch && usedByMatch[1]) {
+              const userPokemon = usedByMatch[1];
+              if (yourPokemon.includes(userPokemon)) {
+                const isTeraActive = yourPokemonState[userPokemon]?.teraActive || false;
+                const moveKey = isTeraActive ? `${result.move} (Tera)` : result.move;
+                pokemonMoves[userPokemon] = moveKey;
+              }
+            }
+          } 
+          // Otherwise, need to infer which Pokémon used it based on type matchups
+          // This is complex and might require additional metadata
+        }
+        // For moves with explicit user info
+        else if (result.userPokemon) {
+          if (yourPokemon.includes(result.userPokemon)) {
+            const isTeraActive = yourPokemonState[result.userPokemon]?.teraActive || false;
+            const moveKey = isTeraActive ? `${result.move} (Tera)` : result.move;
+            pokemonMoves[result.userPokemon] = moveKey;
+          }
+        }
+      });
+      
+      // Track individual move usage and win rates
+      for (const pokemon of yourPokemon) {
+        const move = pokemonMoves[pokemon];
+        if (!move) continue;
+        
+        if (!moveStats[pokemon][move]) {
+          moveStats[pokemon][move] = { total: 0, wins: 0 };
+        }
+        moveStats[pokemon][move].total++;
+        if (scenario.your_team_won) {
+          moveStats[pokemon][move].wins++;
+        }
+      }
+      
+      // Track move combinations when both Pokémon used moves
+      if (pokemonMoves[yourPokemon[0]] && pokemonMoves[yourPokemon[1]]) {
+        const comboKey = `${pokemonMoves[yourPokemon[0]]}:${pokemonMoves[yourPokemon[1]]}`;
+        
+        if (!moveComboStats[comboKey]) {
+          moveComboStats[comboKey] = { 
+            total: 0, 
+            wins: 0,
+            move1: pokemonMoves[yourPokemon[0]],
+            move2: pokemonMoves[yourPokemon[1]]
+          };
+        }
+        
+        moveComboStats[comboKey].total++;
+        if (scenario.your_team_won) {
+          moveComboStats[comboKey].wins++;
+        }
+      }
+    } catch (err) {
+      console.error("Error analyzing scenario:", err);
     }
   });
 
-  // Find best moves for each Pokémon
-  const bestMoves = {};
+  // Convert move stats to array format with win rates for all moves
+  const allMoves = {};
+  
   for (const pokemon of yourPokemon) {
-    const moves = Object.keys(moveStats[pokemon])
-      .filter(move => moveStats[pokemon][move].total >= 3) // Only consider moves with enough samples
+    allMoves[pokemon] = Object.keys(moveStats[pokemon])
       .map(move => ({
         move,
         total: moveStats[pokemon][move].total,
         wins: moveStats[pokemon][move].wins,
         winRate: (moveStats[pokemon][move].wins / moveStats[pokemon][move].total) * 100
       }))
-      .sort((a, b) => b.winRate - a.winRate) // Sort by win rate
-      .slice(0, 3); // Take top 3
-      
-    bestMoves[pokemon] = moves;
+      .sort((a, b) => b.winRate - a.winRate || b.total - a.total); // Sort by win rate, then by usage
   }
 
   // Find best move combinations
   const bestCombos = Object.keys(moveComboStats)
-    .filter(combo => moveComboStats[combo].total >= 3) // Only consider combos with enough samples
+    .filter(combo => moveComboStats[combo].total >= 1) // Only consider combos with enough samples
     .sort((a, b) => {
       // Sort primarily by win rate, secondarily by number of games
       const winRateA = (moveComboStats[a].wins / moveComboStats[a].total) * 100;
@@ -826,26 +907,82 @@ function analyzeMatchingScenarios(scenarios, yourPokemon) {
   return {
     totalGames,
     winRate,
-    recommendedMoves: bestMoves,
+    allMoveOptions: allMoves,
     topCombinations: bestCombos
   };
 }
 
-// Helper function to clean move names with multiple words
-function cleanMoveName(moveName) {
-  // Handle common multi-word move names
-  const multiWordMoves = [
-    'Water Spout', 'Close Combat', 'Tera Blast', 'Earth Power', 'Thunder Wave',
-    'Ice Beam', 'Shadow Ball', 'Dragon Claw', 'Iron Head', 'Fake Out',
-    'Rock Slide', 'Leaf Storm', 'Hyper Beam', 'Thunder Punch', 'Solar Beam',
-    'Mud Shot', 'Giga Drain', 'Heat Wave'
-  ];
+// Improved helper function to parse move strings and extract all relevant information
+function parseMoveString(moveString) {
+  if (!moveString) return null;
   
-  for (const move of multiWordMoves) {
-    if (moveName && moveName.toLowerCase() === move.toLowerCase()) {
-      return move;
-    }
+  // Common formats in the data:
+  // 1. "moveX used by PokemonA on PokemonB" -> "electro drift used by Miraidon on Whimsicott"
+  // 2. "move on target" -> "electro drift on Miraidon"
+  // 3. "move (spread)" -> "dazzling gleam (spread)"
+  // 4. "move (spread) used by Pokemon" -> "dazzling gleam (spread) used by Miraidon"
+  // 5. "PokemonA used move on PokemonB" -> "Miraidon used electro drift on Whimsicott"
+  // 6. "switch to Pokemon" -> "switch to Iron Hands"
+  // 7. "fainted, switch to Pokemon" -> "fainted, switch to Chi-Yu"
+  
+  let move = null;
+  let userPokemon = null;
+  let targetPokemon = null;
+  let isSpreadMove = false;
+  
+  // Case 1: "moveX used by PokemonA on PokemonB"
+  const usedByPattern = /^([^\s]+(?:\s+[^\s]+)*) used by ([^\s]+) on ([^\s]+)/;
+  const usedByMatch = moveString.match(usedByPattern);
+  if (usedByMatch) {
+    move = usedByMatch[1].trim();
+    userPokemon = usedByMatch[2].trim();
+    targetPokemon = usedByMatch[3].trim();
+    return { move, userPokemon, targetPokemon, isSpreadMove };
   }
   
-  return moveName;
+  // Case 2: "move on target"
+  const onTargetPattern = /^([^\s]+(?:\s+[^\s]+)*) on ([^\s,(]+)/;
+  const onTargetMatch = moveString.match(onTargetPattern);
+  if (onTargetMatch) {
+    move = onTargetMatch[1].trim();
+    targetPokemon = onTargetMatch[2].trim();
+    return { move, targetPokemon, isSpreadMove };
+  }
+  
+  // Case 3 & 4: Spread moves
+  const spreadPattern = /^([^\s(]+(?:\s+[^\s(]+)*) \(spread\)(?:\s+used by ([^\s]+))?/;
+  const spreadMatch = moveString.match(spreadPattern);
+  if (spreadMatch) {
+    move = spreadMatch[1].trim();
+    userPokemon = spreadMatch[2]?.trim(); // Optional user Pokemon
+    isSpreadMove = true;
+    return { move, userPokemon, isSpreadMove };
+  }
+  
+  // Case 5: "PokemonA used move on PokemonB"
+  const pokemonUsedPattern = /^([^\s]+) used ([^\s]+(?:\s+[^\s]+)*)(?: on ([^\s,]+))?/;
+  const pokemonUsedMatch = moveString.match(pokemonUsedPattern);
+  if (pokemonUsedMatch) {
+    userPokemon = pokemonUsedMatch[1].trim();
+    move = pokemonUsedMatch[2].trim();
+    targetPokemon = pokemonUsedMatch[3]?.trim(); // Optional target
+    return { move, userPokemon, targetPokemon, isSpreadMove };
+  }
+  
+  // Case 6: Switch actions
+  const switchPattern = /^(?:.*,\s*)?switch to ([^\s,]+)/;
+  const switchMatch = moveString.match(switchPattern);
+  if (switchMatch) {
+    move = "switch";
+    return { move, isSpreadMove };
+  }
+  
+  // Case 7: Fainted notifications
+  if (moveString.startsWith("fainted")) {
+    move = "fainted";
+    return { move, isSpreadMove };
+  }
+  
+  // If we reach here, use the whole string as the move (fallback)
+  return { move: moveString, isSpreadMove };
 }
