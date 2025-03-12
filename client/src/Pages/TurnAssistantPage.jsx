@@ -10,11 +10,22 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Alert
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from "@mui/material";
 import axios from "axios";
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import BattleField from "../components/BattleField";
+
+//todo
+//arreglar movimientos
+//mostrar si tera esta activado con el move
+//ver que hacer con el mirror
 
 function TurnAssistantPage() {
   const [selectedPokemon, setSelectedPokemon] = useState({
@@ -168,7 +179,7 @@ function TurnAssistantPage() {
     setError(null);
     
     try {
-      // Make the API call to the new endpoint
+      // Make the API call to the backend
       const response = await axios.post("http://localhost:5000/api/turn-assistant/analyze", {
         pokemonData: selectedPokemon
       });
@@ -179,9 +190,9 @@ function TurnAssistantPage() {
       } else {
         const data = response.data.data;
         
-        // Transform the data to match our UI expectations
+        // Transform the data for our UI - now we don't need to process Tera separately
         const formattedResults = {
-          yourRecommendedMoves: {},
+          moveOptions: data.allMoveOptions, // This now contains moves with Tera status
           winRate: data.winRate,
           matchingGames: data.totalGames,
           topStrategies: data.topCombinations.map(combo => ({
@@ -191,13 +202,6 @@ function TurnAssistantPage() {
             games: combo.games
           }))
         };
-        
-        // Add recommended moves for each Pokémon
-        formattedResults.yourRecommendedMoves[selectedPokemon.topLeft] = 
-          data.recommendedMoves[selectedPokemon.topLeft].map(m => m.move);
-        
-        formattedResults.yourRecommendedMoves[selectedPokemon.topRight] = 
-          data.recommendedMoves[selectedPokemon.topRight].map(m => m.move);
         
         setAnalysisResults(formattedResults);
       }
@@ -272,7 +276,7 @@ function TurnAssistantPage() {
         </Button>
       </Box>
 
-      {/* Results section */}
+      {/* Results section - updated to show tables with all moves and win rates */}
       {analysisResults && (
         <Paper sx={{ mt: 4, p: 3, backgroundColor: '#221FC7' }}>
           <Typography variant="h5" gutterBottom>
@@ -285,34 +289,140 @@ function TurnAssistantPage() {
 
           <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.2)' }} />
           
+          {/* Move options tables - one for each Pokémon */}
           <Typography variant="h6" gutterBottom>
-            Recommended Moves
+            Available Moves & Win Rates
           </Typography>
           
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2">
-              {selectedPokemon.topLeft}: {analysisResults.yourRecommendedMoves[selectedPokemon.topLeft].join(" or ")}
-            </Typography>
-            <Typography variant="subtitle2">
-              {selectedPokemon.topRight}: {analysisResults.yourRecommendedMoves[selectedPokemon.topRight].join(" or ")}
-            </Typography>
+          <Box sx={{ display: 'flex', flexDirection: {xs: 'column', md: 'row'}, gap: 2, mb: 3 }}>
+            {/* Your left Pokémon moves - with Tera integrated */}
+            <TableContainer component={Paper} sx={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', flex: 1 }}>
+              <Typography variant="subtitle2" sx={{ p: 1, fontWeight: 'bold' }}>
+                {selectedPokemon.topLeft}
+              </Typography>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ color: 'white' }}>Move</TableCell>
+                    <TableCell align="right" sx={{ color: 'white' }}>Win Rate</TableCell>
+                    <TableCell align="right" sx={{ color: 'white' }}>Games</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {analysisResults.moveOptions[selectedPokemon.topLeft]?.length > 0 ? (
+                    analysisResults.moveOptions[selectedPokemon.topLeft].map((move) => (
+                      <TableRow key={move.move} sx={move.move.includes('(Tera)') ? { 
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)'
+                      } : {}}>
+                        <TableCell sx={{ 
+                          color: move.move.includes('(Tera)') ? '#FFA500' : 'white',
+                          fontWeight: move.move.includes('(Tera)') ? 'bold' : 'normal'
+                        }}>
+                          {move.move}
+                        </TableCell>
+                        <TableCell align="right" sx={{ color: 'white' }}>{move.winRate.toFixed(1)}%</TableCell>
+                        <TableCell align="right" sx={{ color: 'white' }}>{move.total}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} sx={{ color: 'white', textAlign: 'center' }}>
+                        No move data available
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            
+            {/* Your right Pokémon moves - with Tera integrated */}
+            <TableContainer component={Paper} sx={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', flex: 1 }}>
+              <Typography variant="subtitle2" sx={{ p: 1, fontWeight: 'bold' }}>
+                {selectedPokemon.topRight}
+              </Typography>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ color: 'white' }}>Move</TableCell>
+                    <TableCell align="right" sx={{ color: 'white' }}>Win Rate</TableCell>
+                    <TableCell align="right" sx={{ color: 'white' }}>Games</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {analysisResults.moveOptions[selectedPokemon.topRight]?.length > 0 ? (
+                    analysisResults.moveOptions[selectedPokemon.topRight].map((move) => (
+                      <TableRow key={move.move} sx={move.move.includes('(Tera)') ? { 
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)'
+                      } : {}}>
+                        <TableCell sx={{ 
+                          color: move.move.includes('(Tera)') ? '#FFA500' : 'white',
+                          fontWeight: move.move.includes('(Tera)') ? 'bold' : 'normal'
+                        }}>
+                          {move.move}
+                        </TableCell>
+                        <TableCell align="right" sx={{ color: 'white' }}>{move.winRate.toFixed(1)}%</TableCell>
+                        <TableCell align="right" sx={{ color: 'white' }}>{move.total}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={3} sx={{ color: 'white', textAlign: 'center' }}>
+                        No move data available
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Box>
 
           <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.2)' }} />
           
+          {/* Top Combinations - which now include Tera information in the move names */}
           <Typography variant="h6" gutterBottom>
             Top Winning Combinations
           </Typography>
           
           {analysisResults.topStrategies.length > 0 ? (
-            analysisResults.topStrategies.map((strategy, index) => (
-              <Box key={index} sx={{ mb: 1 }}>
-                <Typography variant="body2">
-                  {strategy.move1} + {strategy.move2}: {strategy.winRate.toFixed(1)}% win rate 
-                  ({strategy.games} games)
-                </Typography>
-              </Box>
-            ))
+            <TableContainer component={Paper} sx={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ color: 'white' }}>Move Combination</TableCell>
+                    <TableCell align="right" sx={{ color: 'white' }}>Win Rate</TableCell>
+                    <TableCell align="right" sx={{ color: 'white' }}>Games</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {analysisResults.topStrategies.map((strategy, index) => (
+                    <TableRow 
+                      key={index} 
+                      sx={strategy.move1.includes('(Tera)') || strategy.move2.includes('(Tera)') ? { 
+                        backgroundColor: 'rgba(255, 255, 255, 0.15)'
+                      } : {}}
+                    >
+                      <TableCell sx={{ color: 'white' }}>
+                        <span style={{ 
+                          color: strategy.move1.includes('(Tera)') ? '#FFA500' : 'white',
+                          fontWeight: strategy.move1.includes('(Tera)') ? 'bold' : 'normal'
+                        }}>
+                          {strategy.move1}
+                        </span>
+                        {' + '}
+                        <span style={{ 
+                          color: strategy.move2.includes('(Tera)') ? '#FFA500' : 'white',
+                          fontWeight: strategy.move2.includes('(Tera)') ? 'bold' : 'normal'
+                        }}>
+                          {strategy.move2}
+                        </span>
+                      </TableCell>
+                      <TableCell align="right" sx={{ color: 'white' }}>{strategy.winRate.toFixed(1)}%</TableCell>
+                      <TableCell align="right" sx={{ color: 'white' }}>{strategy.games}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           ) : (
             <Typography variant="body2">
               Not enough data to determine effective move combinations
