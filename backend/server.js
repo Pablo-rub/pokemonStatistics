@@ -871,7 +871,7 @@ function analyzeMatchingScenarios(scenarios, yourPokemon) {
       const winRateB = (moveComboStats[b].wins / moveComboStats[b].total) * 100;
       return winRateB - winRateA || moveComboStats[b].total - moveComboStats[a].total;
     })
-    .slice(0, 5) // Take top 5
+    .slice(0, 10) // Take top 10 combinations instead of top 5
     .map(combo => ({
       move1: moveComboStats[combo].move1,
       move2: moveComboStats[combo].move2,

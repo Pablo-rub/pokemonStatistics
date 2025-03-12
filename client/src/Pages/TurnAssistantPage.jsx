@@ -23,9 +23,8 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import BattleField from "../components/BattleField";
 
 //todo
-//arreglar movimientos
-//mostrar si tera esta activado con el move
 //ver que hacer con el mirror
+//boton ir para arriba
 
 function TurnAssistantPage() {
   const [selectedPokemon, setSelectedPokemon] = useState({
@@ -160,9 +159,13 @@ function TurnAssistantPage() {
   };
 
   const handlePokemonSelect = (pokemonData) => {
+    // Simply update the selected Pokémon without checking for duplicates
     setSelectedPokemon(pokemonData);
-    // Reset analysis and error when Pokémon change
+    
+    // Reset analysis results whenever Pokémon are changed
     setAnalysisResults(null);
+    
+    // Clear any existing error
     setError(null);
   };
 
@@ -172,6 +175,17 @@ function TurnAssistantPage() {
     
     if (!allSelected) {
       setError("Please select all four Pokémon before analyzing.");
+      return;
+    }
+    
+    // Check for duplicate selections
+    if (selectedPokemon.topLeft === selectedPokemon.topRight) {
+      setError("You cannot use the same Pokémon twice on your team. Please select different Pokémon.");
+      return;
+    }
+    
+    if (selectedPokemon.bottomLeft === selectedPokemon.bottomRight) {
+      setError("Your opponent cannot use the same Pokémon twice. Please select different Pokémon for the opponent.");
       return;
     }
 
@@ -278,7 +292,7 @@ function TurnAssistantPage() {
         </Button>
       </Box>
 
-      {/* Results section - updated to show tables with all moves and win rates */}
+      {/* Results section */}
       {analysisResults && (
         <Paper sx={{ mt: 4, p: 3, backgroundColor: '#221FC7' }}>
           <Typography variant="h5" gutterBottom>
@@ -297,14 +311,14 @@ function TurnAssistantPage() {
           </Typography>
           
           <Box sx={{ display: 'flex', flexDirection: {xs: 'column', md: 'row'}, gap: 2, mb: 3 }}>
-            {/* Your left Pokémon moves - with Tera integrated */}
-            <TableContainer component={Paper} sx={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', flex: 1 }}>
+            {/* Your left Pokémon moves */}
+            <TableContainer component={Paper} sx={{ backgroundColor: 'rgba(34, 31, 199, 0.8)', flex: 1 }}>
               <Typography variant="subtitle2" sx={{ p: 1, fontWeight: 'bold' }}>
                 {selectedPokemon.topLeft}
               </Typography>
               <Table size="small">
                 <TableHead>
-                  <TableRow>
+                  <TableRow sx={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
                     <TableCell sx={{ color: 'white' }}>Move</TableCell>
                     <TableCell align="right" sx={{ color: 'white' }}>Win Rate</TableCell>
                     <TableCell align="right" sx={{ color: 'white' }}>Games</TableCell>
@@ -312,14 +326,15 @@ function TurnAssistantPage() {
                 </TableHead>
                 <TableBody>
                   {analysisResults.moveOptions[selectedPokemon.topLeft]?.length > 0 ? (
-                    analysisResults.moveOptions[selectedPokemon.topLeft].map((move) => (
-                      <TableRow key={move.move} sx={move.move.includes('(Tera)') ? { 
-                        backgroundColor: 'rgba(255, 255, 255, 0.15)'
-                      } : {}}>
-                        <TableCell sx={{ 
-                          color: move.move.includes('(Tera)') ? '#FFA500' : 'white',
-                          fontWeight: move.move.includes('(Tera)') ? 'bold' : 'normal'
-                        }}>
+                    analysisResults.moveOptions[selectedPokemon.topLeft].map((move, index) => (
+                      <TableRow 
+                        key={move.move}
+                        sx={{ 
+                          backgroundColor: 'rgba(34, 31, 199, 0.8)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+                        }}
+                      >
+                        <TableCell sx={{ color: 'white' }}>
                           {move.move}
                         </TableCell>
                         <TableCell align="right" sx={{ color: 'white' }}>{move.winRate.toFixed(1)}%</TableCell>
@@ -337,14 +352,14 @@ function TurnAssistantPage() {
               </Table>
             </TableContainer>
             
-            {/* Your right Pokémon moves - with Tera integrated */}
-            <TableContainer component={Paper} sx={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', flex: 1 }}>
+            {/* Your right Pokémon moves */}
+            <TableContainer component={Paper} sx={{ backgroundColor: 'rgba(34, 31, 199, 0.8)', flex: 1 }}>
               <Typography variant="subtitle2" sx={{ p: 1, fontWeight: 'bold' }}>
                 {selectedPokemon.topRight}
               </Typography>
               <Table size="small">
                 <TableHead>
-                  <TableRow>
+                  <TableRow sx={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
                     <TableCell sx={{ color: 'white' }}>Move</TableCell>
                     <TableCell align="right" sx={{ color: 'white' }}>Win Rate</TableCell>
                     <TableCell align="right" sx={{ color: 'white' }}>Games</TableCell>
@@ -352,14 +367,15 @@ function TurnAssistantPage() {
                 </TableHead>
                 <TableBody>
                   {analysisResults.moveOptions[selectedPokemon.topRight]?.length > 0 ? (
-                    analysisResults.moveOptions[selectedPokemon.topRight].map((move) => (
-                      <TableRow key={move.move} sx={move.move.includes('(Tera)') ? { 
-                        backgroundColor: 'rgba(255, 255, 255, 0.15)'
-                      } : {}}>
-                        <TableCell sx={{ 
-                          color: move.move.includes('(Tera)') ? '#FFA500' : 'white',
-                          fontWeight: move.move.includes('(Tera)') ? 'bold' : 'normal'
-                        }}>
+                    analysisResults.moveOptions[selectedPokemon.topRight].map((move, index) => (
+                      <TableRow 
+                        key={move.move}
+                        sx={{ 
+                          backgroundColor: 'rgba(34, 31, 199, 0.8)',
+                          borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+                        }}
+                      >
+                        <TableCell sx={{ color: 'white' }}>
                           {move.move}
                         </TableCell>
                         <TableCell align="right" sx={{ color: 'white' }}>{move.winRate.toFixed(1)}%</TableCell>
@@ -380,16 +396,15 @@ function TurnAssistantPage() {
 
           <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.2)' }} />
           
-          {/* Top Combinations - which now include Tera information in the move names */}
           <Typography variant="h6" gutterBottom>
             Top Winning Combinations
           </Typography>
           
           {analysisResults.topStrategies.length > 0 ? (
-            <TableContainer component={Paper} sx={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+            <TableContainer component={Paper} sx={{ backgroundColor: 'rgba(34, 31, 199, 0.8)' }}>
               <Table size="small">
                 <TableHead>
-                  <TableRow>
+                  <TableRow sx={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
                     <TableCell sx={{ color: 'white' }}>Move Combination</TableCell>
                     <TableCell align="right" sx={{ color: 'white' }}>Win Rate</TableCell>
                     <TableCell align="right" sx={{ color: 'white' }}>Games</TableCell>
@@ -398,10 +413,11 @@ function TurnAssistantPage() {
                 <TableBody>
                   {analysisResults.topStrategies.map((strategy, index) => (
                     <TableRow 
-                      key={index} 
-                      sx={strategy.move1.includes('(Tera)') || strategy.move2.includes('(Tera)') ? { 
-                        backgroundColor: 'rgba(255, 255, 255, 0.15)'
-                      } : {}}
+                      key={index}
+                      sx={{ 
+                        backgroundColor: 'rgba(34, 31, 199, 0.8)',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+                      }}
                     >
                       <TableCell sx={{ color: 'white' }}>
                         <Box>
@@ -412,8 +428,7 @@ function TurnAssistantPage() {
                             {strategy.pokemon1}:
                           </Typography>
                           <Typography component="span" sx={{ 
-                            color: strategy.move1.includes('(Tera)') ? '#FFA500' : 'white',
-                            fontWeight: strategy.move1.includes('(Tera)') ? 'bold' : 'normal',
+                            color: 'white',
                             ml: 1
                           }}>
                             {strategy.move1}
@@ -427,8 +442,7 @@ function TurnAssistantPage() {
                             {strategy.pokemon2}:
                           </Typography>
                           <Typography component="span" sx={{ 
-                            color: strategy.move2.includes('(Tera)') ? '#FFA500' : 'white',
-                            fontWeight: strategy.move2.includes('(Tera)') ? 'bold' : 'normal',
+                            color: 'white',
                             ml: 1
                           }}>
                             {strategy.move2}
