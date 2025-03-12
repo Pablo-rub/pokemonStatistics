@@ -622,3 +622,230 @@ app.delete('/api/users/:userId/saved-replays', async (req, res) => {
     res.status(500).send("Error deleting saved replays");
   }
 });
+
+// Turn Assistant endpoint - Find battle scenarios with specific Pokémon
+app.post('/api/turn-assistant/analyze', async (req, res) => {
+  try {
+    const { pokemonData } = req.body;
+    
+    if (!pokemonData || !pokemonData.topLeft || !pokemonData.topRight || 
+        !pokemonData.bottomLeft || !pokemonData.bottomRight) {
+      return res.status(400).json({ 
+        error: "Missing Pokémon selection. Please select all 4 Pokémon." 
+      });
+    }
+    
+    // Your Pokémon (top row)
+    const yourPokemon = [pokemonData.topLeft, pokemonData.topRight];
+    // Opponent's Pokémon (bottom row)
+    const opponentPokemon = [pokemonData.bottomLeft, pokemonData.bottomRight];
+
+    console.log(`Analyzing scenario with Your Pokémon: ${yourPokemon.join(', ')} vs Opponent's: ${opponentPokemon.join(', ')}`);
+
+    // Query matching turns in the database where these 4 Pokémon are on the field
+    const matchingTurnsQuery = `
+      WITH matching_turns AS (
+        SELECT
+          r.replay_id,
+          t.turn_number,
+          t.starts_with.player1 as player1_pokemon,
+          t.starts_with.player2 as player2_pokemon,
+          t.moves_done.player1 as player1_moves,
+          t.moves_done.player2 as player2_moves,
+          r.winner,
+          r.player1,
+          r.player2
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r
+        CROSS JOIN UNNEST(r.turns) t
+        WHERE t.turn_number > 0 
+          AND (
+            -- Your Pokémon are on the field in player1's side
+            (('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1))
+             AND ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)))
+            OR
+            -- Or your Pokémon are on the field in player2's side (flipped perspective)
+            (('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2))
+             AND ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)))
+          )
+      )
+
+      SELECT
+        m.replay_id,
+        m.turn_number,
+        m.player1_pokemon,
+        m.player2_pokemon,
+        m.player1_moves,
+        m.player2_moves,
+        CASE 
+          -- Determine if "your" Pokémon are player1 or player2
+          WHEN '${yourPokemon[0]}' IN UNNEST(m.player1_pokemon) AND '${yourPokemon[1]}' IN UNNEST(m.player1_pokemon)
+            THEN (m.winner = m.player1) -- True if player1 won and they had "your" Pokémon
+          ELSE (m.winner = m.player2) -- True if player2 won and they had "your" Pokémon
+        END as your_team_won
+      FROM matching_turns m
+    `;
+    
+    console.log("Executing query to find matching scenarios...");
+    const [matchingScenarios] = await bigQuery.query(matchingTurnsQuery);
+    console.log(`Found ${matchingScenarios.length} matching scenarios`);
+    
+    if (matchingScenarios.length === 0) {
+      return res.json({
+        matchingScenarios: 0,
+        message: "No matching battle scenarios found with these Pokémon."
+      });
+    }
+    
+    // Analyze the scenarios to find winning moves and combinations
+    const analysis = analyzeMatchingScenarios(matchingScenarios, yourPokemon);
+    
+    res.json({
+      matchingScenarios: matchingScenarios.length,
+      data: analysis
+    });
+    
+  } catch (error) {
+    console.error("Error analyzing battle scenarios:", error);
+    res.status(500).json({ 
+      error: "Error analyzing battle scenarios", 
+      details: error.message 
+    });
+  }
+});
+
+// Helper function to analyze matching scenarios
+function analyzeMatchingScenarios(scenarios, yourPokemon) {
+  // Count total games and wins
+  const totalGames = scenarios.length;
+  const wins = scenarios.filter(s => s.your_team_won).length;
+  const winRate = (wins / totalGames) * 100;
+
+  // Track move frequency and win rates
+  const moveStats = {
+    [yourPokemon[0]]: {},
+    [yourPokemon[1]]: {}
+  };
+
+  // Track combinations of moves
+  const moveComboStats = {};
+
+  // For each scenario, analyze the moves used
+  scenarios.forEach(scenario => {
+    // Determine which player's moves to analyze based on where "your" Pokémon are
+    let yourMoves;
+    
+    if (scenario.player1_pokemon[0] === yourPokemon[0] && 
+        scenario.player1_pokemon[1] === yourPokemon[1]) {
+      // Your Pokémon are player1's Pokémon
+      yourMoves = [
+        { pokemon: yourPokemon[0], move: cleanMoveName(scenario.player1_moves[0]) },
+        { pokemon: yourPokemon[1], move: cleanMoveName(scenario.player1_moves[1]) }
+      ];
+    } else {
+      // Your Pokémon are player2's Pokémon
+      yourMoves = [
+        { pokemon: yourPokemon[0], move: cleanMoveName(scenario.player2_moves[0]) },
+        { pokemon: yourPokemon[1], move: cleanMoveName(scenario.player2_moves[1]) }
+      ];
+    }
+    
+    // Skip if moves are empty (could be switching or passing turn)
+    if (!yourMoves[0].move || !yourMoves[1].move) {
+      return;
+    }
+    
+    // Track individual move usage and win rates
+    yourMoves.forEach(({ pokemon, move }) => {
+      if (!move) return; // Skip empty moves
+      
+      if (!moveStats[pokemon][move]) {
+        moveStats[pokemon][move] = { total: 0, wins: 0 };
+      }
+      
+      moveStats[pokemon][move].total++;
+      
+      if (scenario.your_team_won) {
+        moveStats[pokemon][move].wins++;
+      }
+    });
+    
+    // Track move combinations
+    const comboKey = `${yourMoves[0].move}:${yourMoves[1].move}`;
+    
+    if (!moveComboStats[comboKey]) {
+      moveComboStats[comboKey] = { 
+        total: 0, 
+        wins: 0,
+        move1: yourMoves[0].move,
+        move2: yourMoves[1].move
+      };
+    }
+    
+    moveComboStats[comboKey].total++;
+    
+    if (scenario.your_team_won) {
+      moveComboStats[comboKey].wins++;
+    }
+  });
+
+  // Find best moves for each Pokémon
+  const bestMoves = {};
+  for (const pokemon of yourPokemon) {
+    const moves = Object.keys(moveStats[pokemon])
+      .filter(move => moveStats[pokemon][move].total >= 3) // Only consider moves with enough samples
+      .map(move => ({
+        move,
+        total: moveStats[pokemon][move].total,
+        wins: moveStats[pokemon][move].wins,
+        winRate: (moveStats[pokemon][move].wins / moveStats[pokemon][move].total) * 100
+      }))
+      .sort((a, b) => b.winRate - a.winRate) // Sort by win rate
+      .slice(0, 3); // Take top 3
+      
+    bestMoves[pokemon] = moves;
+  }
+
+  // Find best move combinations
+  const bestCombos = Object.keys(moveComboStats)
+    .filter(combo => moveComboStats[combo].total >= 3) // Only consider combos with enough samples
+    .sort((a, b) => {
+      // Sort primarily by win rate, secondarily by number of games
+      const winRateA = (moveComboStats[a].wins / moveComboStats[a].total) * 100;
+      const winRateB = (moveComboStats[b].wins / moveComboStats[b].total) * 100;
+      return winRateB - winRateA || moveComboStats[b].total - moveComboStats[a].total;
+    })
+    .slice(0, 5) // Take top 5
+    .map(combo => ({
+      move1: moveComboStats[combo].move1,
+      move2: moveComboStats[combo].move2,
+      games: moveComboStats[combo].total,
+      wins: moveComboStats[combo].wins,
+      winRate: (moveComboStats[combo].wins / moveComboStats[combo].total) * 100
+    }));
+
+  return {
+    totalGames,
+    winRate,
+    recommendedMoves: bestMoves,
+    topCombinations: bestCombos
+  };
+}
+
+// Helper function to clean move names with multiple words
+function cleanMoveName(moveName) {
+  // Handle common multi-word move names
+  const multiWordMoves = [
+    'Water Spout', 'Close Combat', 'Tera Blast', 'Earth Power', 'Thunder Wave',
+    'Ice Beam', 'Shadow Ball', 'Dragon Claw', 'Iron Head', 'Fake Out',
+    'Rock Slide', 'Leaf Storm', 'Hyper Beam', 'Thunder Punch', 'Solar Beam',
+    'Mud Shot', 'Giga Drain', 'Heat Wave'
+  ];
+  
+  for (const move of multiWordMoves) {
+    if (moveName && moveName.toLowerCase() === move.toLowerCase()) {
+      return move;
+    }
+  }
+  
+  return moveName;
+}

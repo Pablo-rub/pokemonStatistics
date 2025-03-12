@@ -9,7 +9,8 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Alert
 } from "@mui/material";
 import axios from "axios";
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -24,6 +25,7 @@ function TurnAssistantPage() {
   });
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState(null);
+  const [error, setError] = useState(null);
   
   // States for format selection
   const [formats, setFormats] = useState([]);
@@ -93,6 +95,7 @@ function TurnAssistantPage() {
         }
       } catch (error) {
         console.error('Error fetching formats:', error);
+        setError('Failed to fetch available formats. Please try again later.');
       } finally {
         setIsLoadingFormats(false);
       }
@@ -105,6 +108,7 @@ function TurnAssistantPage() {
   const handleFormatChange = (event) => {
     const newFormat = event.target.value;
     setSelectedFormat(newFormat);
+    setError(null);
     
     // Need to fetch the latest month again since we're not storing it
     const fetchLatestMonth = async () => {
@@ -120,6 +124,7 @@ function TurnAssistantPage() {
         }
       } catch (error) {
         console.error('Error fetching latest month:', error);
+        setError('Failed to fetch Pokémon list for the selected format.');
       }
     };
     
@@ -139,13 +144,15 @@ function TurnAssistantPage() {
       }
     } catch (error) {
       console.error('Error fetching Pokémon list:', error);
+      setError('Failed to fetch Pokémon list. Please try again later.');
     }
   };
 
   const handlePokemonSelect = (pokemonData) => {
     setSelectedPokemon(pokemonData);
-    // Reset analysis when Pokémon change
+    // Reset analysis and error when Pokémon change
     setAnalysisResults(null);
+    setError(null);
   };
 
   const handleAnalyze = async () => {
@@ -153,32 +160,50 @@ function TurnAssistantPage() {
     const allSelected = Object.values(selectedPokemon).every(pokemon => pokemon !== null);
     
     if (!allSelected) {
-      alert("Please select all four Pokémon before analyzing.");
+      setError("Please select all four Pokémon before analyzing.");
       return;
     }
 
     setAnalyzing(true);
+    setError(null);
     
     try {
-      // Here you would make an API call to your backend
-      // For now, we'll simulate a delay and return mock data
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setAnalysisResults({
-        yourRecommendedMoves: {
-          [selectedPokemon.topLeft]: ["Water Spout", "Protect"],
-          [selectedPokemon.topRight]: ["Tera", "Close Combat"]
-        },
-        winRate: 65.3,
-        matchingGames: 42,
-        topStrategies: [
-          { move1: "Water Spout", move2: "Close Combat", winRate: 72.1, games: 18 },
-          { move1: "Protect", move2: "Close Combat", winRate: 64.5, games: 15 },
-          { move1: "Water Spout", move2: "Protect", winRate: 55.3, games: 9 }
-        ]
+      // Make the API call to the new endpoint
+      const response = await axios.post("http://localhost:5000/api/turn-assistant/analyze", {
+        pokemonData: selectedPokemon
       });
+      
+      if (response.data.matchingScenarios === 0) {
+        setError("No matching battle scenarios found with these Pokémon. Try a different combination.");
+        setAnalysisResults(null);
+      } else {
+        const data = response.data.data;
+        
+        // Transform the data to match our UI expectations
+        const formattedResults = {
+          yourRecommendedMoves: {},
+          winRate: data.winRate,
+          matchingGames: data.totalGames,
+          topStrategies: data.topCombinations.map(combo => ({
+            move1: combo.move1,
+            move2: combo.move2, 
+            winRate: combo.winRate,
+            games: combo.games
+          }))
+        };
+        
+        // Add recommended moves for each Pokémon
+        formattedResults.yourRecommendedMoves[selectedPokemon.topLeft] = 
+          data.recommendedMoves[selectedPokemon.topLeft].map(m => m.move);
+        
+        formattedResults.yourRecommendedMoves[selectedPokemon.topRight] = 
+          data.recommendedMoves[selectedPokemon.topRight].map(m => m.move);
+        
+        setAnalysisResults(formattedResults);
+      }
     } catch (error) {
       console.error("Error analyzing battle scenario:", error);
+      setError("An error occurred while analyzing this battle scenario. Please try again.");
     } finally {
       setAnalyzing(false);
     }
@@ -192,6 +217,12 @@ function TurnAssistantPage() {
       <Typography variant="subtitle1" sx={{ mb: 2 }}>
         Select a format and Pokémon to get strategic recommendations
       </Typography>
+      
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
       
       {/* Format selector */}
       <Box sx={{ display: 'flex', mb: 4 }}>
@@ -273,14 +304,20 @@ function TurnAssistantPage() {
             Top Winning Combinations
           </Typography>
           
-          {analysisResults.topStrategies.map((strategy, index) => (
-            <Box key={index} sx={{ mb: 1 }}>
-              <Typography variant="body2">
-                {strategy.move1} + {strategy.move2}: {strategy.winRate.toFixed(1)}% win rate 
-                ({strategy.games} games)
-              </Typography>
-            </Box>
-          ))}
+          {analysisResults.topStrategies.length > 0 ? (
+            analysisResults.topStrategies.map((strategy, index) => (
+              <Box key={index} sx={{ mb: 1 }}>
+                <Typography variant="body2">
+                  {strategy.move1} + {strategy.move2}: {strategy.winRate.toFixed(1)}% win rate 
+                  ({strategy.games} games)
+                </Typography>
+              </Box>
+            ))
+          ) : (
+            <Typography variant="body2">
+              Not enough data to determine effective move combinations
+            </Typography>
+          )}
         </Paper>
       )}
     </Box>
