@@ -190,14 +190,16 @@ function TurnAssistantPage() {
       } else {
         const data = response.data.data;
         
-        // Transform the data for our UI - now we don't need to process Tera separately
+        // Transform the data for our UI
         const formattedResults = {
-          moveOptions: data.allMoveOptions, // This now contains moves with Tera status
+          moveOptions: data.allMoveOptions,
           winRate: data.winRate,
           matchingGames: data.totalGames,
           topStrategies: data.topCombinations.map(combo => ({
             move1: combo.move1,
-            move2: combo.move2, 
+            move2: combo.move2,
+            pokemon1: combo.pokemon1,
+            pokemon2: combo.pokemon2,
             winRate: combo.winRate,
             games: combo.games
           }))
@@ -402,19 +404,36 @@ function TurnAssistantPage() {
                       } : {}}
                     >
                       <TableCell sx={{ color: 'white' }}>
-                        <span style={{ 
-                          color: strategy.move1.includes('(Tera)') ? '#FFA500' : 'white',
-                          fontWeight: strategy.move1.includes('(Tera)') ? 'bold' : 'normal'
-                        }}>
-                          {strategy.move1}
-                        </span>
-                        {' + '}
-                        <span style={{ 
-                          color: strategy.move2.includes('(Tera)') ? '#FFA500' : 'white',
-                          fontWeight: strategy.move2.includes('(Tera)') ? 'bold' : 'normal'
-                        }}>
-                          {strategy.move2}
-                        </span>
+                        <Box>
+                          <Typography variant="body2" component="span" sx={{ 
+                            fontWeight: 'bold',
+                            display: 'block' 
+                          }}>
+                            {strategy.pokemon1}:
+                          </Typography>
+                          <Typography component="span" sx={{ 
+                            color: strategy.move1.includes('(Tera)') ? '#FFA500' : 'white',
+                            fontWeight: strategy.move1.includes('(Tera)') ? 'bold' : 'normal',
+                            ml: 1
+                          }}>
+                            {strategy.move1}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ mt: 1 }}>
+                          <Typography variant="body2" component="span" sx={{ 
+                            fontWeight: 'bold',
+                            display: 'block'
+                          }}>
+                            {strategy.pokemon2}:
+                          </Typography>
+                          <Typography component="span" sx={{ 
+                            color: strategy.move2.includes('(Tera)') ? '#FFA500' : 'white',
+                            fontWeight: strategy.move2.includes('(Tera)') ? 'bold' : 'normal',
+                            ml: 1
+                          }}>
+                            {strategy.move2}
+                          </Typography>
+                        </Box>
                       </TableCell>
                       <TableCell align="right" sx={{ color: 'white' }}>{strategy.winRate.toFixed(1)}%</TableCell>
                       <TableCell align="right" sx={{ color: 'white' }}>{strategy.games}</TableCell>
