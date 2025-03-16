@@ -3,7 +3,7 @@ import {
   Box, 
   Paper, 
   Typography,
-  Grid
+  Grid,
 } from '@mui/material';
 import PokemonDialog from './PokemonDialog';
 import PokemonSprite from './PokemonSprite';
@@ -22,7 +22,7 @@ const BattleField = ({ onPokemonSelect, pokemonList = [] }) => {
     bottomLeft: null,
     bottomRight: null
   });
-
+  
   const handleOpenDialog = (position) => {
     setDialogOpen(prev => ({
       ...prev,
@@ -37,10 +37,11 @@ const BattleField = ({ onPokemonSelect, pokemonList = [] }) => {
     }));
   };
 
-  const handleSelectPokemon = (position, pokemon) => {
+  // Actualizar esta función para manejar correctamente el objeto
+  const handleSelectPokemon = (position, pokemonData) => {
     const newSelectedPokemon = {
       ...selectedPokemon,
-      [position]: pokemon
+      [position]: pokemonData
     };
     
     setSelectedPokemon(newSelectedPokemon);
@@ -73,10 +74,15 @@ const BattleField = ({ onPokemonSelect, pokemonList = [] }) => {
       >
         {pokemon ? (
           <>
-            <PokemonSprite pokemon={{ name: pokemon }} size={80} />
+            <PokemonSprite pokemon={{ name: pokemon.name }} size={80} />
             <Typography variant="subtitle1" sx={{ mt: 1 }}>
-              {pokemon}
+              {pokemon.name}
             </Typography>
+            {pokemon.item && (
+              <Typography variant="body2" sx={{ mt: 0.5, color: 'gold' }}>
+                {pokemon.item}
+              </Typography>
+            )}
           </>
         ) : (
           <Typography variant="subtitle1">

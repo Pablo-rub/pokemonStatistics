@@ -635,15 +635,44 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       });
     }
     
-    // Your Pokémon (top row)
-    const yourPokemon = [pokemonData.topLeft, pokemonData.topRight];
-    // Opponent's Pokémon (bottom row)
-    const opponentPokemon = [pokemonData.bottomLeft, pokemonData.bottomRight];
-
+    // Extract your Pokémon (from the top row)
+    const yourPokemon = [
+      pokemonData.topLeft.name || '', 
+      pokemonData.topRight.name || ''
+    ];
+    
+    // Extract opponent's Pokémon (from the bottom row)
+    const opponentPokemon = [
+      pokemonData.bottomLeft.name || '', 
+      pokemonData.bottomRight.name || ''
+    ];
+    
+    // Extract items for your Pokémon, ensuring we have a value or null
+    const yourItems = {
+      [yourPokemon[0]]: pokemonData.topLeft.item || null,
+      [yourPokemon[1]]: pokemonData.topRight.item || null
+    };
+    
+    // Extract items for opponent's Pokémon too
+    const opponentItems = {
+      [opponentPokemon[0]]: pokemonData.bottomLeft.item || null,
+      [opponentPokemon[1]]: pokemonData.bottomRight.item || null
+    };
+    
     console.log(`Analyzing scenario with Your Pokémon: ${yourPokemon.join(', ')} vs Opponent's: ${opponentPokemon.join(', ')}`);
+    console.log(`Your items: ${Object.values(yourItems).filter(Boolean).join(', ') || 'None'}`);
+    console.log(`Opponent items: ${Object.values(opponentItems).filter(Boolean).join(', ') || 'None'}`);
 
-    // Query matching turns in the database where these 4 Pokémon are on the field
-    const matchingTurnsQuery = `
+    // Define params for BigQuery
+    let params = {
+      yourPokemon1: yourPokemon[0],
+      yourPokemon2: yourPokemon[1],
+      opponentPokemon1: opponentPokemon[0],
+      opponentPokemon2: opponentPokemon[1]
+    };
+
+    // Build the main query to find turns with these Pokémon
+    let matchingTurnsQuery = `
       WITH matching_turns AS (
         SELECT
           r.replay_id,
@@ -660,14 +689,124 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
         FROM \`pokemon-statistics.pokemon_replays.replays\` r
         CROSS JOIN UNNEST(r.turns) t
         WHERE t.turn_number > 0 
+    `;
+
+    // Build item conditions for your Pokémon
+    let yourItemConditions = [];
+    
+    // Process item search conditions for your Pokémon
+    for (let i = 0; i < yourPokemon.length; i++) {
+      const pokemon = yourPokemon[i];
+      const item = yourItems[pokemon];
+      
+      // Only add condition if an item is specified
+      if (item) {
+        // Remove spaces from item name to match database format
+        const formattedItem = item === 'No Item' ? null : item.replace(/\s+/g, '');
+        
+        if (item === 'No Item') {
+          // Search for Pokémon with no item
+          yourItemConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @yourPokemon${i+1} AND (p.item IS NULL OR p.item = '')
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @yourPokemon${i+1} AND (p.item IS NULL OR p.item = '')
+              )
+            )
+          `);
+        } else {
+          // Search for Pokémon with the specified item
+          yourItemConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @yourPokemon${i+1} AND p.item = @yourItem${i+1}
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @yourPokemon${i+1} AND p.item = @yourItem${i+1}
+              )
+            )
+          `);
+          params[`yourItem${i+1}`] = formattedItem;
+        }
+      }
+    }
+    
+    // Build item conditions for opponent's Pokémon
+    let opponentItemConditions = [];
+    
+    // Process item search conditions for opponent's Pokémon
+    for (let i = 0; i < opponentPokemon.length; i++) {
+      const pokemon = opponentPokemon[i];
+      const item = opponentItems[pokemon];
+      
+      // Only add condition if an item is specified
+      if (item) {
+        // Remove spaces from item name to match database format
+        const formattedItem = item === 'No Item' ? null : item.replace(/\s+/g, '');
+        
+        if (item === 'No Item') {
+          // Search for Pokémon with no item
+          opponentItemConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @opponentPokemon${i+1} AND (p.item IS NULL OR p.item = '')
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @opponentPokemon${i+1} AND (p.item IS NULL OR p.item = '')
+              )
+            )
+          `);
+        } else {
+          // Search for Pokémon with the specified item
+          opponentItemConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @opponentPokemon${i+1} AND p.item = @opponentItem${i+1}
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @opponentPokemon${i+1} AND p.item = @opponentItem${i+1}
+              )
+            )
+          `);
+          params[`opponentItem${i+1}`] = formattedItem;
+        }
+      }
+    }
+
+    // Add item conditions to the query
+    if (yourItemConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${yourItemConditions.join(' AND ')})`;
+    }
+    
+    // Add opponent item conditions to the query
+    if (opponentItemConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${opponentItemConditions.join(' AND ')})`;
+    }
+
+    // Add the Pokémon matching conditions
+    matchingTurnsQuery += `
           AND (
             -- Your Pokémon are on the field in player1's side
             (('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1))
-             AND ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)))
+             AND ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) OR '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)))
             OR
             -- Or your Pokémon are on the field in player2's side (flipped perspective)
             (('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2))
-             AND ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)))
+             AND ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) OR '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)))
           )
       )
 
@@ -682,7 +821,8 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
         m.player2_revealed,
         CASE 
           -- Determine if "your" Pokémon are player1 or player2
-          WHEN '${yourPokemon[0]}' IN UNNEST(m.player1_pokemon) AND '${yourPokemon[1]}' IN UNNEST(m.player1_pokemon)
+          WHEN (m.player1_pokemon[OFFSET(0)] = @yourPokemon1 OR m.player1_pokemon[OFFSET(1)] = @yourPokemon1) 
+            AND (m.player1_pokemon[OFFSET(0)] = @yourPokemon2 OR m.player1_pokemon[OFFSET(1)] = @yourPokemon2)
             THEN (m.winner = m.player1) -- True if player1 won and they had "your" Pokémon
           ELSE (m.winner = m.player2) -- True if player2 won and they had "your" Pokémon
         END as your_team_won
@@ -690,7 +830,7 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     `;
     
     console.log("Executing query to find matching scenarios...");
-    const [matchingScenarios] = await bigQuery.query(matchingTurnsQuery);
+    const [matchingScenarios] = await bigQuery.query({ query: matchingTurnsQuery, params });
     console.log(`Found ${matchingScenarios.length} matching scenarios`);
     
     if (matchingScenarios.length === 0) {
@@ -701,7 +841,7 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     }
     
     // Analyze the scenarios to find winning moves and combinations
-    const analysis = analyzeMatchingScenarios(matchingScenarios, yourPokemon);
+    const analysis = analyzeMatchingScenarios(matchingScenarios, yourPokemon, yourItems);
     
     res.json({
       matchingScenarios: matchingScenarios.length,
@@ -718,9 +858,10 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
 });
 
 // Helper function to analyze matching scenarios
-function analyzeMatchingScenarios(scenarios, yourPokemon) {
+function analyzeMatchingScenarios(scenarios, yourPokemon, yourItems = {}) {
   console.log("Analyzing scenarios:", scenarios.length);
   console.log("Your Pokémon:", yourPokemon);
+  console.log("Your Items:", yourItems);
   
   // Count total games and wins
   const totalGames = scenarios.length;
@@ -770,7 +911,7 @@ function analyzeMatchingScenarios(scenarios, yourPokemon) {
           }
         });
       }
-
+      
       // Get the moves corresponding to each of your Pokémon based on their position
       for (const pokemon of yourPokemon) {
         const position = pokemonPositions[pokemon];
