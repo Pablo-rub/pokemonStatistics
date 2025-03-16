@@ -859,6 +859,55 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       matchingTurnsQuery += ` AND (${opponentItemConditions.join(' AND ')})`;
     }
 
+    // Construir condiciones para filtrar por habilidad de los Pokémon del oponente
+    let opponentAbilityConditions = [];
+    for (let i = 0; i < opponentPokemon.length; i++) {
+      const pokemon = opponentPokemon[i];
+      const ability = opponentAbilities[pokemon];
+
+      if (ability && ability.trim() !== "") {
+        if (ability === "No Ability") {
+          opponentAbilityConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @opponentPokemon${i+1} AND (p.ability IS NULL OR p.ability = '')
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @opponentPokemon${i+1} AND (p.ability IS NULL OR p.ability = '')
+              )
+            )
+          `);
+        } else {
+          // Normaliza: quita espacios, recorta y pasa a minúsculas
+          const formattedAbility = ability.trim().toLowerCase().replace(/\s+/g, '');
+          opponentAbilityConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @opponentPokemon${i+1} 
+                  AND LOWER(REPLACE(p.ability, ' ', '')) = @opponentAbility${i+1}
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @opponentPokemon${i+1} 
+                  AND LOWER(REPLACE(p.ability, ' ', '')) = @opponentAbility${i+1}
+              )
+            )
+          `);
+          params[`opponentAbility${i+1}`] = formattedAbility;
+        }
+      }
+    }
+
+    // Añadir las condiciones de habilidad del oponente a la query
+    if (opponentAbilityConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${opponentAbilityConditions.join(' AND ')})`;
+    }
+
     // AQUÍ ESTÁ LA CORRECCIÓN PRINCIPAL: Asegurarnos de que se filtren los escenarios por ambos equipos
     matchingTurnsQuery += `
           AND (
