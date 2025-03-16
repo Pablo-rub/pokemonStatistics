@@ -17,10 +17,6 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import useDraggable from '../hooks/useDraggable';
 
-//todo
-//better item list
-//cargar los datos ya puestos en el pokemon dialog
-
 const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList = [] }) => {
   const [selectedPokemon, setSelectedPokemon] = useState(null);
   const [selectedItem, setSelectedItem] = useState('');
@@ -36,24 +32,6 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
       .then(response => setItemsList(response.data))
       .catch(error => console.error("Error fetching items:", error));
   }, []);
-
-  // Lista predefinida de objetos populares
-  const commonItems = [
-    { name: 'No Item', usage: 0 },
-    { name: 'Choice Specs', usage: 25.2 },
-    { name: 'Rocky Helmet', usage: 18.7 },
-    { name: 'Assault Vest', usage: 15.4 },
-    { name: 'Covert Cloak', usage: 12.3 },
-    { name: 'Life Orb', usage: 10.1 },
-    { name: 'Focus Sash', usage: 9.8 },
-    { name: 'Sitrus Berry', usage: 8.5 },
-    { name: 'Safety Goggles', usage: 7.9 },
-    { name: 'Mental Herb', usage: 6.2 },
-    { name: 'Weakness Policy', usage: 5.8 },
-    { name: 'Choice Scarf', usage: 5.5 },
-    { name: 'Leftovers', usage: 4.9 },
-    { name: 'Choice Band', usage: 4.6 },
-  ];
   
   // Use the draggable hook
   const { ref, style, handleMouseDown, resetPosition, isDragging } = useDraggable();
@@ -89,6 +67,26 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
       default: return "Select Pokémon";
     }
   };
+
+  const [abilitiesList, setAbilitiesList] = useState([]);
+  const [movesList, setMovesList] = useState([]);
+
+  // Estados para la habilidad y movimiento seleccionados
+  const [selectedAbility, setSelectedAbility] = useState('');
+  const [selectedMove, setSelectedMove] = useState('');
+
+  // Obtener la lista de habilidades y movimientos al montar el componente
+  useEffect(() => {
+    axios.get('http://localhost:5000/api/abilities')
+      .then(response => setAbilitiesList(response.data))
+      .catch(error => console.error("Error fetching abilities:", error));
+  }, []);
+
+  useEffect(() => {
+    axios.get('http://localhost:5000/api/moves')
+      .then(response => setMovesList(response.data))
+      .catch(error => console.error("Error fetching moves:", error));
+  }, []);
 
   return (
     <Dialog 
@@ -181,35 +179,96 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
               
               {/* Item selector appears only when a Pokémon is selected */}
               {selectedPokemon && (
-                <FormControl fullWidth sx={{ mt: 2 }}>
-                  <Autocomplete
-                    options={itemsList}
-                    getOptionLabel={(option) => option.name}
-                    value={itemsList.find(item => item.name === selectedItem) || null}
-                    onChange={(event, newValue) => {
-                      setSelectedItem(newValue ? newValue.name : '');
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Held Item"
-                        variant="outlined"
-                        InputLabelProps={{ style: { color: 'white' } }}
-                        InputProps={{
-                          ...params.InputProps,
-                          style: { color: 'white' },
-                        }}
-                      />
-                    )}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        '& fieldset': { borderColor: 'white' },
-                      },
-                      '& .MuiSvgIcon-root': { color: 'white' },
-                      mt: 1,
-                    }}
-                  />
-                </FormControl>
+                <>
+                  {/* Autocomplete para Held Item (ya implementado) */}
+                  <FormControl fullWidth sx={{ mt: 2 }}>
+                    <Autocomplete
+                      options={itemsList}
+                      getOptionLabel={(option) => option.name}
+                      value={itemsList.find(item => item.name === selectedItem) || null}
+                      onChange={(event, newValue) => {
+                        setSelectedItem(newValue ? newValue.name : '');
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Held Item"
+                          variant="outlined"
+                          InputLabelProps={{ style: { color: 'white' } }}
+                          InputProps={{
+                            ...params.InputProps,
+                            style: { color: 'white' },
+                          }}
+                        />
+                      )}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          '& fieldset': { borderColor: 'white' },
+                        },
+                        '& .MuiSvgIcon-root': { color: 'white' },
+                        mt: 1,
+                      }}
+                    />
+                  </FormControl>
+                  
+                  {/* Nuevo Autocomplete para Ability */}
+                  <FormControl fullWidth sx={{ mt: 2 }}>
+                    <Autocomplete
+                      options={abilitiesList}
+                      getOptionLabel={(option) => option.name}
+                      value={abilitiesList.find(ability => ability.name === selectedAbility) || null}
+                      onChange={(event, newValue) => {
+                        setSelectedAbility(newValue ? newValue.name : '');
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Ability"
+                          variant="outlined"
+                          InputLabelProps={{ style: { color: 'white' } }}
+                          InputProps={{
+                            ...params.InputProps,
+                            style: { color: 'white' },
+                          }}
+                        />
+                      )}
+                      sx={{
+                        '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
+                        '& .MuiSvgIcon-root': { color: 'white' },
+                        mt: 1,
+                      }}
+                    />
+                  </FormControl>
+
+                  {/* Nuevo Autocomplete para Move */}
+                  <FormControl fullWidth sx={{ mt: 2 }}>
+                    <Autocomplete
+                      options={movesList}
+                      getOptionLabel={(option) => option.name}
+                      value={movesList.find(move => move.name === selectedMove) || null}
+                      onChange={(event, newValue) => {
+                        setSelectedMove(newValue ? newValue.name : '');
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Move"
+                          variant="outlined"
+                          InputLabelProps={{ style: { color: 'white' } }}
+                          InputProps={{
+                            ...params.InputProps,
+                            style: { color: 'white' },
+                          }}
+                        />
+                      )}
+                      sx={{
+                        '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
+                        '& .MuiSvgIcon-root': { color: 'white' },
+                        mt: 1,
+                      }}
+                    />
+                  </FormControl>
+                </>
               )}
             </>
           )}
