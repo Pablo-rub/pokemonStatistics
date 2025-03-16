@@ -797,16 +797,22 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       matchingTurnsQuery += ` AND (${opponentItemConditions.join(' AND ')})`;
     }
 
-    // Add the Pokémon matching conditions
+    // AQUÍ ESTÁ LA CORRECCIÓN PRINCIPAL: Asegurarnos de que se filtren los escenarios por ambos equipos
     matchingTurnsQuery += `
           AND (
-            -- Your Pokémon are on the field in player1's side
-            (('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1))
-             AND ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) OR '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)))
+            -- Caso 1: Tus Pokémon están en player1 y los del oponente en player2
+            (
+              ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1))
+              AND
+              ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2))
+            )
             OR
-            -- Or your Pokémon are on the field in player2's side (flipped perspective)
-            (('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2))
-             AND ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) OR '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)))
+            -- Caso 2: Tus Pokémon están en player2 y los del oponente en player1
+            (
+              ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2))
+              AND
+              ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1))
+            )
           )
       )
 
