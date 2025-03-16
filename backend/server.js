@@ -658,10 +658,24 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       [opponentPokemon[0]]: pokemonData.bottomLeft.item || null,
       [opponentPokemon[1]]: pokemonData.bottomRight.item || null
     };
-    
+
+    // Extract abilities for your Pokémon
+    const yourAbilities = {
+      [yourPokemon[0]]: pokemonData.topLeft.ability || null,
+      [yourPokemon[1]]: pokemonData.topRight.ability || null
+    };
+
+    // Extract abilities for opponent's Pokémon too
+    const opponentAbilities = {
+      [opponentPokemon[0]]: pokemonData.bottomLeft.ability || null,
+      [opponentPokemon[1]]: pokemonData.bottomRight.ability || null
+    };
+
     console.log(`Analyzing scenario with Your Pokémon: ${yourPokemon.join(', ')} vs Opponent's: ${opponentPokemon.join(', ')}`);
     console.log(`Your items: ${Object.values(yourItems).filter(Boolean).join(', ') || 'None'}`);
     console.log(`Opponent items: ${Object.values(opponentItems).filter(Boolean).join(', ') || 'None'}`);
+    console.log(`Your abilities: ${Object.values(yourAbilities).filter(Boolean).join(', ') || 'None'}`);
+    console.log(`Opponent abilities: ${Object.values(opponentAbilities).filter(Boolean).join(', ') || 'None'}`);
 
     // Define params for BigQuery
     let params = {
@@ -787,6 +801,54 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       }
     }
 
+    // Construir condiciones para filtrar por habilidad de "tus" Pokémon
+    let yourAbilityConditions = [];
+    for (let i = 0; i < yourPokemon.length; i++) {
+      const pokemon = yourPokemon[i];
+      const ability = yourAbilities[pokemon];
+
+      if (ability && ability.trim() !== "") {
+        if (ability === "No Ability") {
+          yourAbilityConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @yourPokemon${i+1} AND (p.ability IS NULL OR p.ability = '')
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @yourPokemon${i+1} AND (p.ability IS NULL OR p.ability = '')
+              )
+            )
+          `);
+        } else {
+          // Normaliza: quita espacios, recorta y pasa a minúsculas
+          const formattedAbility = ability.trim().toLowerCase().replace(/\s+/g, '');
+          yourAbilityConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @yourPokemon${i+1} 
+                  AND LOWER(REPLACE(p.ability, ' ', '')) = @yourAbility${i+1}
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @yourPokemon${i+1} 
+                  AND LOWER(REPLACE(p.ability, ' ', '')) = @yourAbility${i+1}
+              )
+            )
+          `);
+          params[`yourAbility${i+1}`] = formattedAbility;
+        }
+      }
+    }
+
+    if (yourAbilityConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${yourAbilityConditions.join(' AND ')})`;
+    }
+
     // Add item conditions to the query
     if (yourItemConditions.length > 0) {
       matchingTurnsQuery += ` AND (${yourItemConditions.join(' AND ')})`;
@@ -847,7 +909,7 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     }
     
     // Analyze the scenarios to find winning moves and combinations
-    const analysis = analyzeMatchingScenarios(matchingScenarios, yourPokemon, yourItems);
+    const analysis = analyzeMatchingScenarios(matchingScenarios, yourPokemon, yourItems, yourAbilities);
     
     res.json({
       matchingScenarios: matchingScenarios.length,
@@ -864,10 +926,11 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
 });
 
 // Helper function to analyze matching scenarios
-function analyzeMatchingScenarios(scenarios, yourPokemon, yourItems = {}) {
+function analyzeMatchingScenarios(scenarios, yourPokemon, yourItems = {}, yourAbilities = {}) {
   console.log("Analyzing scenarios:", scenarios.length);
   console.log("Your Pokémon:", yourPokemon);
   console.log("Your Items:", yourItems);
+  console.log("Your Abilities:", yourAbilities);
   
   // Count total games and wins
   const totalGames = scenarios.length;

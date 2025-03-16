@@ -37,22 +37,26 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
   const { ref, style, handleMouseDown, resetPosition, isDragging } = useDraggable();
   
   // Effect to reset position and selection when dialog opens/closes
-  useEffect(() => {
+  /*useEffect(() => {
     if (!open) {
       resetPosition();
       setSelectedPokemon(null);
       setSelectedItem('');
       setSearchTerm('');
     }
-  }, [open, resetPosition]);
+  }, [open, resetPosition]);*/
 
-  // Modificar esta función para asegurar que selectedPokemon sea un string
+  // Modificar esta función para incluir la habilidad seleccionada
   const handleSelectPokemon = () => {
     if (selectedPokemon) {
       // Asegúrate de enviar correctamente el nombre del Pokémon como string
       onSelectPokemon(position, {
         name: selectedPokemon,
-        item: selectedItem || null
+        item: selectedItem || null,
+        // ¡Falta incluir la habilidad aquí!
+        ability: selectedAbility || null,
+        // Si también quieres incluir los movimientos:
+        moves: selectedMoves.length > 0 ? selectedMoves.filter(m => m) : []
       });
       onClose();
     }
@@ -74,6 +78,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
   // Estados para la habilidad y movimiento seleccionados
   const [selectedAbility, setSelectedAbility] = useState('');
   const [selectedMove, setSelectedMove] = useState('');
+  const [selectedMoves, setSelectedMoves] = useState([]);
 
   // Obtener la lista de habilidades y movimientos al montar el componente
   useEffect(() => {
