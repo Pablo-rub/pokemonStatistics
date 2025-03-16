@@ -25,6 +25,8 @@ import BattleField from "../components/BattleField";
 //todo
 //ver que hacer con el mirror
 //boton ir para arriba
+//better item list
+//cargar los datos ya puestos en el pokemon dialog
 
 function TurnAssistantPage() {
   const [selectedPokemon, setSelectedPokemon] = useState({
