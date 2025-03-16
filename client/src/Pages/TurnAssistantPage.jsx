@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -42,7 +42,73 @@ function TurnAssistantPage() {
   const [selectedFormat, setSelectedFormat] = useState('');
   const [isLoadingFormats, setIsLoadingFormats] = useState(false);
   const [pokemonList, setPokemonList] = useState([]);
-  
+
+  const handlePokemonSelect = (pokemonData) => {
+    // Simply update the selected Pokémon without checking for duplicates
+    setSelectedPokemon(pokemonData);
+    
+    // Reset analysis results whenever Pokémon are changed
+    setAnalysisResults(null);
+    
+    // Clear any existing error
+    setError(null);
+  };
+
+  const handleAnalyze = async () => {
+    // Ensure all four positions have a Pokémon selected
+    const allSelected = 
+      selectedPokemon.topLeft && 
+      selectedPokemon.topRight && 
+      selectedPokemon.bottomLeft && 
+      selectedPokemon.bottomRight;
+    
+    if (!allSelected) {
+      setError("Please select all four Pokémon before analyzing.");
+      return;
+    }
+    
+    // Check for duplicate selections
+    if (selectedPokemon.topLeft.name === selectedPokemon.topRight.name) {
+      setError("You cannot use the same Pokémon twice on your team. Please select different Pokémon.");
+      return;
+    }
+    
+    if (selectedPokemon.bottomLeft.name === selectedPokemon.bottomRight.name) {
+      setError("Your opponent cannot use the same Pokémon twice. Please select different Pokémon for the opponent.");
+      return;
+    }
+
+    setAnalyzing(true);
+    setError(null);
+    
+    try {
+      // Make the API call to the backend
+      const response = await axios.post("http://localhost:5000/api/turn-assistant/analyze", {
+        pokemonData: selectedPokemon
+      });
+      
+      if (response.data) {
+        setAnalysisResults({
+          matchingGames: response.data.matchingScenarios || 0,
+          winRate: response.data.data?.winRate || 0,
+          allMoveOptions: response.data.data?.allMoveOptions || {},
+          topCombinations: response.data.data?.topCombinations || []
+        });
+      } else {
+        setError("No analysis data returned from server.");
+      }
+    } catch (error) {
+      console.error("Error analyzing scenarios:", error);
+      if (error.response && error.response.data) {
+        setError(error.response.data.error || "Error analyzing scenarios.");
+      } else {
+        setError("Error connecting to server. Please try again later.");
+      }
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   // Fetch available formats when component mounts
   useEffect(() => {
     const fetchFormatsAndPokemon = async () => {
@@ -158,77 +224,6 @@ function TurnAssistantPage() {
     }
   };
 
-  const handlePokemonSelect = (pokemonData) => {
-    // Simply update the selected Pokémon without checking for duplicates
-    setSelectedPokemon(pokemonData);
-    
-    // Reset analysis results whenever Pokémon are changed
-    setAnalysisResults(null);
-    
-    // Clear any existing error
-    setError(null);
-  };
-
-  const handleAnalyze = async () => {
-    // Ensure all four positions have a Pokémon selected
-    const allSelected = Object.values(selectedPokemon).every(pokemon => pokemon !== null);
-    
-    if (!allSelected) {
-      setError("Please select all four Pokémon before analyzing.");
-      return;
-    }
-    
-    // Check for duplicate selections
-    if (selectedPokemon.topLeft === selectedPokemon.topRight) {
-      setError("You cannot use the same Pokémon twice on your team. Please select different Pokémon.");
-      return;
-    }
-    
-    if (selectedPokemon.bottomLeft === selectedPokemon.bottomRight) {
-      setError("Your opponent cannot use the same Pokémon twice. Please select different Pokémon for the opponent.");
-      return;
-    }
-
-    setAnalyzing(true);
-    setError(null);
-    
-    try {
-      // Make the API call to the backend
-      const response = await axios.post("http://localhost:5000/api/turn-assistant/analyze", {
-        pokemonData: selectedPokemon
-      });
-      
-      if (response.data.matchingScenarios === 0) {
-        setError("No matching battle scenarios found with these Pokémon. Try a different combination.");
-        setAnalysisResults(null);
-      } else {
-        const data = response.data.data;
-        
-        // Transform the data for our UI
-        const formattedResults = {
-          moveOptions: data.allMoveOptions,
-          winRate: data.winRate,
-          matchingGames: data.totalGames,
-          topStrategies: data.topCombinations.map(combo => ({
-            move1: combo.move1,
-            move2: combo.move2,
-            pokemon1: combo.pokemon1,
-            pokemon2: combo.pokemon2,
-            winRate: combo.winRate,
-            games: combo.games
-          }))
-        };
-        
-        setAnalysisResults(formattedResults);
-      }
-    } catch (error) {
-      console.error("Error analyzing battle scenario:", error);
-      setError("An error occurred while analyzing this battle scenario. Please try again.");
-    } finally {
-      setAnalyzing(false);
-    }
-  };
-
   return (
     <Box sx={{ padding: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -251,12 +246,18 @@ function TurnAssistantPage() {
           <Select
             labelId="format-select-label"
             value={selectedFormat}
+            onChange={(e) => handleFormatChange(e)}
             label="Format"
-            onChange={handleFormatChange}
-            disabled={isLoadingFormats || formats.length === 0}
+            disabled={isLoadingFormats}
             sx={{
               color: 'white',
-              '& .MuiOutlinedInput-notchedOutline': {
+              '.MuiOutlinedInput-notchedOutline': {
+                borderColor: 'white',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'white',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                 borderColor: 'white',
               },
               '& .MuiSvgIcon-root': {
@@ -272,194 +273,156 @@ function TurnAssistantPage() {
           </Select>
         </FormControl>
       </Box>
-
-      {/* Battle field with Pokémon selection */}
-      <BattleField 
-        onPokemonSelect={handlePokemonSelect} 
-        pokemonList={pokemonList}
-      />
-
-      {/* Analyze button */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <Button 
-          variant="containedSuccess" 
-          size="large"
-          startIcon={analyzing ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
-          onClick={handleAnalyze}
-          disabled={analyzing || !Object.values(selectedPokemon).every(pokemon => pokemon !== null)}
-        >
-          {analyzing ? "Analyzing..." : "Analyze Battle"}
-        </Button>
-      </Box>
-
-      {/* Results section */}
+      
+      {isLoadingFormats ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <BattleField 
+            onPokemonSelect={handlePokemonSelect}
+            pokemonList={pokemonList}
+          />
+          
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleAnalyze}
+              disabled={analyzing}
+              startIcon={analyzing ? <CircularProgress size={20} /> : <PlayArrowIcon />}
+              sx={{ py: 1, px: 4 }}
+            >
+              {analyzing ? "Analyzing..." : "Analyze Battle"}
+            </Button>
+          </Box>
+        </>
+      )}
+      
+      {/* Analysis Results */}
       {analysisResults && (
-        <Paper sx={{ mt: 4, p: 3, backgroundColor: '#221FC7' }}>
+        <Paper sx={{ mt: 5, p: 3, backgroundColor: '#221FC7' }}>
           <Typography variant="h5" gutterBottom>
             Analysis Results
           </Typography>
           
-          <Typography variant="subtitle1">
-            Based on {analysisResults.matchingGames} similar games, your win rate is approximately {analysisResults.winRate.toFixed(1)}%
-          </Typography>
-
-          <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.2)' }} />
-          
-          {/* Move options tables - one for each Pokémon */}
-          <Typography variant="h6" gutterBottom>
-            Available Moves & Win Rates
+          <Typography variant="body1" paragraph>
+            Based on {analysisResults.matchingGames} similar scenarios, your win rate is approximately {analysisResults.winRate.toFixed(1)}%.
           </Typography>
           
-          <Box sx={{ display: 'flex', flexDirection: {xs: 'column', md: 'row'}, gap: 2, mb: 3 }}>
-            {/* Your left Pokémon moves */}
-            <TableContainer component={Paper} sx={{ backgroundColor: 'rgba(34, 31, 199, 0.8)', flex: 1 }}>
-              <Typography variant="subtitle2" sx={{ p: 1, fontWeight: 'bold' }}>
-                {selectedPokemon.topLeft}
+          <Divider sx={{ my: 2 }} />
+          
+          {/* Check that allMoveOptions exists before trying to render */}
+          {analysisResults.allMoveOptions && selectedPokemon.topLeft && selectedPokemon.topRight && (
+            <>
+              <Typography variant="h6" gutterBottom >
+                Move Options
               </Typography>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
-                    <TableCell sx={{ color: 'white' }}>Move</TableCell>
-                    <TableCell align="right" sx={{ color: 'white' }}>Win Rate</TableCell>
-                    <TableCell align="right" sx={{ color: 'white' }}>Games</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {analysisResults.moveOptions[selectedPokemon.topLeft]?.length > 0 ? (
-                    analysisResults.moveOptions[selectedPokemon.topLeft].map((move, index) => (
-                      <TableRow 
-                        key={move.move}
-                        sx={{ 
-                          backgroundColor: 'rgba(34, 31, 199, 0.8)',
-                          borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
-                        }}
-                      >
-                        <TableCell sx={{ color: 'white' }}>
-                          {move.move}
-                        </TableCell>
-                        <TableCell align="right" sx={{ color: 'white' }}>{move.winRate.toFixed(1)}%</TableCell>
-                        <TableCell align="right" sx={{ color: 'white' }}>{move.total}</TableCell>
+              
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, mb: 3 }}>
+                {/* First Pokémon's moves */}
+                <TableContainer component={Paper} sx={{ flex: 1, backgroundColor: '#221FC7' }}>
+                  <Typography variant="subtitle2" sx={{ p: 1 }}>
+                    {selectedPokemon.topLeft.name} {selectedPokemon.topLeft.item ? `(${selectedPokemon.topLeft.item})` : ''}
+                  </Typography>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Move</TableCell>
+                        <TableCell align="right">Win Rate</TableCell>
+                        <TableCell align="right">Games</TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={3} sx={{ color: 'white', textAlign: 'center' }}>
-                        No move data available
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            
-            {/* Your right Pokémon moves */}
-            <TableContainer component={Paper} sx={{ backgroundColor: 'rgba(34, 31, 199, 0.8)', flex: 1 }}>
-              <Typography variant="subtitle2" sx={{ p: 1, fontWeight: 'bold' }}>
-                {selectedPokemon.topRight}
+                    </TableHead>
+                    <TableBody>
+                      {/* Make sure the array exists before mapping */}
+                      {Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topLeft.name]) && analysisResults.allMoveOptions[selectedPokemon.topLeft.name].map((move) => (
+                        <TableRow key={move.move}>
+                          <TableCell>{move.move}</TableCell>
+                          <TableCell align="right">{move.winRate.toFixed(1)}%</TableCell>
+                          <TableCell align="right">{move.total}</TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Handle case when no moves exist */}
+                      {(!analysisResults.allMoveOptions[selectedPokemon.topLeft.name] || 
+                        !Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topLeft.name]) || 
+                        analysisResults.allMoveOptions[selectedPokemon.topLeft.name].length === 0) && (
+                        <TableRow>
+                          <TableCell colSpan={3} align="center">No move data available</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                
+                {/* Second Pokémon's moves */}
+                <TableContainer component={Paper} sx={{ flex: 1, backgroundColor: '#221FC7' }}>
+                  <Typography variant="subtitle2" sx={{ p: 1 }}>
+                    {selectedPokemon.topRight.name} {selectedPokemon.topRight.item ? `(${selectedPokemon.topRight.item})` : ''}
+                  </Typography>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Move</TableCell>
+                        <TableCell align="right">Win Rate</TableCell>
+                        <TableCell align="right">Games</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {/* Make sure the array exists before mapping */}
+                      {Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topRight.name]) && analysisResults.allMoveOptions[selectedPokemon.topRight.name].map((move) => (
+                        <TableRow key={move.move}>
+                          <TableCell>{move.move}</TableCell>
+                          <TableCell align="right">{move.winRate.toFixed(1)}%</TableCell>
+                          <TableCell align="right">{move.total}</TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Handle case when no moves exist */}
+                      {(!analysisResults.allMoveOptions[selectedPokemon.topRight.name] || 
+                        !Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topRight.name]) || 
+                        analysisResults.allMoveOptions[selectedPokemon.topRight.name].length === 0) && (
+                        <TableRow>
+                          <TableCell colSpan={3} align="center">No move data available</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+              
+              <Typography variant="h6" gutterBottom>
+                Best Combinations
               </Typography>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
-                    <TableCell sx={{ color: 'white' }}>Move</TableCell>
-                    <TableCell align="right" sx={{ color: 'white' }}>Win Rate</TableCell>
-                    <TableCell align="right" sx={{ color: 'white' }}>Games</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {analysisResults.moveOptions[selectedPokemon.topRight]?.length > 0 ? (
-                    analysisResults.moveOptions[selectedPokemon.topRight].map((move, index) => (
-                      <TableRow 
-                        key={move.move}
-                        sx={{ 
-                          backgroundColor: 'rgba(34, 31, 199, 0.8)',
-                          borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
-                        }}
-                      >
-                        <TableCell sx={{ color: 'white' }}>
-                          {move.move}
-                        </TableCell>
-                        <TableCell align="right" sx={{ color: 'white' }}>{move.winRate.toFixed(1)}%</TableCell>
-                        <TableCell align="right" sx={{ color: 'white' }}>{move.total}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
+              
+              <TableContainer component={Paper} sx={{ backgroundColor: '#221FC7' }}>
+                <Table size="small">
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={3} sx={{ color: 'white', textAlign: 'center' }}>
-                        No move data available
-                      </TableCell>
+                      <TableCell>{selectedPokemon.topLeft.name}</TableCell>
+                      <TableCell>{selectedPokemon.topRight.name}</TableCell>
+                      <TableCell align="right">Win Rate</TableCell>
+                      <TableCell align="right">Games</TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-
-          <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.2)' }} />
-          
-          <Typography variant="h6" gutterBottom>
-            Top Winning Combinations
-          </Typography>
-          
-          {analysisResults.topStrategies.length > 0 ? (
-            <TableContainer component={Paper} sx={{ backgroundColor: 'rgba(34, 31, 199, 0.8)' }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}>
-                    <TableCell sx={{ color: 'white' }}>Move Combination</TableCell>
-                    <TableCell align="right" sx={{ color: 'white' }}>Win Rate</TableCell>
-                    <TableCell align="right" sx={{ color: 'white' }}>Games</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {analysisResults.topStrategies.map((strategy, index) => (
-                    <TableRow 
-                      key={index}
-                      sx={{ 
-                        backgroundColor: 'rgba(34, 31, 199, 0.8)',
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
-                      }}
-                    >
-                      <TableCell sx={{ color: 'white' }}>
-                        <Box>
-                          <Typography variant="body2" component="span" sx={{ 
-                            fontWeight: 'bold',
-                            display: 'block' 
-                          }}>
-                            {strategy.pokemon1}:
-                          </Typography>
-                          <Typography component="span" sx={{ 
-                            color: 'white',
-                            ml: 1
-                          }}>
-                            {strategy.move1}
-                          </Typography>
-                        </Box>
-                        <Box sx={{ mt: 1 }}>
-                          <Typography variant="body2" component="span" sx={{ 
-                            fontWeight: 'bold',
-                            display: 'block'
-                          }}>
-                            {strategy.pokemon2}:
-                          </Typography>
-                          <Typography component="span" sx={{ 
-                            color: 'white',
-                            ml: 1
-                          }}>
-                            {strategy.move2}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right" sx={{ color: 'white' }}>{strategy.winRate.toFixed(1)}%</TableCell>
-                      <TableCell align="right" sx={{ color: 'white' }}>{strategy.games}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          ) : (
-            <Typography variant="body2">
-              Not enough data to determine effective move combinations
-            </Typography>
+                  </TableHead>
+                  <TableBody>
+                    {analysisResults.topCombinations && analysisResults.topCombinations.length > 0 ? (
+                      analysisResults.topCombinations.map((combo, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{combo.move1}</TableCell>
+                          <TableCell>{combo.move2}</TableCell>
+                          <TableCell align="right">{combo.winRate.toFixed(1)}%</TableCell>
+                          <TableCell align="right">{combo.games}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} align="center">No combination data available</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
           )}
         </Paper>
       )}
