@@ -1111,3 +1111,22 @@ function parseMoveString(moveString) {
   // If we reach here, use the whole string as the move (fallback)
   return { move: moveString, isSpreadMove };
 }
+
+app.get('/api/items', async (req, res) => {
+  try {
+    // Consulta PokeAPI para obtener hasta 1000 ítems (ajusta el limit según sea necesario)
+    const response = await axios.get('https://pokeapi.co/api/v2/item?limit=1000');
+    const items = response.data.results.map(item => ({
+      // Formateamos el nombre para que aparezca con mayúsculas en cada palabra
+      name: item.name
+              .split('-')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' '),
+      url: item.url
+    }));
+    res.json(items);
+  } catch (error) {
+    console.error("Error fetching items:", error);
+    res.status(500).send("Error fetching items");
+  }
+});

@@ -1,3 +1,4 @@
+import axios from 'axios';
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog,
@@ -12,15 +13,12 @@ import {
   CircularProgress,
   Typography,
   FormControl,
-  InputLabel,
-  Select,
-  MenuItem
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import useDraggable from '../hooks/useDraggable';
 
 //todo
-//borde del select item blanco
+//better item list
 //cargar los datos ya puestos en el pokemon dialog
 
 const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList = [] }) => {
@@ -29,6 +27,16 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Nuevo estado para almacenar la lista de items
+  const [itemsList, setItemsList] = useState([]);
+  
+  // Obtener la lista de items de la API al montar el componente
+  useEffect(() => {
+    axios.get('http://localhost:5000/api/items')
+      .then(response => setItemsList(response.data))
+      .catch(error => console.error("Error fetching items:", error));
+  }, []);
+
   // Lista predefinida de objetos populares
   const commonItems = [
     { name: 'No Item', usage: 0 },
@@ -174,29 +182,33 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
               {/* Item selector appears only when a Pokémon is selected */}
               {selectedPokemon && (
                 <FormControl fullWidth sx={{ mt: 2 }}>
-                  <InputLabel id="item-select-label" sx={{ color: 'white' }}>Held Item</InputLabel>
-                  <Select
-                    labelId="item-select-label"
-                    value={selectedItem}
-                    onChange={(e) => setSelectedItem(e.target.value)}
-                    label="Held Item"
-                    sx={{
-                      mt: 1,
-                      color: 'white',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: 'white',
-                      },
-                      '& .MuiSvgIcon-root': {
-                        color: 'white',
-                      }
+                  <Autocomplete
+                    options={itemsList}
+                    getOptionLabel={(option) => option.name}
+                    value={itemsList.find(item => item.name === selectedItem) || null}
+                    onChange={(event, newValue) => {
+                      setSelectedItem(newValue ? newValue.name : '');
                     }}
-                  >
-                    {commonItems.map((item) => (
-                      <MenuItem key={item.name} value={item.name}>
-                        {item.name} {item.usage > 0 && `(${item.usage.toFixed(1)}%)`}
-                      </MenuItem>
-                    ))}
-                  </Select>
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Held Item"
+                        variant="outlined"
+                        InputLabelProps={{ style: { color: 'white' } }}
+                        InputProps={{
+                          ...params.InputProps,
+                          style: { color: 'white' },
+                        }}
+                      />
+                    )}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        '& fieldset': { borderColor: 'white' },
+                      },
+                      '& .MuiSvgIcon-root': { color: 'white' },
+                      mt: 1,
+                    }}
+                  />
                 </FormControl>
               )}
             </>
