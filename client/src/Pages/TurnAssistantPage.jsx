@@ -389,7 +389,7 @@ function TurnAssistantPage() {
                     <TableHead>
                       <TableRow>
                         <TableCell>Move</TableCell>
-                        <TableCell align="right">Win Rate</TableCell>
+                        <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Win Rate</TableCell>
                         <TableCell align="right">Games</TableCell>
                       </TableRow>
                     </TableHead>
@@ -423,7 +423,7 @@ function TurnAssistantPage() {
                     <TableHead>
                       <TableRow>
                         <TableCell>Move</TableCell>
-                        <TableCell align="right">Win Rate</TableCell>
+                        <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Win Rate</TableCell>
                         <TableCell align="right">Games</TableCell>
                       </TableRow>
                     </TableHead>
