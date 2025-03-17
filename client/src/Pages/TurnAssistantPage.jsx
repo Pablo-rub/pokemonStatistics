@@ -28,6 +28,7 @@ import BattleField from "../components/BattleField";
 import BattleConditionsDialog from '../components/BattleConditionsDialog';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import useDraggable from "../hooks/useDraggable";
 
 //todo
 //ver que hacer con el mirror
@@ -280,6 +281,12 @@ function TurnAssistantPage() {
     }
   };
 
+  // Agrega este componente para hacer el dialog movible
+  const DraggablePaperComponent = (props) => {
+    const { ref, style, handleMouseDown } = useDraggable({ resetOnClose: true, handleSelector: '#draggable-dialog-title' });
+    return <Paper {...props} ref={ref} style={{ ...props.style, ...style }} onMouseDown={handleMouseDown} />;
+  };
+
   return (
     <Box sx={{ padding: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -399,15 +406,18 @@ function TurnAssistantPage() {
           <Dialog
             open={resetDialogOpen}
             onClose={() => setResetDialogOpen(false)}
+            PaperComponent={DraggablePaperComponent}
           >
-            <DialogTitle>Confirm Reset</DialogTitle>
+            <DialogTitle style={{ cursor: 'grab' }} id="draggable-dialog-title">
+              Confirm Reset
+            </DialogTitle>
             <DialogContent>
               <Typography>
                 Are you sure you want to reset? This will clear all selected Pokémon, items, abilities, battle conditions, etc.
               </Typography>
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setResetDialogOpen(false)} variant="contained">
+              <Button onClick={() => setResetDialogOpen(false)} variant="outlined" color="primary">
                 Cancel
               </Button>
               <Button onClick={handleResetData} variant="contained" color="error">
