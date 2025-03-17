@@ -626,7 +626,7 @@ app.delete('/api/users/:userId/saved-replays', async (req, res) => {
 // Turn Assistant endpoint - Find battle scenarios with specific Pokémon
 app.post('/api/turn-assistant/analyze', async (req, res) => {
   try {
-    const { pokemonData } = req.body;
+    const { pokemonData, battleConditions = { weather: "", field: "", room: "" } } = req.body;
     
     if (!pokemonData || !pokemonData.topLeft || !pokemonData.topRight || 
         !pokemonData.bottomLeft || !pokemonData.bottomRight) {
@@ -699,7 +699,10 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
           t.revealed_pokemon.player2 as player2_revealed,
           r.winner,
           r.player1,
-          r.player2
+          r.player2,
+          t.weather,
+          t.field,
+          t.room
         FROM \`pokemon-statistics.pokemon_replays.replays\` r
         CROSS JOIN UNNEST(r.turns) t
         WHERE t.turn_number > 0 
@@ -908,6 +911,49 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       matchingTurnsQuery += ` AND (${opponentAbilityConditions.join(' AND ')})`;
     }
 
+    // Add the conditions for weather, field, and room if they are specified
+    console.log("Battle conditions being applied:", battleConditions);
+
+    if (battleConditions.weather && battleConditions.weather.trim() !== "") {
+      const formattedWeather = battleConditions.weather.trim().toLowerCase();
+      console.log(`Applying weather filter: "${formattedWeather}"`);
+      
+      if (formattedWeather === "none") {
+        // Ya está correcto usando t.weather
+        matchingTurnsQuery += ` AND (t.weather IS NULL OR t.weather.condition IS NULL OR t.weather.condition = '')`;
+      } else {
+        // Ya está correcto usando t.weather 
+        matchingTurnsQuery += ` AND t.weather IS NOT NULL AND LOWER(t.weather.condition) = @battleWeather`;
+        params.battleWeather = formattedWeather;
+      }
+    }
+
+    // Para Field (por ejemplo, "Electric Terrain" en BD vs "ElectricTerrain" recibido)
+    if (battleConditions.field && battleConditions.field.trim() !== "") {
+      const formattedField = battleConditions.field.trim().toLowerCase();
+      console.log(`Applying field filter: "${formattedField}"`);
+      
+      if (formattedField === "none") {
+        matchingTurnsQuery += ` AND (t.field IS NULL OR t.field.terrain IS NULL OR t.field.terrain = '')`;
+      } else {
+        matchingTurnsQuery += ` AND t.field IS NOT NULL AND LOWER(REPLACE(t.field.terrain, ' ', '')) = @battleField`;
+        params.battleField = formattedField;
+      }
+    }
+
+    // Para Room (por ejemplo, "Trick Room" en BD vs "TrickRoom" recibido)
+    if (battleConditions.room && battleConditions.room.trim() !== "") {
+      const formattedRoom = battleConditions.room.trim().toLowerCase();
+      console.log(`Applying room filter: "${formattedRoom}"`);
+      
+      if (formattedRoom === "none") {
+        matchingTurnsQuery += ` AND (t.room IS NULL OR t.room.condition IS NULL OR t.room.condition = '')`;
+      } else {
+        matchingTurnsQuery += ` AND t.room IS NOT NULL AND LOWER(REPLACE(t.room.condition, ' ', '')) = @battleRoom`;
+        params.battleRoom = formattedRoom;
+      }
+    }
+    
     // AQUÍ ESTÁ LA CORRECCIÓN PRINCIPAL: Asegurarnos de que se filtren los escenarios por ambos equipos
     matchingTurnsQuery += `
           AND (
@@ -945,7 +991,7 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
         END as your_team_won
       FROM matching_turns m
     `;
-    
+
     console.log("Executing query to find matching scenarios...");
     const [matchingScenarios] = await bigQuery.query({ query: matchingTurnsQuery, params });
     console.log(`Found ${matchingScenarios.length} matching scenarios`);
