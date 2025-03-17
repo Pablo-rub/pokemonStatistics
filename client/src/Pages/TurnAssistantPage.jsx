@@ -293,14 +293,6 @@ function TurnAssistantPage() {
             ))}
           </Select>
         </FormControl>
-        <Button
-          variant="contained"
-          color="error"
-          onClick={() => setSelectedFormat('')}
-          sx={{ ml: 2 }}
-        >
-          Limpiar Todo
-        </Button>
       </Box>
       
       {isLoadingFormats ? (
@@ -324,7 +316,7 @@ function TurnAssistantPage() {
               Battle Conditions
             </Button>
             <Button
-              variant="contained"
+              variant="containedSuccess"
               color="primary"
               onClick={handleAnalyze}
               disabled={analyzing}
@@ -333,6 +325,16 @@ function TurnAssistantPage() {
             >
               {analyzing ? "Analyzing..." : "Analyze Battle"}
             </Button>
+
+            <Button
+              variant="containedCancel"
+              color="error"
+              onClick={() => setSelectedFormat('')}
+              sx={{ py: 1, px: 4, mt: 1 }}
+            >
+              Reset
+            </Button>
+
             {error && (
               <Alert 
                 severity="error" 
