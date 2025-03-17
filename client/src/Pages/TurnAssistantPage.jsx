@@ -31,6 +31,7 @@ import BattleConditionsDialog from '../components/BattleConditionsDialog';
 //el tipo de tera
 //moves
 //boton limpiar
+//battle condition movible
 
 function TurnAssistantPage() {
   const [selectedPokemon, setSelectedPokemon] = useState({
@@ -333,7 +334,17 @@ function TurnAssistantPage() {
               {analyzing ? "Analyzing..." : "Analyze Battle"}
             </Button>
             {error && (
-              <Alert severity="error" sx={{ mt: 2, width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+              <Alert 
+                severity="error" 
+                sx={{
+                  mt: 2,
+                  width: '100%',
+                  maxWidth: '400px',
+                  textAlign: 'center',
+                  backgroundColor: '#E9A5A5', // rojo (puedes ajustar al tono deseado)
+                  color: '#000000'            // texto negro
+                }}
+              >
                 {error}
               </Alert>
             )}
