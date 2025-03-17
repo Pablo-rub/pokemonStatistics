@@ -16,7 +16,11 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from "@mui/material";
 import axios from "axios";
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -63,6 +67,36 @@ function TurnAssistantPage() {
       opponentSide: {}
     }
   });
+
+  // Agrega un estado para el diálogo de confirmación
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  
+  // Agrega un estado para reiniciar el componente
+  const [resetKey, setResetKey] = useState(0);
+
+  // Función para resetear todos los campos (sin resetear el formato)
+  const handleResetData = () => {
+    setSelectedPokemon({
+      topLeft: null,
+      topRight: null,
+      bottomLeft: null,
+      bottomRight: null
+    });
+    setBattleConditions({
+      weather: "",
+      field: "",
+      room: "",
+      sideEffects: {
+        yourSide: {},
+        opponentSide: {}
+      }
+    });
+    setAnalysisResults(null);
+    setError(null);
+    setResetDialogOpen(false);
+    // Incrementa la clave para forzar re-montaje de BattleField
+    setResetKey(prev => prev + 1);
+  };
 
   const handlePokemonSelect = (pokemonData) => {
     // Simply update the selected Pokémon without checking for duplicates
@@ -303,6 +337,7 @@ function TurnAssistantPage() {
         <>
           {/* Solo se usa un BattleField */}
           <BattleField 
+            key={resetKey}
             onPokemonSelect={handlePokemonSelect}
             pokemonList={pokemonList}
           />
@@ -326,11 +361,10 @@ function TurnAssistantPage() {
             >
               {analyzing ? "Analyzing..." : "Analyze Battle"}
             </Button>
-
             <Button
               variant="containedCancel"
               color="error"
-              onClick={() => setSelectedFormat('')}
+              onClick={() => setResetDialogOpen(true)}
               startIcon={<DeleteOutlineIcon />}
               sx={{ py: 1, px: 4, mt: 1 }}
             >
@@ -360,6 +394,27 @@ function TurnAssistantPage() {
             battleConditions={battleConditions}
             setBattleConditions={setBattleConditions}
           />
+
+          {/* Diálogo de confirmación para resetear */}
+          <Dialog
+            open={resetDialogOpen}
+            onClose={() => setResetDialogOpen(false)}
+          >
+            <DialogTitle>Confirm Reset</DialogTitle>
+            <DialogContent>
+              <Typography>
+                Are you sure you want to reset? This will clear all selected Pokémon, items, abilities, battle conditions, etc.
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setResetDialogOpen(false)} variant="contained">
+                Cancel
+              </Button>
+              <Button onClick={handleResetData} variant="contained" color="error">
+                Reset
+              </Button>
+            </DialogActions>
+          </Dialog>
         </>
       )}
       
