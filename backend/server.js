@@ -622,3 +622,705 @@ app.delete('/api/users/:userId/saved-replays', async (req, res) => {
     res.status(500).send("Error deleting saved replays");
   }
 });
+
+// Turn Assistant endpoint - Find battle scenarios with specific Pokémon
+app.post('/api/turn-assistant/analyze', async (req, res) => {
+  try {
+    const { pokemonData, battleConditions = { weather: "", field: "", room: "" } } = req.body;
+    
+    if (!pokemonData || !pokemonData.topLeft || !pokemonData.topRight || 
+        !pokemonData.bottomLeft || !pokemonData.bottomRight) {
+      return res.status(400).json({ 
+        error: "Missing Pokémon selection. Please select all 4 Pokémon." 
+      });
+    }
+    
+    // Extract your Pokémon (from the top row)
+    const yourPokemon = [
+      pokemonData.topLeft.name || '', 
+      pokemonData.topRight.name || ''
+    ];
+    
+    // Extract opponent's Pokémon (from the bottom row)
+    const opponentPokemon = [
+      pokemonData.bottomLeft.name || '', 
+      pokemonData.bottomRight.name || ''
+    ];
+    
+    // Extract items for your Pokémon, ensuring we have a value or null
+    const yourItems = {
+      [yourPokemon[0]]: pokemonData.topLeft.item || null,
+      [yourPokemon[1]]: pokemonData.topRight.item || null
+    };
+    
+    // Extract items for opponent's Pokémon too
+    const opponentItems = {
+      [opponentPokemon[0]]: pokemonData.bottomLeft.item || null,
+      [opponentPokemon[1]]: pokemonData.bottomRight.item || null
+    };
+
+    // Extract abilities for your Pokémon
+    const yourAbilities = {
+      [yourPokemon[0]]: pokemonData.topLeft.ability || null,
+      [yourPokemon[1]]: pokemonData.topRight.ability || null
+    };
+
+    // Extract abilities for opponent's Pokémon too
+    const opponentAbilities = {
+      [opponentPokemon[0]]: pokemonData.bottomLeft.ability || null,
+      [opponentPokemon[1]]: pokemonData.bottomRight.ability || null
+    };
+
+    console.log(`Analyzing scenario with Your Pokémon: ${yourPokemon.join(', ')} vs Opponent's: ${opponentPokemon.join(', ')}`);
+    console.log(`Your items: ${Object.values(yourItems).filter(Boolean).join(', ') || 'None'}`);
+    console.log(`Opponent items: ${Object.values(opponentItems).filter(Boolean).join(', ') || 'None'}`);
+    console.log(`Your abilities: ${Object.values(yourAbilities).filter(Boolean).join(', ') || 'None'}`);
+    console.log(`Opponent abilities: ${Object.values(opponentAbilities).filter(Boolean).join(', ') || 'None'}`);
+
+    // Define params for BigQuery
+    let params = {
+      yourPokemon1: yourPokemon[0],
+      yourPokemon2: yourPokemon[1],
+      opponentPokemon1: opponentPokemon[0],
+      opponentPokemon2: opponentPokemon[1]
+    };
+
+    // Build the main query to find turns with these Pokémon
+    let matchingTurnsQuery = `
+      WITH matching_turns AS (
+        SELECT
+          r.replay_id,
+          t.turn_number,
+          t.starts_with.player1 as player1_pokemon,
+          t.starts_with.player2 as player2_pokemon,
+          t.moves_done.player1 as player1_moves,
+          t.moves_done.player2 as player2_moves,
+          t.revealed_pokemon.player1 as player1_revealed,
+          t.revealed_pokemon.player2 as player2_revealed,
+          r.winner,
+          r.player1,
+          r.player2,
+          t.weather,
+          t.field,
+          t.room
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r
+        CROSS JOIN UNNEST(r.turns) t
+        WHERE t.turn_number > 0 
+    `;
+
+    // Build item conditions for your Pokémon
+    let yourItemConditions = [];
+    
+    // Process item search conditions for your Pokémon
+    for (let i = 0; i < yourPokemon.length; i++) {
+      const pokemon = yourPokemon[i];
+      const item = yourItems[pokemon];
+      
+      // Only add condition if an item is specified
+      if (item) {
+        // Remove spaces from item name to match database format
+        const formattedItem = item === 'No Item' ? null : item.replace(/\s+/g, '');
+        
+        if (item === 'No Item') {
+          // Search for Pokémon with no item
+          yourItemConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @yourPokemon${i+1} AND (p.item IS NULL OR p.item = '')
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @yourPokemon${i+1} AND (p.item IS NULL OR p.item = '')
+              )
+            )
+          `);
+        } else {
+          // Search for Pokémon with the specified item
+          yourItemConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @yourPokemon${i+1} AND p.item = @yourItem${i+1}
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @yourPokemon${i+1} AND p.item = @yourItem${i+1}
+              )
+            )
+          `);
+          params[`yourItem${i+1}`] = formattedItem;
+        }
+      }
+    }
+    
+    // Build item conditions for opponent's Pokémon
+    let opponentItemConditions = [];
+    
+    // Process item search conditions for opponent's Pokémon
+    for (let i = 0; i < opponentPokemon.length; i++) {
+      const pokemon = opponentPokemon[i];
+      const item = opponentItems[pokemon];
+      
+      // Only add condition if an item is specified
+      if (item) {
+        // Remove spaces from item name to match database format
+        const formattedItem = item === 'No Item' ? null : item.replace(/\s+/g, '');
+        
+        if (item === 'No Item') {
+          // Search for Pokémon with no item
+          opponentItemConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @opponentPokemon${i+1} AND (p.item IS NULL OR p.item = '')
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @opponentPokemon${i+1} AND (p.item IS NULL OR p.item = '')
+              )
+            )
+          `);
+        } else {
+          // Search for Pokémon with the specified item
+          opponentItemConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @opponentPokemon${i+1} AND p.item = @opponentItem${i+1}
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @opponentPokemon${i+1} AND p.item = @opponentItem${i+1}
+              )
+            )
+          `);
+          params[`opponentItem${i+1}`] = formattedItem;
+        }
+      }
+    }
+
+    // Construir condiciones para filtrar por habilidad de "tus" Pokémon
+    let yourAbilityConditions = [];
+    for (let i = 0; i < yourPokemon.length; i++) {
+      const pokemon = yourPokemon[i];
+      const ability = yourAbilities[pokemon];
+
+      if (ability && ability.trim() !== "") {
+        if (ability === "No Ability") {
+          yourAbilityConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @yourPokemon${i+1} AND (p.ability IS NULL OR p.ability = '')
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @yourPokemon${i+1} AND (p.ability IS NULL OR p.ability = '')
+              )
+            )
+          `);
+        } else {
+          // Normaliza: quita espacios, recorta y pasa a minúsculas
+          const formattedAbility = ability.trim().toLowerCase().replace(/\s+/g, '');
+          yourAbilityConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @yourPokemon${i+1} 
+                  AND LOWER(REPLACE(p.ability, ' ', '')) = @yourAbility${i+1}
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @yourPokemon${i+1} 
+                  AND LOWER(REPLACE(p.ability, ' ', '')) = @yourAbility${i+1}
+              )
+            )
+          `);
+          params[`yourAbility${i+1}`] = formattedAbility;
+        }
+      }
+    }
+
+    if (yourAbilityConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${yourAbilityConditions.join(' AND ')})`;
+    }
+
+    // Add item conditions to the query
+    if (yourItemConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${yourItemConditions.join(' AND ')})`;
+    }
+    
+    // Add opponent item conditions to the query
+    if (opponentItemConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${opponentItemConditions.join(' AND ')})`;
+    }
+
+    // Construir condiciones para filtrar por habilidad de los Pokémon del oponente
+    let opponentAbilityConditions = [];
+    for (let i = 0; i < opponentPokemon.length; i++) {
+      const pokemon = opponentPokemon[i];
+      const ability = opponentAbilities[pokemon];
+
+      if (ability && ability.trim() !== "") {
+        if (ability === "No Ability") {
+          opponentAbilityConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @opponentPokemon${i+1} AND (p.ability IS NULL OR p.ability = '')
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @opponentPokemon${i+1} AND (p.ability IS NULL OR p.ability = '')
+              )
+            )
+          `);
+        } else {
+          // Normaliza: quita espacios, recorta y pasa a minúsculas
+          const formattedAbility = ability.trim().toLowerCase().replace(/\s+/g, '');
+          opponentAbilityConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @opponentPokemon${i+1} 
+                  AND LOWER(REPLACE(p.ability, ' ', '')) = @opponentAbility${i+1}
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @opponentPokemon${i+1} 
+                  AND LOWER(REPLACE(p.ability, ' ', '')) = @opponentAbility${i+1}
+              )
+            )
+          `);
+          params[`opponentAbility${i+1}`] = formattedAbility;
+        }
+      }
+    }
+
+    // Añadir las condiciones de habilidad del oponente a la query
+    if (opponentAbilityConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${opponentAbilityConditions.join(' AND ')})`;
+    }
+
+    // Add the conditions for weather, field, and room if they are specified
+    console.log("Battle conditions being applied:", battleConditions);
+
+    if (battleConditions.weather && battleConditions.weather.trim() !== "") {
+      const formattedWeather = battleConditions.weather.trim().toLowerCase();
+      console.log(`Applying weather filter: "${formattedWeather}"`);
+      
+      if (formattedWeather === "none") {
+        // Ya está correcto usando t.weather
+        matchingTurnsQuery += ` AND (t.weather IS NULL OR t.weather.condition IS NULL OR t.weather.condition = '')`;
+      } else {
+        // Ya está correcto usando t.weather 
+        matchingTurnsQuery += ` AND t.weather IS NOT NULL AND LOWER(t.weather.condition) = @battleWeather`;
+        params.battleWeather = formattedWeather;
+      }
+    }
+
+    // Para Field (por ejemplo, "Electric Terrain" en BD vs "ElectricTerrain" recibido)
+    if (battleConditions.field && battleConditions.field.trim() !== "") {
+      const formattedField = battleConditions.field.trim().toLowerCase();
+      console.log(`Applying field filter: "${formattedField}"`);
+      
+      if (formattedField === "none") {
+        matchingTurnsQuery += ` AND (t.field IS NULL OR t.field.terrain IS NULL OR t.field.terrain = '')`;
+      } else {
+        matchingTurnsQuery += ` AND t.field IS NOT NULL AND LOWER(REPLACE(t.field.terrain, ' ', '')) = @battleField`;
+        params.battleField = formattedField;
+      }
+    }
+
+    // Para Room (por ejemplo, "Trick Room" en BD vs "TrickRoom" recibido)
+    if (battleConditions.room && battleConditions.room.trim() !== "") {
+      const formattedRoom = battleConditions.room.trim().toLowerCase();
+      console.log(`Applying room filter: "${formattedRoom}"`);
+      
+      if (formattedRoom === "none") {
+        matchingTurnsQuery += ` AND (t.room IS NULL OR t.room.condition IS NULL OR t.room.condition = '')`;
+      } else {
+        matchingTurnsQuery += ` AND t.room IS NOT NULL AND LOWER(REPLACE(t.room.condition, ' ', '')) = @battleRoom`;
+        params.battleRoom = formattedRoom;
+      }
+    }
+    
+    // AQUÍ ESTÁ LA CORRECCIÓN PRINCIPAL: Asegurarnos de que se filtren los escenarios por ambos equipos
+    matchingTurnsQuery += `
+          AND (
+            -- Caso 1: Tus Pokémon están en player1 y los del oponente en player2
+            (
+              ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1))
+              AND
+              ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2))
+            )
+            OR
+            -- Caso 2: Tus Pokémon están en player2 y los del oponente en player1
+            (
+              ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2))
+              AND
+              ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1))
+            )
+          )
+      )
+
+      SELECT
+        m.replay_id,
+        m.turn_number,
+        m.player1_pokemon,
+        m.player2_pokemon,
+        m.player1_moves,
+        m.player2_moves,
+        m.player1_revealed,
+        m.player2_revealed,
+        CASE 
+          -- Determine if "your" Pokémon are player1 or player2
+          WHEN (m.player1_pokemon[OFFSET(0)] = @yourPokemon1 OR m.player1_pokemon[OFFSET(1)] = @yourPokemon1) 
+            AND (m.player1_pokemon[OFFSET(0)] = @yourPokemon2 OR m.player1_pokemon[OFFSET(1)] = @yourPokemon2)
+            THEN (m.winner = m.player1) -- True if player1 won and they had "your" Pokémon
+          ELSE (m.winner = m.player2) -- True if player2 won and they had "your" Pokémon
+        END as your_team_won
+      FROM matching_turns m
+    `;
+
+    console.log("Executing query to find matching scenarios...");
+    const [matchingScenarios] = await bigQuery.query({ query: matchingTurnsQuery, params });
+    console.log(`Found ${matchingScenarios.length} matching scenarios`);
+    
+    if (matchingScenarios.length === 0) {
+      return res.json({
+        matchingScenarios: 0,
+        message: "No matching battle scenarios found with these Pokémon."
+      });
+    }
+    
+    // Analyze the scenarios to find winning moves and combinations
+    const analysis = analyzeMatchingScenarios(matchingScenarios, yourPokemon, yourItems, yourAbilities);
+    
+    res.json({
+      matchingScenarios: matchingScenarios.length,
+      data: analysis
+    });
+    
+  } catch (error) {
+    console.error("Error analyzing battle scenarios:", error);
+    res.status(500).json({ 
+      error: "Error analyzing battle scenarios", 
+      details: error.message 
+    });
+  }
+});
+
+// Helper function to analyze matching scenarios
+function analyzeMatchingScenarios(scenarios, yourPokemon, yourItems = {}, yourAbilities = {}) {
+  console.log("Analyzing scenarios:", scenarios.length);
+  console.log("Your Pokémon:", yourPokemon);
+  console.log("Your Items:", yourItems);
+  console.log("Your Abilities:", yourAbilities);
+  
+  // Count total games and wins
+  const totalGames = scenarios.length;
+  const wins = scenarios.filter(s => s.your_team_won).length;
+  const winRate = (wins / totalGames) * 100;
+
+  // Track move frequency and win rates
+  const moveStats = {
+    [yourPokemon[0]]: {},
+    [yourPokemon[1]]: {}
+  };
+
+  // Track combinations of moves
+  const moveComboStats = {};
+
+  // For each scenario, analyze the moves used
+  scenarios.forEach(scenario => {
+    try {
+      // Determine which player has your Pokémon
+      let yourSide, opponentSide;
+      
+      // Check if your Pokémon are on player1's side
+      if (Array.isArray(scenario.player1_pokemon) &&
+          scenario.player1_pokemon.includes(yourPokemon[0]) && 
+          scenario.player1_pokemon.includes(yourPokemon[1])) {
+        yourSide = "player1";
+        opponentSide = "player2";
+      } else {
+        yourSide = "player2";
+        opponentSide = "player1";
+      }
+      
+      // Get your Pokémon positions in the array
+      const pokemonPositions = {};
+      scenario[`${yourSide}_pokemon`].forEach((pokemon, index) => {
+        if (yourPokemon.includes(pokemon)) {
+          pokemonPositions[pokemon] = index;
+        }
+      });
+      
+      // Get Tera status for your Pokémon
+      const teraStatus = {};
+      if (Array.isArray(scenario[`${yourSide}_revealed`])) {
+        scenario[`${yourSide}_revealed`].forEach(pokemon => {
+          if (pokemon && yourPokemon.includes(pokemon.name)) {
+            teraStatus[pokemon.name] = pokemon.tera && pokemon.tera.active === true;
+          }
+        });
+      }
+      
+      // Get the moves corresponding to each of your Pokémon based on their position
+      for (const pokemon of yourPokemon) {
+        const position = pokemonPositions[pokemon];
+        
+        if (position !== undefined && 
+            Array.isArray(scenario[`${yourSide}_moves`]) && 
+            position < scenario[`${yourSide}_moves`].length) {
+          
+          // Get the exact move text from the database
+          let moveText = scenario[`${yourSide}_moves`][position];
+          
+          // Skip if move is empty
+          if (!moveText) continue;
+          
+          // Add Tera indicator if the Pokémon has Terastallized
+          if (teraStatus[pokemon]) {
+            moveText = `${moveText} (Tera)`;
+          }
+          
+          // Track move usage and win rates
+          if (!moveStats[pokemon][moveText]) {
+            moveStats[pokemon][moveText] = { total: 0, wins: 0 };
+          }
+          
+          moveStats[pokemon][moveText].total++;
+          if (scenario.your_team_won) {
+            moveStats[pokemon][moveText].wins++;
+          }
+        }
+      }
+      
+      // Track move combinations between your two Pokémon
+      const pokemon1 = yourPokemon[0];
+      const pokemon2 = yourPokemon[1];
+      const pos1 = pokemonPositions[pokemon1];
+      const pos2 = pokemonPositions[pokemon2];
+      
+      if (pos1 !== undefined && pos2 !== undefined && 
+          Array.isArray(scenario[`${yourSide}_moves`]) && 
+          pos1 < scenario[`${yourSide}_moves`].length && 
+          pos2 < scenario[`${yourSide}_moves`].length) {
+        
+        // Get move texts for both Pokémon
+        let move1 = scenario[`${yourSide}_moves`][pos1];
+        let move2 = scenario[`${yourSide}_moves`][pos2];
+        
+        // Skip if either move is empty
+        if (!move1 || !move2) return;
+        
+        // Add Tera indicators
+        if (teraStatus[pokemon1]) move1 = `${move1} (Tera)`;
+        if (teraStatus[pokemon2]) move2 = `${move2} (Tera)`;
+        
+        // Create a unique key for this move combination
+        const comboKey = `${move1}:${move2}`;
+        
+        if (!moveComboStats[comboKey]) {
+          moveComboStats[comboKey] = { 
+            total: 0, 
+            wins: 0,
+            move1: move1,
+            move2: move2,
+            pokemon1: pokemon1,
+            pokemon2: pokemon2
+          };
+        }
+        
+        moveComboStats[comboKey].total++;
+        if (scenario.your_team_won) {
+          moveComboStats[comboKey].wins++;
+        }
+      }
+    } catch (err) {
+      console.error("Error analyzing scenario:", err);
+    }
+  });
+
+  // Convert move stats to array format with win rates for all moves
+  const allMoves = {};
+  
+  for (const pokemon of yourPokemon) {
+    allMoves[pokemon] = Object.keys(moveStats[pokemon])
+      .map(move => ({
+        move,
+        total: moveStats[pokemon][move].total,
+        wins: moveStats[pokemon][move].wins,
+        winRate: (moveStats[pokemon][move].wins / moveStats[pokemon][move].total) * 100
+      }))
+      .sort((a, b) => b.winRate - a.winRate || b.total - a.total); // Sort by win rate, then by usage
+  }
+
+  // Find best move combinations
+  const bestCombos = Object.keys(moveComboStats)
+    .filter(combo => moveComboStats[combo].total >= 1) // Only consider combos with enough samples
+    .sort((a, b) => {
+      // Sort primarily by win rate, secondarily by number of games
+      const winRateA = (moveComboStats[a].wins / moveComboStats[a].total) * 100;
+      const winRateB = (moveComboStats[b].wins / moveComboStats[b].total) * 100;
+      return winRateB - winRateA || moveComboStats[b].total - moveComboStats[a].total;
+    })
+    .slice(0, 10) // Take top 10 combinations instead of top 5
+    .map(combo => ({
+      move1: moveComboStats[combo].move1,
+      move2: moveComboStats[combo].move2,
+      pokemon1: moveComboStats[combo].pokemon1,
+      pokemon2: moveComboStats[combo].pokemon2,
+      games: moveComboStats[combo].total,
+      wins: moveComboStats[combo].wins,
+      winRate: (moveComboStats[combo].wins / moveComboStats[combo].total) * 100
+    }));
+
+  return {
+    totalGames,
+    winRate,
+    allMoveOptions: allMoves,
+    topCombinations: bestCombos
+  };
+}
+
+// Improved helper function to parse move strings and extract all relevant information
+function parseMoveString(moveString) {
+  if (!moveString) return null;
+  
+  // Common formats in the data:
+  // 1. "moveX used by PokemonA on PokemonB" -> "electro drift used by Miraidon on Whimsicott"
+  // 2. "move on target" -> "electro drift on Miraidon"
+  // 3. "move (spread)" -> "dazzling gleam (spread)"
+  // 4. "move (spread) used by Pokemon" -> "dazzling gleam (spread) used by Miraidon"
+  // 5. "PokemonA used move on PokemonB" -> "Miraidon used electro drift on Whimsicott"
+  // 6. "switch to Pokemon" -> "switch to Iron Hands"
+  // 7. "fainted, switch to Pokemon" -> "fainted, switch to Chi-Yu"
+  
+  let move = null;
+  let userPokemon = null;
+  let targetPokemon = null;
+  let isSpreadMove = false;
+  
+  // Case 1: "moveX used by PokemonA on PokemonB"
+  const usedByPattern = /^([^\s]+(?:\s+[^\s]+)*) used by ([^\s]+) on ([^\s]+)/;
+  const usedByMatch = moveString.match(usedByPattern);
+  if (usedByMatch) {
+    move = usedByMatch[1].trim();
+    userPokemon = usedByMatch[2].trim();
+    targetPokemon = usedByMatch[3].trim();
+    return { move, userPokemon, targetPokemon, isSpreadMove };
+  }
+  
+  // Case 2: "move on target"
+  const onTargetPattern = /^([^\s]+(?:\s+[^\s]+)*) on ([^\s,(]+)/;
+  const onTargetMatch = moveString.match(onTargetPattern);
+  if (onTargetMatch) {
+    move = onTargetMatch[1].trim();
+    targetPokemon = onTargetMatch[2].trim();
+    return { move, targetPokemon, isSpreadMove };
+  }
+  
+  // Case 3 & 4: Spread moves
+  const spreadPattern = /^([^\s(]+(?:\s+[^\s(]+)*) \(spread\)(?:\s+used by ([^\s]+))?/;
+  const spreadMatch = moveString.match(spreadPattern);
+  if (spreadMatch) {
+    move = spreadMatch[1].trim();
+    userPokemon = spreadMatch[2]?.trim(); // Optional user Pokemon
+    isSpreadMove = true;
+    return { move, userPokemon, isSpreadMove };
+  }
+  
+  // Case 5: "PokemonA used move on PokemonB"
+  const pokemonUsedPattern = /^([^\s]+) used ([^\s]+(?:\s+[^\s]+)*)(?: on ([^\s,]+))?/;
+  const pokemonUsedMatch = moveString.match(pokemonUsedPattern);
+  if (pokemonUsedMatch) {
+    userPokemon = pokemonUsedMatch[1].trim();
+    move = pokemonUsedMatch[2].trim();
+    targetPokemon = pokemonUsedMatch[3]?.trim(); // Optional target
+    return { move, userPokemon, targetPokemon, isSpreadMove };
+  }
+  
+  // Case 6: Switch actions
+  const switchPattern = /^(?:.*,\s*)?switch to ([^\s,]+)/;
+  const switchMatch = moveString.match(switchPattern);
+  if (switchMatch) {
+    move = "switch";
+    return { move, isSpreadMove };
+  }
+  
+  // Case 7: Fainted notifications
+  if (moveString.startsWith("fainted")) {
+    move = "fainted";
+    return { move, isSpreadMove };
+  }
+  
+  // If we reach here, use the whole string as the move (fallback)
+  return { move: moveString, isSpreadMove };
+}
+
+app.get('/api/items', async (req, res) => {
+  try {
+    // Consulta PokeAPI para obtener hasta 1000 ítems (ajusta el limit según sea necesario)
+    const response = await axios.get('https://pokeapi.co/api/v2/item?limit=10000');
+    const items = response.data.results.map(item => ({
+      // Formateamos el nombre para que aparezca con mayúsculas en cada palabra
+      name: item.name
+              .split('-')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' '),
+      url: item.url
+    }));
+    res.json(items);
+  } catch (error) {
+    console.error("Error fetching items:", error);
+    res.status(500).send("Error fetching items");
+  }
+});
+
+// Endpoint para obtener la lista de habilidades (abilities)
+app.get('/api/abilities', async (req, res) => {
+  try {
+    const response = await axios.get('https://pokeapi.co/api/v2/ability?limit=1000');
+    const abilities = response.data.results.map(ability => ({
+      name: ability.name
+              .split('-')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' '),
+      url: ability.url
+    }));
+    res.json(abilities);
+  } catch (error) {
+    console.error("Error fetching abilities:", error);
+    res.status(500).send("Error fetching abilities");
+  }
+});
+
+// Endpoint para obtener la lista de movimientos (moves)
+app.get('/api/moves', async (req, res) => {
+  try {
+    const response = await axios.get('https://pokeapi.co/api/v2/move?limit=1000');
+    const moves = response.data.results.map(move => ({
+      name: move.name
+              .split('-')
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' '),
+      url: move.url
+    }));
+    res.json(moves);
+  } catch (error) {
+    console.error("Error fetching moves:", error);
+    res.status(500).send("Error fetching moves");
+  }
+});
