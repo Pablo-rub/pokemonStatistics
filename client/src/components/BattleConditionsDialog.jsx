@@ -14,13 +14,12 @@ import {
   FormControlLabel,
   Checkbox,
   Divider,
-  Typography
+  Typography,
+  Paper
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import useDraggable from '../hooks/useDraggable';
 
-const sideEffectsList = ["Tailwind", "Reflect", "Lightscreen", "Aurora Veil"];
-
-// Estilo para que el icono del checkbox sea blanco incluso al estar seleccionado
 const WhiteCheckbox = styled(Checkbox)(({ theme }) => ({
   color: 'white',
   '&.Mui-checked': {
@@ -28,6 +27,12 @@ const WhiteCheckbox = styled(Checkbox)(({ theme }) => ({
   }
 }));
 
+function DraggablePaperComponent(props) {
+  const { ref, style, handleMouseDown } = useDraggable({ resetOnClose: true, handleSelector: '#draggable-dialog-title' });
+  return <Paper ref={ref} {...props} style={{ ...props.style, ...style }} onMouseDown={handleMouseDown} />;
+}
+
+const sideEffectsList = ["Tailwind", "Reflect", "Lightscreen", "Aurora Veil"];
 const menuPropsDown = {
   anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
   transformOrigin: { vertical: 'top', horizontal: 'left' },
@@ -65,8 +70,10 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth>
-      <DialogTitle>Battle Conditions</DialogTitle>
+    <Dialog open={open} onClose={onClose} PaperComponent={DraggablePaperComponent} fullWidth>
+      <DialogTitle id="draggable-dialog-title" style={{ cursor: 'grab' }}>
+        Battle Conditions
+      </DialogTitle>
       <DialogContent dividers>
         <Grid container spacing={2}>
           {/* Sección de condiciones generales */}
@@ -176,7 +183,7 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
         <Button onClick={onClose} variant="contained" color="error">
           Cancel
         </Button>
-        <Button onClick={handleApply} variant="containedSuccess">
+        <Button onClick={handleApply} variant="contained" color="success">
           Apply
         </Button>
       </DialogActions>
