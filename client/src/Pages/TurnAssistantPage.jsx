@@ -16,21 +16,26 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from "@mui/material";
 import axios from "axios";
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import BattleField from "../components/BattleField";
+import BattleConditionsDialog from '../components/BattleConditionsDialog';
+import SettingsIcon from '@mui/icons-material/Settings';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import useDraggable from "../hooks/useDraggable";
 
 //todo
 //ver que hacer con el mirror
 //boton ir para arriba
 //better item list
 //que los select se desplieguen para abajo
-//el tipo de tera
 //moves
-//error al analizar abajo, donde el boton
-//boton limpiar
 
 function TurnAssistantPage() {
   const [selectedPokemon, setSelectedPokemon] = useState({
@@ -49,13 +54,49 @@ function TurnAssistantPage() {
   const [isLoadingFormats, setIsLoadingFormats] = useState(false);
   const [pokemonList, setPokemonList] = useState([]);
 
-  // Agregar estados para el panel de condiciones de batalla
-  const [showBattleOptions, setShowBattleOptions] = useState(false);
+  // Estado para el dialog de Battle Conditions  
+  const [battleDialogOpen, setBattleDialogOpen] = useState(false);
+
+  // Estado extendido para condiciones de batalla, incluyendo side effects
   const [battleConditions, setBattleConditions] = useState({
     weather: "",
     field: "",
-    room: ""
+    room: "",
+    sideEffects: {
+      yourSide: {},
+      opponentSide: {}
+    }
   });
+
+  // Agrega un estado para el diálogo de confirmación
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  
+  // Agrega un estado para reiniciar el componente
+  const [resetKey, setResetKey] = useState(0);
+
+  // Función para resetear todos los campos (sin resetear el formato)
+  const handleResetData = () => {
+    setSelectedPokemon({
+      topLeft: null,
+      topRight: null,
+      bottomLeft: null,
+      bottomRight: null
+    });
+    setBattleConditions({
+      weather: "",
+      field: "",
+      room: "",
+      sideEffects: {
+        yourSide: {},
+        opponentSide: {}
+      }
+    });
+    setAnalysisResults(null);
+    setError(null);
+    setResetDialogOpen(false);
+    // Incrementa la clave para forzar re-montaje de BattleField
+    setResetKey(prev => prev + 1);
+  };
 
   const handlePokemonSelect = (pokemonData) => {
     // Simply update the selected Pokémon without checking for duplicates
@@ -239,6 +280,12 @@ function TurnAssistantPage() {
     }
   };
 
+  // Agrega este componente para hacer el dialog movible
+  const DraggablePaperComponent = (props) => {
+    const { ref, style, handleMouseDown } = useDraggable({ resetOnClose: true, handleSelector: '#draggable-dialog-title' });
+    return <Paper {...props} ref={ref} style={{ ...props.style, ...style }} onMouseDown={handleMouseDown} />;
+  };
+
   return (
     <Box sx={{ padding: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -248,15 +295,9 @@ function TurnAssistantPage() {
         Select a format and Pokémon to get strategic recommendations
       </Typography>
       
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
-      
       {/* Format selector */}
-      <Box sx={{ display: 'flex', mb: 4 }}>
-        <FormControl sx={{ minWidth: 250 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+        <FormControl sx={{ minWidth: 250, flexGrow: 1 }}>
           <InputLabel id="format-select-label" sx={{ color: 'white' }}>Format</InputLabel>
           <Select
             labelId="format-select-label"
@@ -279,6 +320,11 @@ function TurnAssistantPage() {
                 color: 'white',
               }
             }}
+            MenuProps={{
+              anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
+              transformOrigin: { vertical: 'top', horizontal: 'left' },
+              getContentAnchorEl: null
+            }}
           >
             {formats.map((format) => (
               <MenuItem key={format.apiName} value={format.apiName}>
@@ -295,7 +341,9 @@ function TurnAssistantPage() {
         </Box>
       ) : (
         <>
+          {/* Solo se usa un BattleField */}
           <BattleField 
+            key={resetKey}
             onPokemonSelect={handlePokemonSelect}
             pokemonList={pokemonList}
           />
@@ -303,96 +351,14 @@ function TurnAssistantPage() {
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
             <Button
               variant="contained"
-              onClick={() => setShowBattleOptions(!showBattleOptions)}
+              onClick={() => setBattleDialogOpen(true)}
+              startIcon={<SettingsIcon />}
               sx={{ mb: 1, width: '200px', fontSize: '0.875rem', marginTop: '1rem' }}
             >
-              {showBattleOptions ? "Hide Options" : "Battle Conditions"}
+              Battle Conditions
             </Button>
-            {showBattleOptions && (
-              <Paper 
-                elevation={3}
-                sx={{
-                  width: '200px', 
-                  p: 2, 
-                  borderRadius: 1, 
-                  mb: 2,
-                  backgroundColor: '#221FC7',
-                  color: 'white'
-                }}
-              >
-                <Typography variant="subtitle1" sx={{ mb: 1, textAlign: 'center' }}>
-                  Battle Conditions
-                </Typography>
-                <FormControl fullWidth sx={{ mb: 1 }}>
-                  <InputLabel sx={{ color: 'white' }}>Weather</InputLabel>
-                  <Select
-                    value={battleConditions.weather}
-                    onChange={(e) =>
-                      setBattleConditions(prev => ({ ...prev, weather: e.target.value }))
-                    }
-                    label="Weather"
-                    sx={{
-                      color: 'white',
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: 'white' }
-                    }}
-                  >
-                    <MenuItem value="">Any</MenuItem>
-                    <MenuItem value="none">None</MenuItem>
-                    <MenuItem value="RainDance">RainDance</MenuItem>
-                    <MenuItem value="SunnyDay">SunnyDay</MenuItem>
-                    <MenuItem value="Sandstorm">Sandstorm</MenuItem>
-                    <MenuItem value="Hail">Hail</MenuItem>
-                  </Select>
-                </FormControl>
-                <FormControl fullWidth sx={{ mb: 1 }}>
-                  <InputLabel sx={{ color: 'white' }}>Field</InputLabel>
-                  <Select
-                    value={battleConditions.field}
-                    onChange={(e) =>
-                      setBattleConditions(prev => ({ ...prev, field: e.target.value }))
-                    }
-                    label="Field"
-                    sx={{
-                      color: 'white',
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: 'white' }
-                    }}
-                  >
-                    <MenuItem value="">Any</MenuItem>
-                    <MenuItem value="none">None</MenuItem>
-                    <MenuItem value="ElectricTerrain">ElectricTerrain</MenuItem>
-                    <MenuItem value="GrassyTerrain">GrassyTerrain</MenuItem>
-                    <MenuItem value="MistyTerrain">MistyTerrain</MenuItem>
-                    <MenuItem value="PsychicTerrain">PsychicTerrain</MenuItem>
-                  </Select>
-                </FormControl>
-                <FormControl fullWidth>
-                  <InputLabel sx={{ color: 'white' }}>Room Effects</InputLabel>
-                  <Select
-                    value={battleConditions.room}
-                    onChange={(e) =>
-                      setBattleConditions(prev => ({ ...prev, room: e.target.value }))
-                    }
-                    label="Room Effects"
-                    sx={{
-                      color: 'white',
-                      '& .MuiOutlinedInput-notchedOutline': { borderColor: 'white' }
-                    }}
-                  >
-                    <MenuItem value="">Any</MenuItem>
-                    <MenuItem value="none">None</MenuItem>
-                    <MenuItem value="TrickRoom">TrickRoom</MenuItem>
-                    <MenuItem value="Gravity">Gravity</MenuItem>
-                    <MenuItem value="MagicRoom">MagicRoom</MenuItem>
-                    <MenuItem value="WonderRoom">WonderRoom</MenuItem>
-                  </Select>
-                </FormControl>
-              </Paper>
-            )}
-          </Box>
-          
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
             <Button
-              variant="contained"
+              variant="containedSuccess"
               color="primary"
               onClick={handleAnalyze}
               disabled={analyzing}
@@ -401,7 +367,63 @@ function TurnAssistantPage() {
             >
               {analyzing ? "Analyzing..." : "Analyze Battle"}
             </Button>
+            <Button
+              variant="containedCancel"
+              color="error"
+              onClick={() => setResetDialogOpen(true)}
+              startIcon={<DeleteOutlineIcon />}
+              sx={{ py: 1, px: 4, mt: 1 }}
+            >
+              Reset
+            </Button>
+
+            {error && (
+              <Alert 
+                severity="error" 
+                sx={{
+                  mt: 2,
+                  width: '100%',
+                  maxWidth: '400px',
+                  textAlign: 'center',
+                  backgroundColor: '#E9A5A5', // rojo (puedes ajustar al tono deseado)
+                  color: '#000000'            // texto negro
+                }}
+              >
+                {error}
+              </Alert>
+            )}
           </Box>
+
+          <BattleConditionsDialog
+            open={battleDialogOpen}
+            onClose={() => setBattleDialogOpen(false)}
+            battleConditions={battleConditions}
+            setBattleConditions={setBattleConditions}
+          />
+
+          {/* Diálogo de confirmación para resetear */}
+          <Dialog
+            open={resetDialogOpen}
+            onClose={() => setResetDialogOpen(false)}
+            PaperComponent={DraggablePaperComponent}
+          >
+            <DialogTitle style={{ cursor: 'grab' }} id="draggable-dialog-title">
+              Confirm Reset
+            </DialogTitle>
+            <DialogContent>
+              <Typography>
+                Are you sure you want to reset? This will clear all selected Pokémon, items, abilities, battle conditions, etc.
+              </Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setResetDialogOpen(false)} variant="outlined" color="primary">
+                Cancel
+              </Button>
+              <Button onClick={handleResetData} variant="contained" color="error">
+                Reset
+              </Button>
+            </DialogActions>
+          </Dialog>
         </>
       )}
       
@@ -435,7 +457,7 @@ function TurnAssistantPage() {
                     <TableHead>
                       <TableRow>
                         <TableCell>Move</TableCell>
-                        <TableCell align="right">Win Rate</TableCell>
+                        <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Win Rate</TableCell>
                         <TableCell align="right">Games</TableCell>
                       </TableRow>
                     </TableHead>
@@ -469,7 +491,7 @@ function TurnAssistantPage() {
                     <TableHead>
                       <TableRow>
                         <TableCell>Move</TableCell>
-                        <TableCell align="right">Win Rate</TableCell>
+                        <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Win Rate</TableCell>
                         <TableCell align="right">Games</TableCell>
                       </TableRow>
                     </TableHead>

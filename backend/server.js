@@ -1041,6 +1041,23 @@ function analyzeMatchingScenarios(scenarios, yourPokemon, yourItems = {}, yourAb
   // Track combinations of moves
   const moveComboStats = {};
 
+  // Primero, construimos un objeto que asocia el nombre del Pokémon con su tipo de tera (si está activo)
+  const teraInfo = {};
+  // Suponiendo que cada escenario incluye un array 'playerX_revealed' con objetos que incluyen { name, tera }
+  scenarios.forEach(scenario => {
+    // Determinar de qué lado están "tus" Pokémon (por ejemplo, 'player1' o 'player2')
+    const yourSide = scenario.player1_pokemon.includes(yourPokemon[0]) ? "player1" : "player2";
+    if (Array.isArray(scenario[`${yourSide}_revealed`])) {
+      scenario[`${yourSide}_revealed`].forEach(pokemon => {
+        // Asegurarse de que pokemon es un objeto con la propiedad name y tera
+        if (pokemon && pokemon.name && yourPokemon.includes(pokemon.name) && pokemon.tera && pokemon.tera.active) {
+          // Guarda el tipo; si no hay tipo definido se dejará como cadena vacía
+          teraInfo[pokemon.name] = pokemon.tera.type || "";
+        }
+      });
+    }
+  });
+
   // For each scenario, analyze the moves used
   scenarios.forEach(scenario => {
     try {
@@ -1094,6 +1111,13 @@ function analyzeMatchingScenarios(scenarios, yourPokemon, yourItems = {}, yourAb
           if (teraStatus[pokemon]) {
             moveText = `${moveText} (Tera)`;
           }
+
+          // Si el Pokémon tiene terastallizado (la lógica original podría usar un objeto teraStatus booleado)
+          if (teraInfo[pokemon] !== undefined) {
+            const type = teraInfo[pokemon];
+            // Si ya se añadió "(Tera)" previamente, se elimina para que quede solo la versión detallada
+            moveText = type ? `${moveText.replace(" (Tera)", "")} (Tera ${type})` : `${moveText.replace(" (Tera)", "")} (Tera)`;
+          }
           
           // Track move usage and win rates
           if (!moveStats[pokemon][moveText]) {
@@ -1128,6 +1152,18 @@ function analyzeMatchingScenarios(scenarios, yourPokemon, yourItems = {}, yourAb
         // Add Tera indicators
         if (teraStatus[pokemon1]) move1 = `${move1} (Tera)`;
         if (teraStatus[pokemon2]) move2 = `${move2} (Tera)`;
+
+        // Si el Pokémon tiene terastallizado (la lógica original podría usar un objeto teraStatus booleado)
+        if (teraInfo[pokemon1] !== undefined) {
+          const type = teraInfo[pokemon1];
+          // Si ya se añadió "(Tera)" previamente, se elimina para que quede solo la versión detallada
+          move1 = type ? `${move1.replace(" (Tera)", "")} (Tera ${type})` : `${move1.replace(" (Tera)", "")} (Tera)`;
+        }
+        if (teraInfo[pokemon2] !== undefined) {
+          const type = teraInfo[pokemon2];
+          // Si ya se añadió "(Tera)" previamente, se elimina para que quede solo la versión detallada
+          move2 = type ? `${move2.replace(" (Tera)", "")} (Tera ${type})` : `${move2.replace(" (Tera)", "")} (Tera)`;
+        }
         
         // Create a unique key for this move combination
         const comboKey = `${move1}:${move2}`;
