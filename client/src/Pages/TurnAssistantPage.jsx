@@ -22,16 +22,16 @@ import axios from "axios";
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import BattleField from "../components/BattleField";
 import BattleConditionsDialog from '../components/BattleConditionsDialog';
+import SettingsIcon from '@mui/icons-material/Settings';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
 //todo
 //ver que hacer con el mirror
 //boton ir para arriba
 //better item list
 //que los select se desplieguen para abajo
-//el tipo de tera
 //moves
 //boton limpiar
-//battle condition movible
 
 function TurnAssistantPage() {
   const [selectedPokemon, setSelectedPokemon] = useState({
@@ -311,6 +311,7 @@ function TurnAssistantPage() {
             <Button
               variant="contained"
               onClick={() => setBattleDialogOpen(true)}
+              startIcon={<SettingsIcon />}
               sx={{ mb: 1, width: '200px', fontSize: '0.875rem', marginTop: '1rem' }}
             >
               Battle Conditions
@@ -330,6 +331,7 @@ function TurnAssistantPage() {
               variant="containedCancel"
               color="error"
               onClick={() => setSelectedFormat('')}
+              startIcon={<DeleteOutlineIcon />}
               sx={{ py: 1, px: 4, mt: 1 }}
             >
               Reset
