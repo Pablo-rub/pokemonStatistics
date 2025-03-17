@@ -281,12 +281,13 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose} variant="outlined">
+        <Button onClick={onClose} variant="contained" color="error">
           Cancel
         </Button>
         <Button 
           onClick={handleSelectPokemon} 
-          variant="containedSuccess"
+          variant="containedSuccess" 
+          color="error"
           disabled={!selectedPokemon}
         >
           Select
