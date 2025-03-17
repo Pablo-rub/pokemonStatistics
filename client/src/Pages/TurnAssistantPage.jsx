@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -9,11 +9,28 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
 } from "@mui/material";
 import axios from "axios";
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import BattleField from "../components/BattleField";
+
+//todo
+//ver que hacer con el mirror
+//boton ir para arriba
+//better item list
+//que los select se desplieguen para abajo
+//el tipo de tera
+//moves
+//error al analizar abajo, donde el boton
+//boton limpiar
 
 function TurnAssistantPage() {
   const [selectedPokemon, setSelectedPokemon] = useState({
@@ -24,13 +41,89 @@ function TurnAssistantPage() {
   });
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState(null);
+  const [error, setError] = useState(null);
   
   // States for format selection
   const [formats, setFormats] = useState([]);
   const [selectedFormat, setSelectedFormat] = useState('');
   const [isLoadingFormats, setIsLoadingFormats] = useState(false);
   const [pokemonList, setPokemonList] = useState([]);
-  
+
+  // Agregar estados para el panel de condiciones de batalla
+  const [showBattleOptions, setShowBattleOptions] = useState(false);
+  const [battleConditions, setBattleConditions] = useState({
+    weather: "",
+    field: "",
+    room: ""
+  });
+
+  const handlePokemonSelect = (pokemonData) => {
+    // Simply update the selected Pokémon without checking for duplicates
+    setSelectedPokemon(pokemonData);
+    
+    // Reset analysis results whenever Pokémon are changed
+    setAnalysisResults(null);
+    
+    // Clear any existing error
+    setError(null);
+  };
+
+  const handleAnalyze = async () => {
+    // Ensure all four positions have a Pokémon selected
+    const allSelected = 
+      selectedPokemon.topLeft && 
+      selectedPokemon.topRight && 
+      selectedPokemon.bottomLeft && 
+      selectedPokemon.bottomRight;
+    
+    if (!allSelected) {
+      setError("Please select all four Pokémon before analyzing.");
+      return;
+    }
+    
+    // Check for duplicate selections
+    if (selectedPokemon.topLeft.name === selectedPokemon.topRight.name) {
+      setError("You cannot use the same Pokémon twice on your team. Please select different Pokémon.");
+      return;
+    }
+    
+    if (selectedPokemon.bottomLeft.name === selectedPokemon.bottomRight.name) {
+      setError("Your opponent cannot use the same Pokémon twice. Please select different Pokémon for the opponent.");
+      return;
+    }
+
+    setAnalyzing(true);
+    setError(null);
+    
+    try {
+      // Make the API call to the backend
+      const response = await axios.post("http://localhost:5000/api/turn-assistant/analyze", {
+        pokemonData: selectedPokemon,
+        battleConditions: battleConditions
+      });
+      
+      if (response.data) {
+        setAnalysisResults({
+          matchingGames: response.data.matchingScenarios || 0,
+          winRate: response.data.data?.winRate || 0,
+          allMoveOptions: response.data.data?.allMoveOptions || {},
+          topCombinations: response.data.data?.topCombinations || []
+        });
+      } else {
+        setError("No analysis data returned from server.");
+      }
+    } catch (error) {
+      console.error("Error analyzing scenarios:", error);
+      if (error.response && error.response.data) {
+        setError(error.response.data.error || "Error analyzing scenarios.");
+      } else {
+        setError("Error connecting to server. Please try again later.");
+      }
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   // Fetch available formats when component mounts
   useEffect(() => {
     const fetchFormatsAndPokemon = async () => {
@@ -93,6 +186,7 @@ function TurnAssistantPage() {
         }
       } catch (error) {
         console.error('Error fetching formats:', error);
+        setError('Failed to fetch available formats. Please try again later.');
       } finally {
         setIsLoadingFormats(false);
       }
@@ -105,6 +199,7 @@ function TurnAssistantPage() {
   const handleFormatChange = (event) => {
     const newFormat = event.target.value;
     setSelectedFormat(newFormat);
+    setError(null);
     
     // Need to fetch the latest month again since we're not storing it
     const fetchLatestMonth = async () => {
@@ -120,6 +215,7 @@ function TurnAssistantPage() {
         }
       } catch (error) {
         console.error('Error fetching latest month:', error);
+        setError('Failed to fetch Pokémon list for the selected format.');
       }
     };
     
@@ -139,48 +235,7 @@ function TurnAssistantPage() {
       }
     } catch (error) {
       console.error('Error fetching Pokémon list:', error);
-    }
-  };
-
-  const handlePokemonSelect = (pokemonData) => {
-    setSelectedPokemon(pokemonData);
-    // Reset analysis when Pokémon change
-    setAnalysisResults(null);
-  };
-
-  const handleAnalyze = async () => {
-    // Ensure all four positions have a Pokémon selected
-    const allSelected = Object.values(selectedPokemon).every(pokemon => pokemon !== null);
-    
-    if (!allSelected) {
-      alert("Please select all four Pokémon before analyzing.");
-      return;
-    }
-
-    setAnalyzing(true);
-    
-    try {
-      // Here you would make an API call to your backend
-      // For now, we'll simulate a delay and return mock data
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setAnalysisResults({
-        yourRecommendedMoves: {
-          [selectedPokemon.topLeft]: ["Water Spout", "Protect"],
-          [selectedPokemon.topRight]: ["Tera", "Close Combat"]
-        },
-        winRate: 65.3,
-        matchingGames: 42,
-        topStrategies: [
-          { move1: "Water Spout", move2: "Close Combat", winRate: 72.1, games: 18 },
-          { move1: "Protect", move2: "Close Combat", winRate: 64.5, games: 15 },
-          { move1: "Water Spout", move2: "Protect", winRate: 55.3, games: 9 }
-        ]
-      });
-    } catch (error) {
-      console.error("Error analyzing battle scenario:", error);
-    } finally {
-      setAnalyzing(false);
+      setError('Failed to fetch Pokémon list. Please try again later.');
     }
   };
 
@@ -193,6 +248,12 @@ function TurnAssistantPage() {
         Select a format and Pokémon to get strategic recommendations
       </Typography>
       
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+      
       {/* Format selector */}
       <Box sx={{ display: 'flex', mb: 4 }}>
         <FormControl sx={{ minWidth: 250 }}>
@@ -200,12 +261,18 @@ function TurnAssistantPage() {
           <Select
             labelId="format-select-label"
             value={selectedFormat}
+            onChange={(e) => handleFormatChange(e)}
             label="Format"
-            onChange={handleFormatChange}
-            disabled={isLoadingFormats || formats.length === 0}
+            disabled={isLoadingFormats}
             sx={{
               color: 'white',
-              '& .MuiOutlinedInput-notchedOutline': {
+              '.MuiOutlinedInput-notchedOutline': {
+                borderColor: 'white',
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'white',
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                 borderColor: 'white',
               },
               '& .MuiSvgIcon-root': {
@@ -221,66 +288,247 @@ function TurnAssistantPage() {
           </Select>
         </FormControl>
       </Box>
+      
+      {isLoadingFormats ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <BattleField 
+            onPokemonSelect={handlePokemonSelect}
+            pokemonList={pokemonList}
+          />
 
-      {/* Battle field with Pokémon selection */}
-      <BattleField 
-        onPokemonSelect={handlePokemonSelect} 
-        pokemonList={pokemonList}
-      />
-
-      {/* Analyze button */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <Button 
-          variant="containedSuccess" 
-          size="large"
-          startIcon={analyzing ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
-          onClick={handleAnalyze}
-          disabled={analyzing || !Object.values(selectedPokemon).every(pokemon => pokemon !== null)}
-        >
-          {analyzing ? "Analyzing..." : "Analyze Battle"}
-        </Button>
-      </Box>
-
-      {/* Results section */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 2 }}>
+            <Button
+              variant="contained"
+              onClick={() => setShowBattleOptions(!showBattleOptions)}
+              sx={{ mb: 1, width: '200px', fontSize: '0.875rem', marginTop: '1rem' }}
+            >
+              {showBattleOptions ? "Hide Options" : "Battle Conditions"}
+            </Button>
+            {showBattleOptions && (
+              <Paper 
+                elevation={3}
+                sx={{
+                  width: '200px', 
+                  p: 2, 
+                  borderRadius: 1, 
+                  mb: 2,
+                  backgroundColor: '#221FC7',
+                  color: 'white'
+                }}
+              >
+                <Typography variant="subtitle1" sx={{ mb: 1, textAlign: 'center' }}>
+                  Battle Conditions
+                </Typography>
+                <FormControl fullWidth sx={{ mb: 1 }}>
+                  <InputLabel sx={{ color: 'white' }}>Weather</InputLabel>
+                  <Select
+                    value={battleConditions.weather}
+                    onChange={(e) =>
+                      setBattleConditions(prev => ({ ...prev, weather: e.target.value }))
+                    }
+                    label="Weather"
+                    sx={{
+                      color: 'white',
+                      '& .MuiOutlinedInput-notchedOutline': { borderColor: 'white' }
+                    }}
+                  >
+                    <MenuItem value="">Any</MenuItem>
+                    <MenuItem value="none">None</MenuItem>
+                    <MenuItem value="RainDance">RainDance</MenuItem>
+                    <MenuItem value="SunnyDay">SunnyDay</MenuItem>
+                    <MenuItem value="Sandstorm">Sandstorm</MenuItem>
+                    <MenuItem value="Hail">Hail</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth sx={{ mb: 1 }}>
+                  <InputLabel sx={{ color: 'white' }}>Field</InputLabel>
+                  <Select
+                    value={battleConditions.field}
+                    onChange={(e) =>
+                      setBattleConditions(prev => ({ ...prev, field: e.target.value }))
+                    }
+                    label="Field"
+                    sx={{
+                      color: 'white',
+                      '& .MuiOutlinedInput-notchedOutline': { borderColor: 'white' }
+                    }}
+                  >
+                    <MenuItem value="">Any</MenuItem>
+                    <MenuItem value="none">None</MenuItem>
+                    <MenuItem value="ElectricTerrain">ElectricTerrain</MenuItem>
+                    <MenuItem value="GrassyTerrain">GrassyTerrain</MenuItem>
+                    <MenuItem value="MistyTerrain">MistyTerrain</MenuItem>
+                    <MenuItem value="PsychicTerrain">PsychicTerrain</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth>
+                  <InputLabel sx={{ color: 'white' }}>Room Effects</InputLabel>
+                  <Select
+                    value={battleConditions.room}
+                    onChange={(e) =>
+                      setBattleConditions(prev => ({ ...prev, room: e.target.value }))
+                    }
+                    label="Room Effects"
+                    sx={{
+                      color: 'white',
+                      '& .MuiOutlinedInput-notchedOutline': { borderColor: 'white' }
+                    }}
+                  >
+                    <MenuItem value="">Any</MenuItem>
+                    <MenuItem value="none">None</MenuItem>
+                    <MenuItem value="TrickRoom">TrickRoom</MenuItem>
+                    <MenuItem value="Gravity">Gravity</MenuItem>
+                    <MenuItem value="MagicRoom">MagicRoom</MenuItem>
+                    <MenuItem value="WonderRoom">WonderRoom</MenuItem>
+                  </Select>
+                </FormControl>
+              </Paper>
+            )}
+          </Box>
+          
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleAnalyze}
+              disabled={analyzing}
+              startIcon={analyzing ? <CircularProgress size={20} /> : <PlayArrowIcon />}
+              sx={{ py: 1, px: 4 }}
+            >
+              {analyzing ? "Analyzing..." : "Analyze Battle"}
+            </Button>
+          </Box>
+        </>
+      )}
+      
+      {/* Analysis Results */}
       {analysisResults && (
-        <Paper sx={{ mt: 4, p: 3, backgroundColor: '#221FC7' }}>
+        <Paper sx={{ mt: 5, p: 3, backgroundColor: '#221FC7' }}>
           <Typography variant="h5" gutterBottom>
             Analysis Results
           </Typography>
           
-          <Typography variant="subtitle1">
-            Based on {analysisResults.matchingGames} similar games, your win rate is approximately {analysisResults.winRate.toFixed(1)}%
-          </Typography>
-
-          <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.2)' }} />
-          
-          <Typography variant="h6" gutterBottom>
-            Recommended Moves
+          <Typography variant="body1" paragraph>
+            Based on {analysisResults.matchingGames} similar scenarios, your win rate is approximately {analysisResults.winRate.toFixed(1)}%.
           </Typography>
           
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2">
-              {selectedPokemon.topLeft}: {analysisResults.yourRecommendedMoves[selectedPokemon.topLeft].join(" or ")}
-            </Typography>
-            <Typography variant="subtitle2">
-              {selectedPokemon.topRight}: {analysisResults.yourRecommendedMoves[selectedPokemon.topRight].join(" or ")}
-            </Typography>
-          </Box>
-
-          <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.2)' }} />
+          <Divider sx={{ my: 2 }} />
           
-          <Typography variant="h6" gutterBottom>
-            Top Winning Combinations
-          </Typography>
-          
-          {analysisResults.topStrategies.map((strategy, index) => (
-            <Box key={index} sx={{ mb: 1 }}>
-              <Typography variant="body2">
-                {strategy.move1} + {strategy.move2}: {strategy.winRate.toFixed(1)}% win rate 
-                ({strategy.games} games)
+          {/* Check that allMoveOptions exists before trying to render */}
+          {analysisResults.allMoveOptions && selectedPokemon.topLeft && selectedPokemon.topRight && (
+            <>
+              <Typography variant="h6" gutterBottom >
+                Move Options
               </Typography>
-            </Box>
-          ))}
+              
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, mb: 3 }}>
+                {/* First Pokémon's moves */}
+                <TableContainer component={Paper} sx={{ flex: 1, backgroundColor: '#221FC7' }}>
+                  <Typography variant="subtitle2" sx={{ p: 1 }}>
+                    {selectedPokemon.topLeft.name} {selectedPokemon.topLeft.item ? `(${selectedPokemon.topLeft.item})` : ''}
+                  </Typography>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Move</TableCell>
+                        <TableCell align="right">Win Rate</TableCell>
+                        <TableCell align="right">Games</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {/* Make sure the array exists before mapping */}
+                      {Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topLeft.name]) && analysisResults.allMoveOptions[selectedPokemon.topLeft.name].map((move) => (
+                        <TableRow key={move.move}>
+                          <TableCell>{move.move}</TableCell>
+                          <TableCell align="right">{move.winRate.toFixed(1)}%</TableCell>
+                          <TableCell align="right">{move.total}</TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Handle case when no moves exist */}
+                      {(!analysisResults.allMoveOptions[selectedPokemon.topLeft.name] || 
+                        !Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topLeft.name]) || 
+                        analysisResults.allMoveOptions[selectedPokemon.topLeft.name].length === 0) && (
+                        <TableRow>
+                          <TableCell colSpan={3} align="center">No move data available</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                
+                {/* Second Pokémon's moves */}
+                <TableContainer component={Paper} sx={{ flex: 1, backgroundColor: '#221FC7' }}>
+                  <Typography variant="subtitle2" sx={{ p: 1 }}>
+                    {selectedPokemon.topRight.name} {selectedPokemon.topRight.item ? `(${selectedPokemon.topRight.item})` : ''}
+                  </Typography>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Move</TableCell>
+                        <TableCell align="right">Win Rate</TableCell>
+                        <TableCell align="right">Games</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {/* Make sure the array exists before mapping */}
+                      {Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topRight.name]) && analysisResults.allMoveOptions[selectedPokemon.topRight.name].map((move) => (
+                        <TableRow key={move.move}>
+                          <TableCell>{move.move}</TableCell>
+                          <TableCell align="right">{move.winRate.toFixed(1)}%</TableCell>
+                          <TableCell align="right">{move.total}</TableCell>
+                        </TableRow>
+                      ))}
+                      {/* Handle case when no moves exist */}
+                      {(!analysisResults.allMoveOptions[selectedPokemon.topRight.name] || 
+                        !Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topRight.name]) || 
+                        analysisResults.allMoveOptions[selectedPokemon.topRight.name].length === 0) && (
+                        <TableRow>
+                          <TableCell colSpan={3} align="center">No move data available</TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+              
+              <Typography variant="h6" gutterBottom>
+                Best Combinations
+              </Typography>
+              
+              <TableContainer component={Paper} sx={{ backgroundColor: '#221FC7' }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>{selectedPokemon.topLeft.name}</TableCell>
+                      <TableCell>{selectedPokemon.topRight.name}</TableCell>
+                      <TableCell align="right">Win Rate</TableCell>
+                      <TableCell align="right">Games</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {analysisResults.topCombinations && analysisResults.topCombinations.length > 0 ? (
+                      analysisResults.topCombinations.map((combo, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{combo.move1}</TableCell>
+                          <TableCell>{combo.move2}</TableCell>
+                          <TableCell align="right">{combo.winRate.toFixed(1)}%</TableCell>
+                          <TableCell align="right">{combo.games}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} align="center">No combination data available</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
         </Paper>
       )}
     </Box>
