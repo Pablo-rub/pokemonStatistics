@@ -36,7 +36,6 @@ import useDraggable from "../hooks/useDraggable";
 //better item list
 //que los select se desplieguen para abajo
 //moves
-//boton limpiar
 
 function TurnAssistantPage() {
   const [selectedPokemon, setSelectedPokemon] = useState({
