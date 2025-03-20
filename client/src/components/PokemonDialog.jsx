@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, TextField, Autocomplete, Box, IconButton,
-  Typography, FormControl, Slider
+  Typography, FormControl, Slider, Grid
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import useDraggable from '../hooks/useDraggable';
@@ -19,6 +19,16 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
   const [hp, setHp] = useState(100);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedVolatileStatuses, setSelectedVolatileStatuses] = useState([]);
+  const [statChanges, setStatChanges] = useState({
+    hp: 100,
+    atk: 0,
+    def: 0,
+    spa: 0,
+    spd: 0,
+    spe: 0,
+    acc: 0,
+    eva: 0,
+  });
   
   const [itemsList, setItemsList] = useState([]);
   const [abilitiesList, setAbilitiesList] = useState([]);
@@ -86,11 +96,14 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
         name: selectedPokemon,
         item: selectedItem || null,
         ability: selectedAbility || null,
-        moves: selectedMoves.length > 0 ? selectedMoves : []
+        moves: selectedMoves.length > 0 ? selectedMoves : [],
+        stats: statChanges
       });
       onClose();
     }
   };
+
+  const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
   return (
     <Dialog 
@@ -146,25 +159,6 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
               />
               {selectedPokemon && (
                 <>
-                  {/* Barra de vida y campo numérico */}
-                  <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
-                    <Slider
-                      value={hp}
-                      onChange={(e, newValue) => setHp(newValue)}
-                      aria-labelledby="hp-slider"
-                      sx={{ color: '#24CC9F', flexGrow: 1, mr: 2, width: '50%' }}
-                    />
-                    <TextField
-                      value={hp}
-                      onChange={(e) => setHp(Number(e.target.value))}
-                      type="number"
-                      inputProps={{ min: 0, max: 100 }}
-                      size="small"
-                      sx={{ width: 80, mr: 1 }} 
-                    />
-                    <Typography variant="body2" color="white">/100% hp</Typography>
-                  </Box>
-
                   <FormControl fullWidth sx={{ mt: 2 }}>
                     <Autocomplete
                       options={itemsList}
@@ -226,6 +220,150 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                       selectedMoves={selectedMoves} 
                       setSelectedMoves={setSelectedMoves} 
                     />
+                  </Box>
+
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="h6" color="white" sx={{ mb: 1 }}>Stats</Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <TextField
+                          type="number"
+                          label="HP"
+                          value={statChanges.hp}
+                          onChange={(e) =>
+                            setStatChanges(prev => ({ ...prev, hp: Number(e.target.value) }))
+                          }
+                          onBlur={(e) => {
+                            const newValue = Number(e.target.value);
+                            setStatChanges(prev => ({ ...prev, hp: clamp(newValue, 0, 100) }));
+                          }}
+                          variant="outlined"
+                          fullWidth
+                          InputLabelProps={{ style: { color: 'white' } }}
+                          inputProps={{ min: 0, max: 100, step: 1, style: { color: 'white' } }}
+                        />
+                        <TextField
+                          type="number"
+                          label="ATK"
+                          value={statChanges.atk}
+                          onChange={(e) =>
+                            setStatChanges(prev => ({ ...prev, atk: Number(e.target.value) }))
+                          }
+                          onBlur={(e) => {
+                            const newValue = Number(e.target.value);
+                            setStatChanges(prev => ({ ...prev, atk: clamp(newValue, -6, 6) }));
+                          }}
+                          variant="outlined"
+                          fullWidth
+                          InputLabelProps={{ style: { color: 'white' } }}
+                          inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
+                          sx={{ mt: 1 }}
+                        />
+                        <TextField
+                          type="number"
+                          label="DEF"
+                          value={statChanges.def}
+                          onChange={(e) =>
+                            setStatChanges(prev => ({ ...prev, def: Number(e.target.value) }))
+                          }
+                          onBlur={(e) => {
+                            const newValue = Number(e.target.value);
+                            setStatChanges(prev => ({ ...prev, def: clamp(newValue, -6, 6) }));
+                          }}
+                          variant="outlined"
+                          fullWidth
+                          InputLabelProps={{ style: { color: 'white' } }}
+                          inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
+                          sx={{ mt: 1 }}
+                        />
+                        <TextField
+                          type="number"
+                          label="ACC"
+                          value={statChanges.acc}
+                          onChange={(e) =>
+                            setStatChanges(prev => ({ ...prev, acc: Number(e.target.value) }))
+                          }
+                          onBlur={(e) => {
+                            const newValue = Number(e.target.value);
+                            setStatChanges(prev => ({ ...prev, acc: clamp(newValue, -6, 6) }));
+                          }}
+                          variant="outlined"
+                          fullWidth
+                          InputLabelProps={{ style: { color: 'white' } }}
+                          inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
+                          sx={{ mt: 1 }}
+                        />
+                      </Grid>
+                      <Grid item xs={6}>
+                        <TextField
+                          type="number"
+                          label="SPA"
+                          value={statChanges.spa}
+                          onChange={(e) =>
+                            setStatChanges(prev => ({ ...prev, spa: Number(e.target.value) }))
+                          }
+                          onBlur={(e) => {
+                            const newValue = Number(e.target.value);
+                            setStatChanges(prev => ({ ...prev, spa: clamp(newValue, -6, 6) }));
+                          }}
+                          variant="outlined"
+                          fullWidth
+                          InputLabelProps={{ style: { color: 'white' } }}
+                          inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
+                        />
+                        <TextField
+                          type="number"
+                          label="SPD"
+                          value={statChanges.spd}
+                          onChange={(e) =>
+                            setStatChanges(prev => ({ ...prev, spd: Number(e.target.value) }))
+                          }
+                          onBlur={(e) => {
+                            const newValue = Number(e.target.value);
+                            setStatChanges(prev => ({ ...prev, spd: clamp(newValue, -6, 6) }));
+                          }}
+                          variant="outlined"
+                          fullWidth
+                          InputLabelProps={{ style: { color: 'white' } }}
+                          inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
+                          sx={{ mt: 1 }}
+                        />
+                        <TextField
+                          type="number"
+                          label="SPE"
+                          value={statChanges.spe}
+                          onChange={(e) =>
+                            setStatChanges(prev => ({ ...prev, spe: Number(e.target.value) }))
+                          }
+                          onBlur={(e) => {
+                            const newValue = Number(e.target.value);
+                            setStatChanges(prev => ({ ...prev, spe: clamp(newValue, -6, 6) }));
+                          }}
+                          variant="outlined"
+                          fullWidth
+                          InputLabelProps={{ style: { color: 'white' } }}
+                          inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
+                          sx={{ mt: 1 }}
+                        />
+                        <TextField
+                          type="number"
+                          label="EVA"
+                          value={statChanges.eva}
+                          onChange={(e) =>
+                            setStatChanges(prev => ({ ...prev, eva: Number(e.target.value) }))
+                          }
+                          onBlur={(e) => {
+                            const newValue = Number(e.target.value);
+                            setStatChanges(prev => ({ ...prev, eva: clamp(newValue, -6, 6) }));
+                          }}
+                          variant="outlined"
+                          fullWidth
+                          InputLabelProps={{ style: { color: 'white' } }}
+                          inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
+                          sx={{ mt: 1 }}
+                        />
+                      </Grid>
+                    </Grid>
                   </Box>
                 </>
               )}

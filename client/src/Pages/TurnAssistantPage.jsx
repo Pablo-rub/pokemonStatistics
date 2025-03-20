@@ -34,14 +34,11 @@ import useDraggable from "../hooks/useDraggable";
 //iu:
 //boton ir para arriba
 //better item list
+//texto de ayuda
 //que los select se desplieguen para abajo
 //tera active
 //tera individual
 //conditions duration
-//spikes
-//toxic spikes
-//stealth rock
-//sticky web
 //teams
 //revealed pokemon
 //stats
