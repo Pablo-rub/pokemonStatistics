@@ -7,6 +7,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import useDraggable from '../hooks/useDraggable';
 import MovesSelect from './MovesSelect';
+import VolatileStatusesSelect from './VolatileStatusesSelect';
 
 const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList = [] }) => {
   const [selectedPokemon, setSelectedPokemon] = useState(null);
@@ -18,6 +19,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
   const [searchTerm, setSearchTerm] = useState('');
   const [hp, setHp] = useState(100);
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedVolatileStatuses, setSelectedVolatileStatuses] = useState([]);
   
   const [itemsList, setItemsList] = useState([]);
   const [abilitiesList, setAbilitiesList] = useState([]);
@@ -181,6 +183,14 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                       renderInput={(params) => (
                         <TextField {...params} label="Non Volatile Status" variant="outlined" />
                       )}
+                    />
+                  </FormControl>
+
+                  <FormControl fullWidth sx={{ mt: 2 }}>
+                    <VolatileStatusesSelect
+                      options={["Confusion", "Lock", "Yawn"]}
+                      selectedStatuses={selectedVolatileStatuses}
+                      setSelectedStatuses={setSelectedVolatileStatuses}
                     />
                   </FormControl>
 
