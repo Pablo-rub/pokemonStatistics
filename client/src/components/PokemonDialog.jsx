@@ -1,68 +1,48 @@
-import axios from 'axios';
 import React, { useState, useEffect } from 'react';
 import { 
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  Autocomplete,
-  Box,
-  IconButton,
-  CircularProgress,
-  Typography,
-  FormControl,
+  Dialog, DialogTitle, DialogContent, DialogActions, 
+  Button, TextField, Autocomplete, Box, IconButton, 
+  CircularProgress, Typography, FormControl 
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import useDraggable from '../hooks/useDraggable';
+import MovesSelect from './MovesSelect';
 
 const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList = [] }) => {
   const [selectedPokemon, setSelectedPokemon] = useState(null);
   const [selectedItem, setSelectedItem] = useState('');
+  const [selectedAbility, setSelectedAbility] = useState('');
+  const [selectedMove, setSelectedMove] = useState('');
+  const [selectedMoves, setSelectedMoves] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Nuevo estado para almacenar la lista de items
   const [itemsList, setItemsList] = useState([]);
-  
-  // Obtener la lista de items de la API al montar el componente
+  const [abilitiesList, setAbilitiesList] = useState([]);
+  const [movesList, setMovesList] = useState([]);
+
+  // Obtener las listas (items, abilities, moves) al montar el componente
   useEffect(() => {
-    axios.get('http://localhost:5000/api/items')
-      .then(response => setItemsList(response.data))
-      .catch(error => console.error("Error fetching items:", error));
+    // Items
+    fetch('http://localhost:5000/api/items')
+      .then(res => res.json())
+      .then(data => setItemsList(data))
+      .catch(err => console.error("Error fetching items:", err));
+    // Abilities
+    fetch('http://localhost:5000/api/abilities')
+      .then(res => res.json())
+      .then(data => setAbilitiesList(data))
+      .catch(err => console.error("Error fetching abilities:", err));
+    // Moves
+    fetch('http://localhost:5000/api/moves')
+      .then(res => res.json())
+      .then(data => setMovesList(data))
+      .catch(err => console.error("Error fetching moves:", err));
   }, []);
-  
-  // Use the draggable hook
-  const { ref, style, handleMouseDown, resetPosition, isDragging } = useDraggable();
-  
-  // Effect to reset position and selection when dialog opens/closes
-  /*useEffect(() => {
-    if (!open) {
-      resetPosition();
-      setSelectedPokemon(null);
-      setSelectedItem('');
-      setSearchTerm('');
-    }
-  }, [open, resetPosition]);*/
 
-  // Modificar esta función para incluir la habilidad seleccionada
-  const handleSelectPokemon = () => {
-    if (selectedPokemon) {
-      // Asegúrate de enviar correctamente el nombre del Pokémon como string
-      onSelectPokemon(position, {
-        name: selectedPokemon,
-        item: selectedItem || null,
-        // ¡Falta incluir la habilidad aquí!
-        ability: selectedAbility || null,
-        // Si también quieres incluir los movimientos:
-        moves: selectedMoves.length > 0 ? selectedMoves.filter(m => m) : []
-      });
-      onClose();
-    }
-  };
-
-  const positionName = position => {
+  const { ref, style, handleMouseDown, isDragging } = useDraggable({ resetOnClose: true });
+  
+  const positionName = (position) => {
     switch(position) {
       case 'topLeft': return "Your Left Pokémon";
       case 'topRight': return "Your Right Pokémon";
@@ -72,26 +52,17 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
     }
   };
 
-  const [abilitiesList, setAbilitiesList] = useState([]);
-  const [movesList, setMovesList] = useState([]);
-
-  // Estados para la habilidad y movimiento seleccionados
-  const [selectedAbility, setSelectedAbility] = useState('');
-  const [selectedMove, setSelectedMove] = useState('');
-  const [selectedMoves, setSelectedMoves] = useState([]);
-
-  // Obtener la lista de habilidades y movimientos al montar el componente
-  useEffect(() => {
-    axios.get('http://localhost:5000/api/abilities')
-      .then(response => setAbilitiesList(response.data))
-      .catch(error => console.error("Error fetching abilities:", error));
-  }, []);
-
-  useEffect(() => {
-    axios.get('http://localhost:5000/api/moves')
-      .then(response => setMovesList(response.data))
-      .catch(error => console.error("Error fetching moves:", error));
-  }, []);
+  const handleSelect = () => {
+    if (selectedPokemon) {
+      onSelectPokemon(position, {
+        name: selectedPokemon,
+        item: selectedItem || null,
+        ability: selectedAbility || null,
+        moves: selectedMoves.length > 0 ? selectedMoves : []
+      });
+      onClose();
+    }
+  };
 
   return (
     <Dialog 
@@ -101,11 +72,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
       maxWidth="sm"
       PaperProps={{
         ref,
-        style: {
-          ...style,
-          backgroundColor: '#221FC7',
-          transition: 'none'
-        },
+        style: { ...style, backgroundColor: '#221FC7', transition: 'none' },
         onMouseDown: handleMouseDown,
         sx: {
           '& .MuiDialogTitle-root': {
@@ -118,18 +85,13 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
       }}
     >
       <DialogTitle>
-        <Box sx={{ 
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
           {positionName(position)}
           <IconButton onClick={onClose} sx={{ color: 'white' }}>
             <CloseIcon />
           </IconButton>
         </Box>
       </DialogTitle>
-
       <DialogContent>
         <Box sx={{ mt: 2 }}>
           {pokemonList.length === 0 ? (
@@ -146,96 +108,40 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                 inputValue={searchTerm}
                 onInputChange={(event, newInputValue) => setSearchTerm(newInputValue)}
                 renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Pokémon Name"
-                    variant="outlined"
-                    fullWidth
-                    InputProps={{
-                      ...params.InputProps,
-                      endAdornment: (
-                        <>
-                          {loading ? <CircularProgress color="inherit" size={20} /> : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
-                    }}
-                  />
+                  <TextField {...params} label="Pokémon Name" variant="outlined" fullWidth />
                 )}
                 sx={{
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': {
-                      borderColor: 'white',
-                    },
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: 'white',
-                  },
-                  '& .MuiInputBase-input': {
-                    color: 'white',
-                  },
-                  '& .MuiAutocomplete-endAdornment': {
-                    '& .MuiIconButton-root': {
-                      color: 'white',
-                    }
-                  }
+                  '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
+                  '& .MuiSvgIcon-root': { color: 'white' },
+                  mt: 1,
                 }}
               />
-              
-              {/* Item selector appears only when a Pokémon is selected */}
               {selectedPokemon && (
                 <>
-                  {/* Autocomplete para Held Item (ya implementado) */}
                   <FormControl fullWidth sx={{ mt: 2 }}>
                     <Autocomplete
                       options={itemsList}
                       getOptionLabel={(option) => option.name}
                       value={itemsList.find(item => item.name === selectedItem) || null}
-                      onChange={(event, newValue) => {
-                        setSelectedItem(newValue ? newValue.name : '');
-                      }}
+                      onChange={(e, newValue) => setSelectedItem(newValue ? newValue.name : '')}
                       renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Held Item"
-                          variant="outlined"
-                          InputLabelProps={{ style: { color: 'white' } }}
-                          InputProps={{
-                            ...params.InputProps,
-                            style: { color: 'white' },
-                          }}
-                        />
+                        <TextField {...params} label="Held Item" variant="outlined" InputLabelProps={{ style: { color: 'white' } }} />
                       )}
                       sx={{
-                        '& .MuiOutlinedInput-root': {
-                          '& fieldset': { borderColor: 'white' },
-                        },
+                        '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
                         '& .MuiSvgIcon-root': { color: 'white' },
                         mt: 1,
                       }}
                     />
                   </FormControl>
-                  
-                  {/* Nuevo Autocomplete para Ability */}
                   <FormControl fullWidth sx={{ mt: 2 }}>
                     <Autocomplete
                       options={abilitiesList}
                       getOptionLabel={(option) => option.name}
                       value={abilitiesList.find(ability => ability.name === selectedAbility) || null}
-                      onChange={(event, newValue) => {
-                        setSelectedAbility(newValue ? newValue.name : '');
-                      }}
+                      onChange={(e, newValue) => setSelectedAbility(newValue ? newValue.name : '')}
                       renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Ability"
-                          variant="outlined"
-                          InputLabelProps={{ style: { color: 'white' } }}
-                          InputProps={{
-                            ...params.InputProps,
-                            style: { color: 'white' },
-                          }}
-                        />
+                        <TextField {...params} label="Ability" variant="outlined" InputLabelProps={{ style: { color: 'white' } }} />
                       )}
                       sx={{
                         '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
@@ -245,51 +151,25 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                     />
                   </FormControl>
 
-                  {/* Nuevo Autocomplete para Move */}
-                  <FormControl fullWidth sx={{ mt: 2 }}>
-                    <Autocomplete
-                      options={movesList}
-                      getOptionLabel={(option) => option.name}
-                      value={movesList.find(move => move.name === selectedMove) || null}
-                      onChange={(event, newValue) => {
-                        setSelectedMove(newValue ? newValue.name : '');
-                      }}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Move"
-                          variant="outlined"
-                          InputLabelProps={{ style: { color: 'white' } }}
-                          InputProps={{
-                            ...params.InputProps,
-                            style: { color: 'white' },
-                          }}
-                        />
-                      )}
-                      sx={{
-                        '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
-                        '& .MuiSvgIcon-root': { color: 'white' },
-                        mt: 1,
-                      }}
+                  {/* Movimientos */}
+                  <Box sx={{ mt: 3 }}>
+                    <MovesSelect 
+                      movesList={movesList} 
+                      selectedMoves={selectedMoves} 
+                      setSelectedMoves={setSelectedMoves} 
                     />
-                  </FormControl>
+                  </Box>
                 </>
               )}
             </>
           )}
         </Box>
       </DialogContent>
-
       <DialogActions>
         <Button onClick={onClose} variant="contained" color="error">
           Cancel
         </Button>
-        <Button 
-          onClick={handleSelectPokemon} 
-          variant="containedSuccess" 
-          color="error"
-          disabled={!selectedPokemon}
-        >
+        <Button onClick={handleSelect} variant="containedSuccess" color="success" disabled={!selectedPokemon}>
           Select
         </Button>
       </DialogActions>
