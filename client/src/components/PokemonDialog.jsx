@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, TextField, Autocomplete, Box, IconButton, 
-  CircularProgress, Typography, FormControl 
+  CircularProgress, Typography, FormControl, Slider 
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import useDraggable from '../hooks/useDraggable';
@@ -16,6 +16,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
   const [selectedMoves, setSelectedMoves] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [hp, setHp] = useState(100);
   
   const [itemsList, setItemsList] = useState([]);
   const [abilitiesList, setAbilitiesList] = useState([]);
@@ -118,6 +119,25 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
               />
               {selectedPokemon && (
                 <>
+                  {/* Barra de vida y campo numérico */}
+                  <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
+                    <Slider
+                      value={hp}
+                      onChange={(e, newValue) => setHp(newValue)}
+                      aria-labelledby="hp-slider"
+                      sx={{ color: '#24CC9F', flexGrow: 1, mr: 2, width: '50%' }}
+                    />
+                    <TextField
+                      value={hp}
+                      onChange={(e) => setHp(Number(e.target.value))}
+                      type="number"
+                      inputProps={{ min: 0, max: 100 }}
+                      size="small"
+                      sx={{ width: 80, mr: 1 }} 
+                    />
+                    <Typography variant="body2" color="white">/100% hp</Typography>
+                  </Box>
+
                   <FormControl fullWidth sx={{ mt: 2 }}>
                     <Autocomplete
                       options={itemsList}
