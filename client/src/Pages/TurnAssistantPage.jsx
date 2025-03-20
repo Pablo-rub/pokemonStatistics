@@ -31,11 +31,40 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import useDraggable from "../hooks/useDraggable";
 
 //todo
-//ver que hacer con el mirror
+//iu:
 //boton ir para arriba
 //better item list
 //que los select se desplieguen para abajo
+//tera active
+//tera individual
+//conditions duration
+//spikes
+//toxic spikes
+//stealth rock
+//sticky web
+//teams
+//revealed pokemon
+//stats
+//fainted
+
+//backend:
+//spikes
+//toxic spikes
+//stealth rock
+//sticky web
+//teams
+//revealed pokemon
+//stats
+//fainted
+//screens?
+//conditions duration
+//tera active
+//tera individual
 //moves
+//life
+//volatile statuses
+//non volatile statuses
+//ver que hacer con el mirror
 
 function TurnAssistantPage() {
   const [selectedPokemon, setSelectedPokemon] = useState({
