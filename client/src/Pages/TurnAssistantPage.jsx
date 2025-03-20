@@ -94,6 +94,10 @@ function TurnAssistantPage() {
     sideEffects: {
       yourSide: {},
       opponentSide: {}
+    },
+    entryHazards: {
+      yourSide: {},
+      opponentSide: {}
     }
   });
 
@@ -116,6 +120,10 @@ function TurnAssistantPage() {
       field: "",
       room: "",
       sideEffects: {
+        yourSide: {},
+        opponentSide: {}
+      },
+      entryHazards: {        // <-- Nueva propiedad
         yourSide: {},
         opponentSide: {}
       }

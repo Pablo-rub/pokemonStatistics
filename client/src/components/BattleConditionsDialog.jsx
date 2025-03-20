@@ -177,6 +177,48 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
               </Grid>
             </Grid>
           </Grid>
+
+          <Grid item xs={12}>
+            <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Entry Hazards</Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Typography variant="body1" sx={{ mb: 1 }}>Your Side</Typography>
+                <FormGroup>
+                  {["Spikes", "Toxic Spikes", "Stealth Rock", "Sticky Web"].map(effect => (
+                    <FormControlLabel
+                      key={effect}
+                      control={
+                        <WhiteCheckbox
+                          checked={battleConditions.entryHazards?.yourSide?.[effect] || false}
+                          onChange={handleCheckboxChange('entryHazards', effect)}
+                          name={effect}
+                        />
+                      }
+                      label={effect}
+                    />
+                  ))}
+                </FormGroup>
+              </Grid>
+              <Grid item xs={6}>
+                <Typography variant="body1" sx={{ mb: 1 }}>Opponent Side</Typography>
+                <FormGroup>
+                  {["Spikes", "Toxic Spikes", "Stealth Rock", "Sticky Web"].map(effect => (
+                    <FormControlLabel
+                      key={effect}
+                      control={
+                        <WhiteCheckbox
+                          checked={battleConditions.entryHazards?.opponentSide?.[effect] || false}
+                          onChange={handleCheckboxChange('entryHazards', effect)}
+                          name={effect}
+                        />
+                      }
+                      label={effect}
+                    />
+                  ))}
+                </FormGroup>
+              </Grid>
+            </Grid>
+          </Grid>
         </Grid>
       </DialogContent>
       <DialogActions>
