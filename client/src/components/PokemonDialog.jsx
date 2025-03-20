@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, TextField, Autocomplete, Box, IconButton,
-  Typography, FormControl, Slider, Grid
+  Typography, FormControl, Grid
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import useDraggable from '../hooks/useDraggable';
@@ -16,7 +16,6 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
   const [selectedMoves, setSelectedMoves] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [hp, setHp] = useState(100);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [selectedVolatileStatuses, setSelectedVolatileStatuses] = useState([]);
   const [statChanges, setStatChanges] = useState({
