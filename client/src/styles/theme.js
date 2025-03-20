@@ -259,7 +259,21 @@ const theme = createTheme({
             '&:focus': {
               backgroundColor: 'transparent'
             }
-          }
+          },
+          color: '#ffffff',
+          backgroundColor: 'transparent',
+          '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#ffffff',
+          },
+          '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#ffffff',
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: '#ffffff',
+          },
+          '& .MuiSvgIcon-root': {
+            color: '#ffffff',
+          },
         },
         replayFilter: {
           color: '#ffffff',

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, TextField, Autocomplete, Box, IconButton, 
-  CircularProgress, Typography, FormControl, Slider 
+  CircularProgress, Typography, FormControl, Slider, Select, MenuItem 
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import useDraggable from '../hooks/useDraggable';
@@ -17,6 +17,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [hp, setHp] = useState(100);
+  const [selectedStatus, setSelectedStatus] = useState('');
   
   const [itemsList, setItemsList] = useState([]);
   const [abilitiesList, setAbilitiesList] = useState([]);
@@ -163,16 +164,28 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                       renderInput={(params) => (
                         <TextField {...params} label="Ability" variant="outlined" InputLabelProps={{ style: { color: 'white' } }} />
                       )}
+                      // Se elimina el mt interno para que solo se use el del FormControl
                       sx={{
                         '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
-                        '& .MuiSvgIcon-root': { color: 'white' },
-                        mt: 1,
+                        '& .MuiSvgIcon-root': { color: 'white' }
                       }}
                     />
                   </FormControl>
 
+                  <FormControl fullWidth sx={{ mt: 2 }}>
+                    <Autocomplete
+                      options={["Burn", "Freeze", "Paralysis", "Poison", "Badly poisoned", "Sleep"]}
+                      getOptionLabel={(option) => option}
+                      value={selectedStatus}
+                      onChange={(e, newValue) => setSelectedStatus(newValue || '')}
+                      renderInput={(params) => (
+                        <TextField {...params} label="Non Volatile Status" variant="outlined" />
+                      )}
+                    />
+                  </FormControl>
+
                   {/* Movimientos */}
-                  <Box sx={{ mt: 3 }}>
+                  <Box sx={{ mt: 2 }}>
                     <MovesSelect 
                       movesList={movesList} 
                       selectedMoves={selectedMoves} 
