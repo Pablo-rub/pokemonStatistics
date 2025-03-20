@@ -1,21 +1,17 @@
 import React, { useState } from 'react';
-import { 
-  Box, 
-  Paper, 
-  Typography,
-  Grid,
-} from '@mui/material';
-import PokemonDialog from './PokemonDialog';
+import { Box, Typography, Grid, Button, Paper } from '@mui/material';
 import PokemonSprite from './PokemonSprite';
+import PokemonDialog from './PokemonDialog';
+import TeamDialog from './TeamDialog';  // nuevo componente de selección de equipo
 
 const BattleField = ({ onPokemonSelect, pokemonList = [] }) => {
+  // Estados existentes para los slots individuales...
   const [dialogOpen, setDialogOpen] = useState({
     topLeft: false,
     topRight: false,
     bottomLeft: false,
     bottomRight: false
   });
-  
   const [selectedPokemon, setSelectedPokemon] = useState({
     topLeft: null,
     topRight: null,
@@ -23,6 +19,11 @@ const BattleField = ({ onPokemonSelect, pokemonList = [] }) => {
     bottomRight: null
   });
   
+  // Estados nuevos para equipos
+  const [yourTeam, setYourTeam] = useState([]);
+  const [opponentTeam, setOpponentTeam] = useState([]);
+  const [teamDialogOpen, setTeamDialogOpen] = useState({ your: false, opponent: false });
+
   const handleOpenDialog = (position) => {
     setDialogOpen(prev => ({
       ...prev,
@@ -37,7 +38,6 @@ const BattleField = ({ onPokemonSelect, pokemonList = [] }) => {
     }));
   };
 
-  // Actualizar esta función para manejar correctamente el objeto
   const handleSelectPokemon = (position, pokemonData) => {
     const newSelectedPokemon = {
       ...selectedPokemon,
@@ -48,10 +48,9 @@ const BattleField = ({ onPokemonSelect, pokemonList = [] }) => {
     onPokemonSelect(newSelectedPokemon);
   };
 
-  // Helper function to render a Pokémon slot
+  // Función para renderizar un slot de Pokémon individual (ya existente)
   const renderPokemonSlot = (position, label) => {
     const pokemon = selectedPokemon[position];
-    
     return (
       <Paper
         elevation={3}
@@ -85,21 +84,58 @@ const BattleField = ({ onPokemonSelect, pokemonList = [] }) => {
             )}
           </>
         ) : (
-          <Typography variant="subtitle1">
-            {label}
-          </Typography>
+          <Typography variant="subtitle1">{label}</Typography>
         )}
       </Paper>
     );
   };
 
+  // Función para renderizar la visualización del equipo completo
+  const renderTeam = (team) => {
+    return (
+      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap', mt: 1 }}>
+        {team.map((pokemon, idx) => (
+          <Box key={idx} sx={{ cursor: 'pointer' }} title={pokemon.name}>
+            <PokemonSprite pokemon={pokemon} size={60} />
+          </Box>
+        ))}
+      </Box>
+    );
+  };
+
   return (
     <Box sx={{ width: '100%', maxWidth: 800, mx: 'auto' }}>
-      {/* Player's (Your) Pokémon */}
+      {/* Your Team Section */}
       <Typography variant="h6" align="center" sx={{ mb: 2 }}>
         Your Team
       </Typography>
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+
+      {/* Botón de selección de equipo - Ahora justo debajo del título */}
+      <Box sx={{ textAlign: 'center', mb: 2 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() =>
+            setTeamDialogOpen(prev => ({ ...prev, your: true }))
+          }
+        >
+          Select Team
+        </Button>
+      </Box>
+
+      {/* Visualización del equipo - Ahora separada del botón */}
+      <Box sx={{ textAlign: 'center', mb: 2 }}>
+        {yourTeam.length === 6 ? (
+          renderTeam(yourTeam)
+        ) : (
+          <Typography variant="body2" color="white">
+            No team selected
+          </Typography>
+        )}
+      </Box>
+
+      {/* Slots individuales para Pokémon */}
+      <Grid container spacing={3} sx={{ mb: 2 }}>
         <Grid item xs={6}>
           {renderPokemonSlot('topLeft', 'Select Left Pokémon')}
           <PokemonDialog
@@ -122,22 +158,22 @@ const BattleField = ({ onPokemonSelect, pokemonList = [] }) => {
         </Grid>
       </Grid>
 
-      {/* Field divider */}
-      <Box 
-        sx={{ 
-          height: 4, 
-          backgroundColor: '#24CC9F', 
-          mb: 4, 
+      {/* Divider or Field Divider */}
+      <Box
+        sx={{
+          height: 4,
+          backgroundColor: '#24CC9F',
+          mb: 4,
           borderRadius: 2,
           width: '100%'
-        }} 
+        }}
       />
 
-      {/* Opponent's Pokémon */}
+      {/* Opponent's Team Section */}
       <Typography variant="h6" align="center" sx={{ mb: 2 }}>
         Opponent's Team
       </Typography>
-      <Grid container spacing={3}>
+      <Grid container spacing={3} sx={{ mb: 2 }}>
         <Grid item xs={6}>
           {renderPokemonSlot('bottomLeft', 'Select Left Pokémon')}
           <PokemonDialog
@@ -159,6 +195,36 @@ const BattleField = ({ onPokemonSelect, pokemonList = [] }) => {
           />
         </Grid>
       </Grid>
+      {opponentTeam.length === 6 ? (
+        renderTeam(opponentTeam)
+      ) : (
+        <Typography variant="body2" align="center">No team selected</Typography>
+      )}
+      <Box sx={{ textAlign: 'center', mt: 1, mb: 4 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={() =>
+            setTeamDialogOpen(prev => ({ ...prev, opponent: true }))
+          }
+        >
+          Select Team
+        </Button>
+      </Box>
+
+      {/* Diálogos para seleccionar equipos */}
+      <TeamDialog
+        open={teamDialogOpen.your}
+        onClose={() => setTeamDialogOpen(prev => ({ ...prev, your: false }))}
+        onSelectTeam={setYourTeam}
+        pokemonList={pokemonList}
+      />
+      <TeamDialog
+        open={teamDialogOpen.opponent}
+        onClose={() => setTeamDialogOpen(prev => ({ ...prev, opponent: false }))}
+        onSelectTeam={setOpponentTeam}
+        pokemonList={pokemonList}
+      />
     </Box>
   );
 };
