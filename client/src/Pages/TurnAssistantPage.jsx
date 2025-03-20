@@ -40,7 +40,6 @@ import useDraggable from "../hooks/useDraggable";
 //tera active
 //tera individual
 //conditions duration
-//teams
 //revealed pokemon
 //fainted
 

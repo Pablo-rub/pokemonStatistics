@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, TextField, Autocomplete, Box, IconButton,
-  Typography, FormControl, Grid
+  Typography, FormControl, Grid, FormControlLabel, Checkbox
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import useDraggable from '../hooks/useDraggable';
@@ -28,6 +28,8 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
     acc: 0,
     eva: 0,
   });
+  const [selectedTeraType, setSelectedTeraType] = useState('');
+  const [teraActive, setTeraActive] = useState(false);
   
   const [itemsList, setItemsList] = useState([]);
   const [abilitiesList, setAbilitiesList] = useState([]);
@@ -96,13 +98,21 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
         item: selectedItem || null,
         ability: selectedAbility || null,
         moves: selectedMoves.length > 0 ? selectedMoves : [],
-        stats: statChanges
+        stats: statChanges,
+        teraType: selectedTeraType,
+        teraActive: teraActive,
       });
       onClose();
     }
   };
 
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+  const teraTypes = [
+    'Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice', 
+    'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 
+    'Bug', 'Rock', 'Ghost', 'Dragon', 'Dark', 'Steel', 'Fairy', 'Stellar'
+  ];
 
   return (
     <Dialog 
@@ -218,6 +228,38 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                       movesList={movesList} 
                       selectedMoves={selectedMoves} 
                       setSelectedMoves={setSelectedMoves} 
+                    />
+                  </Box>
+
+                  {/* Tera Type and Active checkbox - horizontally aligned */}
+                  <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <Autocomplete
+                      options={teraTypes}
+                      value={selectedTeraType}
+                      onChange={(e, newValue) => setSelectedTeraType(newValue || '')}
+                      clearIcon={selectedTeraType ? undefined : null}
+                      renderInput={(params) => (
+                        <TextField {...params} label="Tera Type" variant="outlined" InputLabelProps={{ style: { color: 'white' } }} />
+                      )}
+                      sx={{
+                        flex: 1,
+                        '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
+                        '& .MuiSvgIcon-root': { color: 'white' }
+                      }}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Checkbox 
+                          checked={teraActive}
+                          onChange={(e) => setTeraActive(e.target.checked)}
+                          sx={{ 
+                            color: 'white',
+                            '&.Mui-checked': { color: '#24CC9F' }
+                          }}
+                        />
+                      }
+                      label="Tera Active"
+                      sx={{ color: 'white' }}
                     />
                   </Box>
 
