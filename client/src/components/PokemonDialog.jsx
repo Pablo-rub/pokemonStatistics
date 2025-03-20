@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
-  Button, TextField, Autocomplete, Box, IconButton, 
-  CircularProgress, Typography, FormControl, Slider, Select, MenuItem 
+  Button, TextField, Autocomplete, Box, IconButton,
+  Typography, FormControl, Slider
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import useDraggable from '../hooks/useDraggable';
@@ -13,7 +13,6 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
   const [selectedPokemon, setSelectedPokemon] = useState(null);
   const [selectedItem, setSelectedItem] = useState('');
   const [selectedAbility, setSelectedAbility] = useState('');
-  const [selectedMove, setSelectedMove] = useState('');
   const [selectedMoves, setSelectedMoves] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -24,6 +23,8 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
   const [itemsList, setItemsList] = useState([]);
   const [abilitiesList, setAbilitiesList] = useState([]);
   const [movesList, setMovesList] = useState([]);
+  const [volatileStatuses, setVolatileStatuses] = useState([]);
+  const [nonVolatileStatuses, setNonVolatileStatuses] = useState([]);
 
   // Obtener las listas (items, abilities, moves) al montar el componente
   useEffect(() => {
@@ -42,6 +43,29 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
       .then(res => res.json())
       .then(data => setMovesList(data))
       .catch(err => console.error("Error fetching moves:", err));
+
+    fetch(process.env.PUBLIC_URL + '/volatile.txt')
+      .then(res => res.text())
+      .then(text => {
+        const statuses = text
+          .trim()
+          .split('\n')
+          .map(s => s.trim())
+          .filter(Boolean);
+        setVolatileStatuses(statuses);
+      })
+      .catch(err => console.error("Error fetching volatile statuses:", err));
+
+    fetch(process.env.PUBLIC_URL + '/nonvolatile.txt')
+      .then(res => res.text())
+      .then(text => {
+        const statuses = text
+          .trim()
+          .split('\n')
+          .map(s => s.trim())
+          .filter(Boolean);
+        setNonVolatileStatuses(statuses);
+      });
   }, []);
 
   const { ref, style, handleMouseDown, isDragging } = useDraggable({ resetOnClose: true });
@@ -180,6 +204,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                       getOptionLabel={(option) => option}
                       value={selectedStatus}
                       onChange={(e, newValue) => setSelectedStatus(newValue || '')}
+                      clearIcon={selectedStatus ? undefined : null}
                       renderInput={(params) => (
                         <TextField {...params} label="Non Volatile Status" variant="outlined" />
                       )}
@@ -188,7 +213,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
 
                   <FormControl fullWidth sx={{ mt: 2 }}>
                     <VolatileStatusesSelect
-                      options={["Confusion", "Lock", "Yawn"]}
+                      options={volatileStatuses}
                       selectedStatuses={selectedVolatileStatuses}
                       setSelectedStatuses={setSelectedVolatileStatuses}
                     />
