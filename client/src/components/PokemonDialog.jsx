@@ -30,6 +30,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
   });
   const [selectedTeraType, setSelectedTeraType] = useState('');
   const [teraActive, setTeraActive] = useState(false);
+  const [teraDuration, setTeraDuration] = useState(5);
   
   const [itemsList, setItemsList] = useState([]);
   const [abilitiesList, setAbilitiesList] = useState([]);
@@ -231,7 +232,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                     />
                   </Box>
 
-                  {/* Tera Type and Active checkbox - horizontally aligned */}
+                  {/* Tera Type and Active checkbox - horizontal */}
                   <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
                     <Autocomplete
                       options={teraTypes}
@@ -261,6 +262,16 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                       label="Tera Active"
                       sx={{ color: 'white' }}
                     />
+                    {teraActive && (
+                      <TextField
+                        label="Duration"
+                        type="number"
+                        value={teraDuration}
+                        onChange={(e) => setTeraDuration(Number(e.target.value))}
+                        inputProps={{ min: 1, max: 10, step: 1 }}
+                        sx={{ width: '80px' }}
+                      />
+                    )}
                   </Box>
 
                   <Box sx={{ mt: 2 }}>

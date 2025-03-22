@@ -82,16 +82,31 @@ function TurnAssistantPage() {
   // Estado para el dialog de Battle Conditions  
   const [battleDialogOpen, setBattleDialogOpen] = useState(false);
 
-  // Estado extendido para condiciones de batalla, incluyendo side effects
+  // Estado extendido para condiciones de batalla, incluyendo duraciones
   const [battleConditions, setBattleConditions] = useState({
     weather: "",
+    weatherDuration: 0,
     field: "",
+    fieldDuration: 0,
     room: "",
+    roomDuration: 0,
     sideEffects: {
       yourSide: {},
       opponentSide: {}
     },
+    sideEffectsDuration: {
+      yourSide: {},
+      opponentSide: {}
+    },
     entryHazards: {
+      yourSide: {},
+      opponentSide: {}
+    },
+    entryHazardsLevel: {
+      yourSide: {},
+      opponentSide: {}
+    },
+    entryHazardsDuration: {
       yourSide: {},
       opponentSide: {}
     }
@@ -118,13 +133,28 @@ function TurnAssistantPage() {
     });
     setBattleConditions({
       weather: "",
+      weatherDuration: 0,
       field: "",
+      fieldDuration: 0,
       room: "",
+      roomDuration: 0,
       sideEffects: {
         yourSide: {},
         opponentSide: {}
       },
-      entryHazards: {        // <-- Nueva propiedad
+      sideEffectsDuration: {
+        yourSide: {},
+        opponentSide: {}
+      },
+      entryHazards: {
+        yourSide: {},
+        opponentSide: {}
+      },
+      entryHazardsLevel: {
+        yourSide: {},
+        opponentSide: {}
+      },
+      entryHazardsDuration: {
         yourSide: {},
         opponentSide: {}
       }
