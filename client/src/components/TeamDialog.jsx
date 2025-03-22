@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { 
     Dialog, DialogTitle, DialogContent, DialogActions, 
-    Button, TextField, Autocomplete, Box, 
-    Typography, Grid, Alert, Paper, FormControlLabel, Checkbox
+    Button, TextField, Autocomplete, Box, Grid, Alert, Paper,
+    FormControlLabel, Checkbox, Collapse, IconButton, Typography,
+    FormControl, Divider
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { createFilterOptions } from '@mui/material/Autocomplete';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import useDraggable from '../hooks/useDraggable';
 
 // Checkbox con estilo blanco
 const WhiteCheckbox = styled(Checkbox)(({ theme }) => ({
-  color: 'white',
-  '&.Mui-checked': {
     color: 'white',
-  }
+    '&.Mui-checked': {
+        color: 'white',
+    }
 }));
 
 // Componente para hacer el diálogo arrastrable
@@ -41,6 +44,57 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
     const [localPokemonList, setLocalPokemonList] = useState([]);
     const [revealed, setRevealed] = useState({});
     const [fainted, setFainted] = useState({});
+    
+    // Estados para los detalles de cada Pokémon
+    const [expandedDetails, setExpandedDetails] = useState({});
+    const [pokemonDetails, setPokemonDetails] = useState(Array(6).fill({
+        item: '',
+        ability: '',
+        moves: [],
+        status: '',
+        teraType: '',
+        teraActive: false
+    }));
+    
+    // Listas para los selectores
+    const [itemsList, setItemsList] = useState([]);
+    const [abilitiesList, setAbilitiesList] = useState([]);
+    const [movesList, setMovesList] = useState([]);
+    const [statusList, setStatusList] = useState([]);
+    
+    // Obtener las listas al montar el componente
+    useEffect(() => {
+        // Items
+        fetch('http://localhost:5000/api/items')
+            .then(res => res.json())
+            .then(data => setItemsList(data))
+            .catch(err => console.error("Error fetching items:", err));
+        
+        // Abilities
+        fetch('http://localhost:5000/api/abilities')
+            .then(res => res.json())
+            .then(data => setAbilitiesList(data))
+            .catch(err => console.error("Error fetching abilities:", err));
+        
+        // Moves
+        fetch('http://localhost:5000/api/moves')
+            .then(res => res.json())
+            .then(data => setMovesList(data))
+            .catch(err => console.error("Error fetching moves:", err));
+        
+        // Status
+        fetch(process.env.PUBLIC_URL + '/nonvolatile.txt')
+            .then(res => res.text())
+            .then(text => {
+                const statuses = text
+                    .trim()
+                    .split('\n')
+                    .map(s => s.trim())
+                    .filter(Boolean);
+                setStatusList(statuses);
+            })
+            .catch(err => console.error("Error fetching non-volatile statuses:", err));
+    }, []);
 
     useEffect(() => {
         setLocalPokemonList(pokemonList);
@@ -61,22 +115,47 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
 
     const handleSubmit = () => {
         if (team.every(p => p)) {
-            // Incluir información de revealed y fainted en el equipo
+            // Incluir información de revealed, fainted y detalles adicionales
             const teamWithMetadata = team.map((pokemon, index) => ({
                 ...pokemon,
                 revealed: revealed[index] || false,
-                fainted: fainted[index] || false
+                fainted: fainted[index] || false,
+                item: pokemonDetails[index].item || null,
+                ability: pokemonDetails[index].ability || null,
+                moves: pokemonDetails[index].moves || [],
+                status: pokemonDetails[index].status || null,
+                teraType: pokemonDetails[index].teraType || null,
+                teraActive: pokemonDetails[index].teraActive || false
             }));
             
             onSelectTeam(teamWithMetadata);
             onClose();
             setError('');
+        } else {
+            setError('Please select all Pokémon for the team.');
         }
+    };
+
+    // Toggle expanded details for a Pokemon
+    const toggleDetails = (index) => {
+        setExpandedDetails(prev => ({
+            ...prev,
+            [index]: !prev[index]
+        }));
+    };
+    
+    // Update Pokemon details
+    const updatePokemonDetail = (index, field, value) => {
+        const newDetails = [...pokemonDetails];
+        newDetails[index] = {
+            ...newDetails[index],
+            [field]: value
+        };
+        setPokemonDetails(newDetails);
     };
 
     // Actualizar la función handleRevealedChange para limitar a 4 Pokémon revelados
     const handleRevealedChange = (index, value) => {
-        // Si estamos intentando marcar un nuevo Pokémon como revelado
         if (value) {
             // Comprobar cuántos Pokémon están ya revelados
             const currentRevealedCount = Object.values(revealed).filter(isRevealed => isRevealed).length;
@@ -108,19 +187,25 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
         matchFrom: 'start',
         stringify: (option) => (option && option.name ? option.name : ''),
     });
+    
+    const teraTypes = [
+        'Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice', 
+        'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 
+        'Bug', 'Rock', 'Ghost', 'Dragon', 'Dark', 'Steel', 'Fairy', 'Stellar'
+    ];
 
     return (
         <Dialog 
             open={open} 
             onClose={onClose} 
             fullWidth 
-            maxWidth="sm"
+            maxWidth="md"
             PaperComponent={DraggablePaperComponent}
         >
             <DialogTitle id="draggable-dialog-title" style={{ cursor: 'grab' }}>
                 Select Team
             </DialogTitle>
-            <DialogContent sx={{ maxHeight: '70vh', overflowY: 'auto', pt: 5 }}>
+            <DialogContent sx={{ maxHeight: '80vh', overflowY: 'auto', pt: 5 }}>
                 {/* Spacer box to ensure content doesn't get cut off */}
                 <Box sx={{ height: 12 }} />
                 
@@ -131,65 +216,241 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                 )}
                 <Grid container spacing={2}>
                     {team.map((pokemon, index) => (
-                        <Box key={index} sx={{ mb: 2, width: '100%' }}>
-                            {/* Selector existente para el Pokémon */}
-                            <Autocomplete
-                                options={localPokemonList}
-                                getOptionLabel={(option) => (option && option.name ? option.name : (typeof option === 'string' ? option : ''))}
-                                filterOptions={filterOptions}
-                                isOptionEqualToValue={(option, value) =>
-                                    option && value ? 
-                                        (option.name === value.name || 
-                                         option === value || 
-                                         option.name === value || 
-                                         option === value.name) : false
-                                }
-                                loading={loading}
-                                value={team[index]}
-                                onChange={(event, newValue) => handleChange(index, newValue)}
-                                inputValue={searchTerms[index]}
-                                onInputChange={(event, newInputValue) => handleSearchChange(index, newInputValue)}
-                                renderInput={(params) => (
-                                    <TextField
-                                        {...params}
-                                        label={`Slot ${index + 1}`}
-                                        variant="outlined"
-                                        fullWidth
-                                    />
-                                )}
-                                sx={{
-                                    mt: 1,
+                        <Grid item xs={12} key={index}>
+                            <Paper 
+                                elevation={3}
+                                sx={{ 
+                                    p: 2, 
+                                    mb: 2, 
+                                    backgroundColor: '#1A1896',
+                                    color: 'white'
                                 }}
-                            />
-                            {/* Checkboxes adicionales */}
-                            <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-                                <FormControlLabel
-                                    control={
-                                        <WhiteCheckbox
-                                            checked={revealed[index] || false}
-                                            onChange={(e) => handleRevealedChange(index, e.target.checked)}
-                                            disabled={
-                                                Object.values(revealed).filter(isRevealed => isRevealed).length >= 4 && 
-                                                !revealed[index]
+                            >
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                    <Typography variant="h6">Slot {index + 1}</Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography variant="body2" sx={{ color: 'white' }}>
+                                            {expandedDetails[index] ? 'Hide details' : 'More details'}
+                                        </Typography>
+                                        <IconButton 
+                                            onClick={() => toggleDetails(index)} 
+                                            sx={{ color: 'white' }}
+                                        >
+                                            {expandedDetails[index] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                        </IconButton>
+                                    </Box>
+                                </Box>
+                                
+                                {/* Selector existente para el Pokémon */}
+                                <Autocomplete
+                                    options={localPokemonList}
+                                    getOptionLabel={(option) => (option && option.name ? option.name : (typeof option === 'string' ? option : ''))}
+                                    filterOptions={filterOptions}
+                                    isOptionEqualToValue={(option, value) =>
+                                        option && value ? 
+                                            (option.name === value.name || 
+                                             option === value || 
+                                             option.name === value || 
+                                             option === value.name) : false
+                                    }
+                                    loading={loading}
+                                    value={team[index]}
+                                    onChange={(event, newValue) => handleChange(index, newValue)}
+                                    inputValue={searchTerms[index]}
+                                    onInputChange={(event, newInputValue) => handleSearchChange(index, newInputValue)}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label={`Pokémon`}
+                                            variant="outlined"
+                                            fullWidth
+                                            InputLabelProps={{ style: { color: 'white' } }}
+                                        />
+                                    )}
+                                    sx={{
+                                        mt: 1,
+                                        mb: 1,
+                                        '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
+                                        '& .MuiSvgIcon-root': { color: 'white' }
+                                    }}
+                                />
+                                
+                                {/* Checkboxes para Revealed y Fainted */}
+                                <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
+                                    {/* Solo mostrar Revealed si no hay 4 revelados o si este ya está revelado */}
+                                    {(Object.values(revealed).filter(isRevealed => isRevealed).length < 4 || revealed[index]) && (
+                                        <FormControlLabel
+                                            control={
+                                                <WhiteCheckbox
+                                                    checked={revealed[index] || false}
+                                                    onChange={(e) => handleRevealedChange(index, e.target.checked)}
+                                                />
                                             }
+                                            label="Revealed"
+                                            sx={{ color: 'white' }}
                                         />
-                                    }
-                                    label="Revealed"
-                                    sx={{ color: 'white' }}
-                                />
-                                <FormControlLabel
-                                    control={
-                                        <WhiteCheckbox
-                                            checked={fainted[index] || false}
-                                            onChange={(e) => handleFaintedChange(index, e.target.checked)}
-                                            disabled={!revealed[index]} // Deshabilitar si no está revelado
+                                    )}
+                                    {/* Solo mostrar Fainted si el Pokémon está revelado */}
+                                    {revealed[index] && (
+                                        <FormControlLabel
+                                            control={
+                                                <WhiteCheckbox
+                                                    checked={fainted[index] || false}
+                                                    onChange={(e) => handleFaintedChange(index, e.target.checked)}
+                                                />
+                                            }
+                                            label="Fainted"
+                                            sx={{ color: 'white' }}
                                         />
-                                    }
-                                    label="Fainted"
-                                    sx={{ color: 'white' }}
-                                />
-                            </Box>
-                        </Box>
+                                    )}
+                                </Box>
+                                
+                                {/* Detalles expandibles del Pokémon */}
+                                <Collapse in={expandedDetails[index]}>
+                                    <Divider sx={{ my: 2, borderColor: 'grey.500' }} />
+                                    
+                                    <Grid container spacing={2}>
+                                        {/* Item */}
+                                        <Grid item xs={12} sm={6}>
+                                            <FormControl fullWidth>
+                                                <Autocomplete
+                                                    options={itemsList}
+                                                    getOptionLabel={(option) => option?.name || ''}
+                                                    value={itemsList.find(item => item.name === pokemonDetails[index].item) || null}
+                                                    onChange={(_, newValue) => updatePokemonDetail(index, 'item', newValue?.name || '')}
+                                                    renderInput={(params) => (
+                                                        <TextField 
+                                                            {...params} 
+                                                            label="Held Item" 
+                                                            variant="outlined"
+                                                            InputLabelProps={{ style: { color: 'white' } }} 
+                                                        />
+                                                    )}
+                                                    sx={{
+                                                        '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
+                                                        '& .MuiSvgIcon-root': { color: 'white' }
+                                                    }}
+                                                />
+                                            </FormControl>
+                                        </Grid>
+                                        
+                                        {/* Ability */}
+                                        <Grid item xs={12} sm={6}>
+                                            <FormControl fullWidth>
+                                                <Autocomplete
+                                                    options={abilitiesList}
+                                                    getOptionLabel={(option) => option?.name || ''}
+                                                    value={abilitiesList.find(ability => ability.name === pokemonDetails[index].ability) || null}
+                                                    onChange={(_, newValue) => updatePokemonDetail(index, 'ability', newValue?.name || '')}
+                                                    renderInput={(params) => (
+                                                        <TextField 
+                                                            {...params} 
+                                                            label="Ability" 
+                                                            variant="outlined"
+                                                            InputLabelProps={{ style: { color: 'white' } }} 
+                                                        />
+                                                    )}
+                                                    sx={{
+                                                        '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
+                                                        '& .MuiSvgIcon-root': { color: 'white' }
+                                                    }}
+                                                />
+                                            </FormControl>
+                                        </Grid>
+                                        
+                                        {/* Moves */}
+                                        <Grid item xs={12}>
+                                            <FormControl fullWidth>
+                                                <Autocomplete
+                                                    multiple
+                                                    options={movesList}
+                                                    getOptionLabel={(option) => option?.name || ''}
+                                                    value={pokemonDetails[index].moves.map(moveName => 
+                                                        movesList.find(move => move.name === moveName) || { name: moveName }
+                                                    )}
+                                                    onChange={(_, newValue) => updatePokemonDetail(index, 'moves', newValue.map(move => move.name))}
+                                                    renderInput={(params) => (
+                                                        <TextField 
+                                                            {...params} 
+                                                            label="Moves" 
+                                                            variant="outlined"
+                                                            InputLabelProps={{ style: { color: 'white' } }}
+                                                        />
+                                                    )}
+                                                    sx={{
+                                                        '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
+                                                        '& .MuiSvgIcon-root': { color: 'white' }
+                                                    }}
+                                                />
+                                            </FormControl>
+                                        </Grid>
+                                        
+                                        {/* Status */}
+                                        <Grid item xs={12} sm={6}>
+                                            <FormControl fullWidth>
+                                                <Autocomplete
+                                                    options={statusList}
+                                                    getOptionLabel={(option) => option || ''}
+                                                    value={pokemonDetails[index].status || null}
+                                                    onChange={(_, newValue) => updatePokemonDetail(index, 'status', newValue || '')}
+                                                    renderInput={(params) => (
+                                                        <TextField 
+                                                            {...params} 
+                                                            label="Non-Volatile Status" 
+                                                            variant="outlined"
+                                                            InputLabelProps={{ style: { color: 'white' } }}
+                                                        />
+                                                    )}
+                                                    sx={{
+                                                        '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
+                                                        '& .MuiSvgIcon-root': { color: 'white' }
+                                                    }}
+                                                />
+                                            </FormControl>
+                                        </Grid>
+                                        
+                                        {/* Tera Type y Tera Active */}
+                                        <Grid item xs={12} sm={6}>
+                                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                                <FormControl sx={{ flex: 1 }}>
+                                                    <Autocomplete
+                                                        options={teraTypes}
+                                                        getOptionLabel={(option) => option || ''}
+                                                        value={pokemonDetails[index].teraType || null}
+                                                        onChange={(_, newValue) => updatePokemonDetail(index, 'teraType', newValue || '')}
+                                                        renderInput={(params) => (
+                                                            <TextField 
+                                                                {...params} 
+                                                                label="Tera Type" 
+                                                                variant="outlined"
+                                                                InputLabelProps={{ style: { color: 'white' } }}
+                                                            />
+                                                        )}
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
+                                                            '& .MuiSvgIcon-root': { color: 'white' }
+                                                        }}
+                                                    />
+                                                </FormControl>
+                                                {/* Solo mostrar Tera Active si hay un tipo Tera seleccionado */}
+                                                {pokemonDetails[index].teraType && (
+                                                    <FormControlLabel
+                                                        control={
+                                                            <WhiteCheckbox
+                                                                checked={pokemonDetails[index].teraActive || false}
+                                                                onChange={(e) => updatePokemonDetail(index, 'teraActive', e.target.checked)}
+                                                            />
+                                                        }
+                                                        label="Tera Active"
+                                                        sx={{ color: 'white' }}
+                                                    />
+                                                )}
+                                            </Box>
+                                        </Grid>
+                                    </Grid>
+                                </Collapse>
+                            </Paper>
+                        </Grid>
                     ))}
                 </Grid>
             </DialogContent>

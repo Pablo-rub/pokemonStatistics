@@ -30,7 +30,6 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
   });
   const [selectedTeraType, setSelectedTeraType] = useState('');
   const [teraActive, setTeraActive] = useState(false);
-  const [teraDuration, setTeraDuration] = useState(5);
   
   const [itemsList, setItemsList] = useState([]);
   const [abilitiesList, setAbilitiesList] = useState([]);
@@ -248,28 +247,21 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                         '& .MuiSvgIcon-root': { color: 'white' }
                       }}
                     />
-                    <FormControlLabel
-                      control={
-                        <Checkbox 
-                          checked={teraActive}
-                          onChange={(e) => setTeraActive(e.target.checked)}
-                          sx={{ 
-                            color: 'white',
-                            '&.Mui-checked': { color: '#24CC9F' }
-                          }}
-                        />
-                      }
-                      label="Tera Active"
-                      sx={{ color: 'white' }}
-                    />
-                    {teraActive && (
-                      <TextField
-                        label="Duration"
-                        type="number"
-                        value={teraDuration}
-                        onChange={(e) => setTeraDuration(Number(e.target.value))}
-                        inputProps={{ min: 1, max: 10, step: 1 }}
-                        sx={{ width: '80px' }}
+                    {/* Solo mostrar Tera Active si hay un tipo Tera seleccionado */}
+                    {selectedTeraType && (
+                      <FormControlLabel
+                        control={
+                          <Checkbox 
+                            checked={teraActive}
+                            onChange={(e) => setTeraActive(e.target.checked)}
+                            sx={{ 
+                              color: 'white',
+                              '&.Mui-checked': { color: '#24CC9F' }
+                            }}
+                          />
+                        }
+                        label="Tera Active"
+                        sx={{ color: 'white' }}
                       />
                     )}
                   </Box>

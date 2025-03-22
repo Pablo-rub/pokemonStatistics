@@ -36,8 +36,6 @@ import useDraggable from "../hooks/useDraggable";
 //texto de ayuda
 //texto fecha inicio recoleccion
 //que los select se desplieguen para abajo
-//revealed pokemon
-//fainted
 
 //backend:
 //spikes
@@ -113,11 +111,6 @@ function TurnAssistantPage() {
   
   // Agrega un estado para reiniciar el componente
   const [resetKey, setResetKey] = useState(0);
-
-  // Agrega nuevos estados para equipos
-  const [yourTeam, setYourTeam] = useState([]);
-  const [opponentTeam, setOpponentTeam] = useState([]);
-  const [teamDialogOpen, setTeamDialogOpen] = useState({ your: false, opponent: false });
 
   // Función para resetear todos los campos (sin resetear el formato)
   const handleResetData = () => {
