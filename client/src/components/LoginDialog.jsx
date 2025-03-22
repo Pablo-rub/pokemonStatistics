@@ -21,7 +21,7 @@ export default function LoginDialog({ open, onClose, isSignUp = false }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, signup, loginWithGoogle } = useAuth();
+  const { login, signup, signInWithGoogle } = useAuth();
 
   // Use the draggable hook
   const { ref, style, handleMouseDown, resetPosition, isDragging } = useDraggable();
@@ -62,7 +62,7 @@ export default function LoginDialog({ open, onClose, isSignUp = false }) {
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
-      await loginWithGoogle();
+      await signInWithGoogle();
       handleClose();
     } catch (error) {
       console.error('Google login error:', error);
