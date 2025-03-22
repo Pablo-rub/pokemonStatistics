@@ -194,6 +194,24 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
         'Bug', 'Rock', 'Ghost', 'Dragon', 'Dark', 'Steel', 'Fairy', 'Stellar'
     ];
 
+    // Añade esta función de reseteo después de handleSubmit
+    const handleClearData = () => {
+        setTeam(Array(6).fill(null));
+        setSearchTerms(Array(6).fill(''));
+        setRevealed({});
+        setFainted({});
+        setExpandedDetails({});
+        setPokemonDetails(Array(6).fill({
+            item: '',
+            ability: '',
+            moves: [],
+            status: '',
+            teraType: '',
+            teraActive: false
+        }));
+        setError('');
+    };
+
     return (
         <Dialog 
             open={open} 
@@ -455,6 +473,14 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                 </Grid>
             </DialogContent>
             <DialogActions>
+                <Button 
+                    onClick={handleClearData} 
+                    variant="outlined" 
+                    color="warning"
+                    sx={{ mr: 'auto' }}
+                >
+                    Clear Team
+                </Button>
                 <Button onClick={onClose} variant="contained" color="error">
                     Cancel
                 </Button>

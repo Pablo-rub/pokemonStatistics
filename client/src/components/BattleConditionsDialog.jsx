@@ -138,7 +138,7 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
           }
         }
       }));
-    } else if (!value && (hazard === "Spikes" || hazard === "Toxic Spikes")) {
+    } else if (!value && (hazard === "Spikes" || "Toxic Spikes")) {
       // Si se desactiva, resetear nivel
       setBattleConditions(prev => ({
         ...prev,
@@ -222,6 +222,37 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
         }
       }));
     }
+  };
+
+  const handleClearData = () => {
+    setBattleConditions({
+      weather: "",
+      weatherDuration: 0,
+      field: "",
+      fieldDuration: 0,
+      room: "",
+      roomDuration: 0,
+      sideEffects: {
+        yourSide: {},
+        opponentSide: {}
+      },
+      sideEffectsDuration: {
+        yourSide: {},
+        opponentSide: {}
+      },
+      entryHazards: {
+        yourSide: {},
+        opponentSide: {}
+      },
+      entryHazardsLevel: {
+        yourSide: {},
+        opponentSide: {}
+      },
+      entryHazardsDuration: {
+        yourSide: {},
+        opponentSide: {}
+      }
+    });
   };
 
   const handleApply = () => {
@@ -481,6 +512,14 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
         </Grid>
       </DialogContent>
       <DialogActions>
+        <Button 
+          onClick={handleClearData} 
+          variant="outlined" 
+          color="warning"
+          sx={{ mr: 'auto' }}
+        >
+          Clear Conditions
+        </Button>
         <Button onClick={onClose} variant="contained" color="error">
           Cancel
         </Button>

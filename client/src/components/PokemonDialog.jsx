@@ -106,6 +106,27 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
     }
   };
 
+  const handleClearData = () => {
+    setSelectedPokemon(null);
+    setSelectedItem('');
+    setSelectedAbility('');
+    setSelectedMoves([]);
+    setSelectedStatus('');
+    setSelectedVolatileStatuses([]);
+    setStatChanges({
+      hp: 100,
+      atk: 0,
+      def: 0,
+      spa: 0,
+      spd: 0,
+      spe: 0,
+      acc: 0,
+      eva: 0,
+    });
+    setSelectedTeraType('');
+    setTeraActive(false);
+  };
+
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
   const teraTypes = [
@@ -416,6 +437,14 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
         </Box>
       </DialogContent>
       <DialogActions>
+        <Button 
+          onClick={handleClearData} 
+          variant="outlined" 
+          color="warning"
+          sx={{ mr: 'auto' }}
+        >
+          Clear Data
+        </Button>
         <Button onClick={onClose} variant="contained" color="error">
           Cancel
         </Button>
