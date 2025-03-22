@@ -33,13 +33,9 @@ import useDraggable from "../hooks/useDraggable";
 //todo
 //iu:
 //boton ir para arriba
-//better item list
 //texto de ayuda
 //texto fecha inicio recoleccion
 //que los select se desplieguen para abajo
-//tera active
-//tera individual
-//conditions duration
 //revealed pokemon
 //fainted
 
