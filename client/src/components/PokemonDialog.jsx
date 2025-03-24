@@ -16,7 +16,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
   const [selectedMoves, setSelectedMoves] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
+  const [selectedNonVolatileStatus, setSelectedNonVolatileStatus] = useState('');
   const [selectedVolatileStatuses, setSelectedVolatileStatuses] = useState([]);
   const [statChanges, setStatChanges] = useState({
     hp: 100,
@@ -99,7 +99,8 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
         ability: selectedAbility || null,
         moves: selectedMoves.length > 0 ? selectedMoves : [],
         stats: statChanges,
-        status: selectedStatus || null,
+        nonVolatileStatus: selectedNonVolatileStatus || null,
+        volatileStatuses: selectedVolatileStatuses || [],
         teraType: selectedTeraType,
         teraActive: teraActive,
       });
@@ -112,7 +113,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
     setSelectedItem('');
     setSelectedAbility('');
     setSelectedMoves([]);
-    setSelectedStatus('');
+    setSelectedNonVolatileStatus('');
     setSelectedVolatileStatuses([]);
     setStatChanges({
       hp: 100,
@@ -227,9 +228,9 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                     <Autocomplete
                       options={["Burn", "Freeze", "Paralysis", "Poison", "Badly poisoned", "Sleep"]}
                       getOptionLabel={(option) => option}
-                      value={selectedStatus}
-                      onChange={(e, newValue) => setSelectedStatus(newValue || '')}
-                      clearIcon={selectedStatus ? undefined : null}
+                      value={selectedNonVolatileStatus}
+                      onChange={(e, newValue) => setSelectedNonVolatileStatus(newValue || '')}
+                      clearIcon={selectedNonVolatileStatus ? undefined : null}
                       renderInput={(params) => (
                         <TextField {...params} label="Non Volatile Status" variant="outlined" />
                       )}

@@ -671,25 +671,29 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       [opponentPokemon[1]]: pokemonData.bottomRight.ability || null
     };
 
-    // Extraer non volatile status de cada Pokémon
+    // Extraer non-volatile status de tus Pokémon
     const yourNonVolatileStatus = {
-      [yourPokemon[0]]: pokemonData.topLeft.status || null,
-      [yourPokemon[1]]: pokemonData.topRight.status || null
+      [yourPokemon[0]]: pokemonData.topLeft.nonVolatileStatus || null,
+      [yourPokemon[1]]: pokemonData.topRight.nonVolatileStatus || null
     };
 
+    // Extraer non-volatile status de los Pokémon del oponente
     const opponentNonVolatileStatus = {
-      [opponentPokemon[0]]: pokemonData.bottomLeft.status || null,
-      [opponentPokemon[1]]: pokemonData.bottomRight.status || null
+      [opponentPokemon[0]]: pokemonData.bottomLeft.nonVolatileStatus || null,
+      [opponentPokemon[1]]: pokemonData.bottomRight.nonVolatileStatus || null
     };
 
-    console.log(`Your non-volatile statuses: ${Object.values(yourNonVolatileStatus).filter(Boolean).join(', ') || 'None'}`);
-    console.log(`Opponent non-volatile statuses: ${Object.values(opponentNonVolatileStatus).filter(Boolean).join(', ') || 'None'}`);
+    // Extraer volatile statuses de tus Pokémon (como arrays)
+    const yourVolatileStatuses = {
+      [yourPokemon[0]]: pokemonData.topLeft.volatileStatuses || [],
+      [yourPokemon[1]]: pokemonData.topRight.volatileStatuses || []
+    };
 
-    console.log(`Analyzing scenario with Your Pokémon: ${yourPokemon.join(', ')} vs Opponent's: ${opponentPokemon.join(', ')}`);
-    console.log(`Your items: ${Object.values(yourItems).filter(Boolean).join(', ') || 'None'}`);
-    console.log(`Opponent items: ${Object.values(opponentItems).filter(Boolean).join(', ') || 'None'}`);
-    console.log(`Your abilities: ${Object.values(yourAbilities).filter(Boolean).join(', ') || 'None'}`);
-    console.log(`Opponent abilities: ${Object.values(opponentAbilities).filter(Boolean).join(', ') || 'None'}`);
+    // Extraer volatile statuses de los Pokémon del oponente
+    const opponentVolatileStatuses = {
+      [opponentPokemon[0]]: pokemonData.bottomLeft.volatileStatuses || [],
+      [opponentPokemon[1]]: pokemonData.bottomRight.volatileStatuses || []
+    };
 
     // Define params for BigQuery
     let params = {
@@ -968,7 +972,7 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       }
     }
 
-    // Agregar condiciones para non volatile status para tus Pokémon
+    // Agregar condiciones para non-volatile status para tus Pokémon
     const yourNonVolatileStatusConditions = [];
     Object.entries(yourNonVolatileStatus).forEach(([pokemonName, statusName], index) => {
       if (statusName) {
@@ -1381,7 +1385,7 @@ function parseMoveString(moveString) {
 const statusMapping = {
   "burn": "brn",
   "freeze": "frz",
-  "frostbite": "frt",  // ajusta según el código real
+  "frostbite": "frt",
   "paralysis": "par",
   "poison": "psn",
   "badly poisoned": "tox",
