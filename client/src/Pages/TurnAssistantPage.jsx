@@ -53,7 +53,6 @@ import useDraggable from "../hooks/useDraggable";
 //moves
 //life
 //volatile statuses
-//non volatile statuses
 //ver que hacer con el mirror
 
 function TurnAssistantPage() {
