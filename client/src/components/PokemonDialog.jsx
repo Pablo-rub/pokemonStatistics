@@ -99,6 +99,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
         ability: selectedAbility || null,
         moves: selectedMoves.length > 0 ? selectedMoves : [],
         stats: statChanges,
+        status: selectedStatus || null,
         teraType: selectedTeraType,
         teraActive: teraActive,
       });

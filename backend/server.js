@@ -671,6 +671,20 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       [opponentPokemon[1]]: pokemonData.bottomRight.ability || null
     };
 
+    // Extraer non volatile status de cada Pokémon
+    const yourStatus = {
+      [yourPokemon[0]]: pokemonData.topLeft.status || null,
+      [yourPokemon[1]]: pokemonData.topRight.status || null
+    };
+
+    const opponentStatus = {
+      [opponentPokemon[0]]: pokemonData.bottomLeft.status || null,
+      [opponentPokemon[1]]: pokemonData.bottomRight.status || null
+    };
+
+    console.log(`Your non-volatile statuses: ${Object.values(yourStatus).filter(Boolean).join(', ') || 'None'}`);
+    console.log(`Opponent non-volatile statuses: ${Object.values(opponentStatus).filter(Boolean).join(', ') || 'None'}`);
+
     console.log(`Analyzing scenario with Your Pokémon: ${yourPokemon.join(', ')} vs Opponent's: ${opponentPokemon.join(', ')}`);
     console.log(`Your items: ${Object.values(yourItems).filter(Boolean).join(', ') || 'None'}`);
     console.log(`Opponent items: ${Object.values(opponentItems).filter(Boolean).join(', ') || 'None'}`);
@@ -952,6 +966,63 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
         matchingTurnsQuery += ` AND t.room IS NOT NULL AND LOWER(REPLACE(t.room.condition, ' ', '')) = @battleRoom`;
         params.battleRoom = formattedRoom;
       }
+    }
+
+    // Agregar condiciones para non volatile status para tus Pokémon
+    const yourStatusConditions = [];
+    Object.entries(yourStatus).forEach(([pokemonName, statusName], index) => {
+      if (statusName) {
+        const formattedStatus = statusName.trim().toLowerCase();
+        // Mapea el estado al formato de la BBDD
+        const mappedStatus = statusMapping[formattedStatus] || formattedStatus;
+        params[`yourStatus${index + 1}`] = mappedStatus;
+        yourStatusConditions.push(`
+          EXISTS (
+            SELECT 1 FROM UNNEST(
+              CASE
+                WHEN (
+                  t.starts_with.player1[OFFSET(0)] = @yourPokemon1 OR
+                  t.starts_with.player1[OFFSET(1)] = @yourPokemon1
+                ) THEN t.revealed_pokemon.player1
+                ELSE t.revealed_pokemon.player2
+              END
+            ) p
+            WHERE p.name = "${pokemonName}" 
+              AND LOWER(REPLACE(p.non_volatile_status, ' ', '')) = @yourStatus${index + 1}
+          )
+        `);
+      }
+    });
+    if (yourStatusConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${yourStatusConditions.join(' AND ')})`;
+    }
+
+    // Agregar condiciones para non volatile status para Pokémon del oponente
+    const opponentStatusConditions = [];
+    Object.entries(opponentStatus).forEach(([pokemonName, statusName], index) => {
+      if (statusName) {
+        const formattedStatus = statusName.trim().toLowerCase();
+        const mappedStatus = statusMapping[formattedStatus] || formattedStatus;
+        params[`opponentStatus${index + 1}`] = mappedStatus;
+        opponentStatusConditions.push(`
+          EXISTS (
+            SELECT 1 FROM UNNEST(
+              CASE
+                WHEN (
+                  t.starts_with.player1[OFFSET(0)] = @opponentPokemon1 OR
+                  t.starts_with.player1[OFFSET(1)] = @opponentPokemon1
+                ) THEN t.revealed_pokemon.player1
+                ELSE t.revealed_pokemon.player2
+              END
+            ) p
+            WHERE p.name = "${pokemonName}" 
+              AND LOWER(REPLACE(p.non_volatile_status, ' ', '')) = @opponentStatus${index + 1}
+          )
+        `);
+      }
+    });
+    if (opponentStatusConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${opponentStatusConditions.join(' AND ')})`;
     }
     
     // AQUÍ ESTÁ LA CORRECCIÓN PRINCIPAL: Asegurarnos de que se filtren los escenarios por ambos equipos
@@ -1305,6 +1376,17 @@ function parseMoveString(moveString) {
   // If we reach here, use the whole string as the move (fallback)
   return { move: moveString, isSpreadMove };
 }
+
+// Define un objeto de mapeo para los estados no volátiles
+const statusMapping = {
+  "burn": "brn",
+  "freeze": "frz",
+  "frostbite": "frt",  // ajusta según el código real
+  "paralysis": "par",
+  "poison": "psn",
+  "badly poisoned": "tox",
+  "sleep": "slp"
+};
 
 app.get('/api/items', async (req, res) => {
   try {
