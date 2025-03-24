@@ -672,18 +672,18 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     };
 
     // Extraer non volatile status de cada Pokémon
-    const yourStatus = {
+    const yourNonVolatileStatus = {
       [yourPokemon[0]]: pokemonData.topLeft.status || null,
       [yourPokemon[1]]: pokemonData.topRight.status || null
     };
 
-    const opponentStatus = {
+    const opponentNonVolatileStatus = {
       [opponentPokemon[0]]: pokemonData.bottomLeft.status || null,
       [opponentPokemon[1]]: pokemonData.bottomRight.status || null
     };
 
-    console.log(`Your non-volatile statuses: ${Object.values(yourStatus).filter(Boolean).join(', ') || 'None'}`);
-    console.log(`Opponent non-volatile statuses: ${Object.values(opponentStatus).filter(Boolean).join(', ') || 'None'}`);
+    console.log(`Your non-volatile statuses: ${Object.values(yourNonVolatileStatus).filter(Boolean).join(', ') || 'None'}`);
+    console.log(`Opponent non-volatile statuses: ${Object.values(opponentNonVolatileStatus).filter(Boolean).join(', ') || 'None'}`);
 
     console.log(`Analyzing scenario with Your Pokémon: ${yourPokemon.join(', ')} vs Opponent's: ${opponentPokemon.join(', ')}`);
     console.log(`Your items: ${Object.values(yourItems).filter(Boolean).join(', ') || 'None'}`);
@@ -969,14 +969,14 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     }
 
     // Agregar condiciones para non volatile status para tus Pokémon
-    const yourStatusConditions = [];
-    Object.entries(yourStatus).forEach(([pokemonName, statusName], index) => {
+    const yourNonVolatileStatusConditions = [];
+    Object.entries(yourNonVolatileStatus).forEach(([pokemonName, statusName], index) => {
       if (statusName) {
         const formattedStatus = statusName.trim().toLowerCase();
         // Mapea el estado al formato de la BBDD
         const mappedStatus = statusMapping[formattedStatus] || formattedStatus;
-        params[`yourStatus${index + 1}`] = mappedStatus;
-        yourStatusConditions.push(`
+        params[`yourNonVolatileStatus${index + 1}`] = mappedStatus;
+        yourNonVolatileStatusConditions.push(`
           EXISTS (
             SELECT 1 FROM UNNEST(
               CASE
@@ -988,23 +988,23 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
               END
             ) p
             WHERE p.name = "${pokemonName}" 
-              AND LOWER(REPLACE(p.non_volatile_status, ' ', '')) = @yourStatus${index + 1}
+              AND LOWER(REPLACE(p.non_volatile_status, ' ', '')) = @yourNonVolatileStatus${index + 1}
           )
         `);
       }
     });
-    if (yourStatusConditions.length > 0) {
-      matchingTurnsQuery += ` AND (${yourStatusConditions.join(' AND ')})`;
+    if (yourNonVolatileStatusConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${yourNonVolatileStatusConditions.join(' AND ')})`;
     }
 
     // Agregar condiciones para non volatile status para Pokémon del oponente
-    const opponentStatusConditions = [];
-    Object.entries(opponentStatus).forEach(([pokemonName, statusName], index) => {
+    const opponentNonVolatileStatusConditions = [];
+    Object.entries(opponentNonVolatileStatus).forEach(([pokemonName, statusName], index) => {
       if (statusName) {
         const formattedStatus = statusName.trim().toLowerCase();
         const mappedStatus = statusMapping[formattedStatus] || formattedStatus;
-        params[`opponentStatus${index + 1}`] = mappedStatus;
-        opponentStatusConditions.push(`
+        params[`opponentNonVolatileStatus${index + 1}`] = mappedStatus;
+        opponentNonVolatileStatusConditions.push(`
           EXISTS (
             SELECT 1 FROM UNNEST(
               CASE
@@ -1016,13 +1016,13 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
               END
             ) p
             WHERE p.name = "${pokemonName}" 
-              AND LOWER(REPLACE(p.non_volatile_status, ' ', '')) = @opponentStatus${index + 1}
+              AND LOWER(REPLACE(p.non_volatile_status, ' ', '')) = @opponentNonVolatileStatus${index + 1}
           )
         `);
       }
     });
-    if (opponentStatusConditions.length > 0) {
-      matchingTurnsQuery += ` AND (${opponentStatusConditions.join(' AND ')})`;
+    if (opponentNonVolatileStatusConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${opponentNonVolatileStatusConditions.join(' AND ')})`;
     }
     
     // AQUÍ ESTÁ LA CORRECCIÓN PRINCIPAL: Asegurarnos de que se filtren los escenarios por ambos equipos
