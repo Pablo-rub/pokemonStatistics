@@ -1028,6 +1028,77 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     if (opponentNonVolatileStatusConditions.length > 0) {
       matchingTurnsQuery += ` AND (${opponentNonVolatileStatusConditions.join(' AND ')})`;
     }
+
+    // Agregar condiciones para volatile statuses para tus Pokémon
+    const yourVolatileStatusConditions = [];
+    Object.entries(yourVolatileStatuses).forEach(([pokemonName, statusesArray], pIndex) => {
+      // Si hay algún volatile status seleccionado para este Pokémon…
+      if (statusesArray.length > 0) {
+        statusesArray.forEach((status, sIndex) => {
+          const formattedStatus = status.trim().toLowerCase();
+          const paramName = `yourVolatileStatus${pIndex + 1}_${sIndex + 1}`;
+          params[paramName] = formattedStatus;
+          yourVolatileStatusConditions.push(`
+            EXISTS (
+              SELECT 1 FROM UNNEST(
+                CASE
+                  WHEN (
+                    t.starts_with.player1[OFFSET(0)] = @yourPokemon1 OR
+                    t.starts_with.player1[OFFSET(1)] = @yourPokemon1
+                  ) THEN t.revealed_pokemon.player1
+                  ELSE t.revealed_pokemon.player2
+                END
+              ) p
+              WHERE p.name = "${pokemonName}"
+                AND ARRAY_LENGTH(
+                  ARRAY(
+                    SELECT x FROM UNNEST(p.volatile_status) x
+                    WHERE LOWER(x.name) = @${paramName}
+                  )
+                ) > 0
+            )
+          `);
+        });
+      }
+    });
+    if (yourVolatileStatusConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${yourVolatileStatusConditions.join(' AND ')})`;
+    }
+
+    // Agregar condiciones para volatile statuses para Pokémon del oponente
+    const opponentVolatileStatusConditions = [];
+    Object.entries(opponentVolatileStatuses).forEach(([pokemonName, statusesArray], pIndex) => {
+      if (statusesArray.length > 0) {
+        statusesArray.forEach((status, sIndex) => {
+          const formattedStatus = status.trim().toLowerCase();
+          const paramName = `opponentVolatileStatus${pIndex + 1}_${sIndex + 1}`;
+          params[paramName] = formattedStatus;
+          opponentVolatileStatusConditions.push(`
+            EXISTS (
+              SELECT 1 FROM UNNEST(
+                CASE
+                  WHEN (
+                    t.starts_with.player1[OFFSET(0)] = @opponentPokemon1 OR
+                    t.starts_with.player1[OFFSET(1)] = @opponentPokemon1
+                  ) THEN t.revealed_pokemon.player1
+                  ELSE t.revealed_pokemon.player2
+                END
+              ) p
+              WHERE p.name = "${pokemonName}"
+                AND ARRAY_LENGTH(
+                  ARRAY(
+                    SELECT x FROM UNNEST(p.volatile_status) x
+                    WHERE LOWER(x.name) = @${paramName}
+                  )
+                ) > 0
+            )
+          `);
+        });
+      }
+    });
+    if (opponentVolatileStatusConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${opponentVolatileStatusConditions.join(' AND ')})`;
+    }
     
     // AQUÍ ESTÁ LA CORRECCIÓN PRINCIPAL: Asegurarnos de que se filtren los escenarios por ambos equipos
     matchingTurnsQuery += `
