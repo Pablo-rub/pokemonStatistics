@@ -34,7 +34,7 @@ function DraggablePaperComponent(props) {
   return <Paper ref={ref} {...props} style={{ ...props.style, ...style }} onMouseDown={handleMouseDown} />;
 }
 
-const sideEffectsList = ["tailwind", "reflect", "lightscreen", "aurora veil"];
+const sideEffectsList = ["tailwind", "reflect", "lightscreen", "auroraveil"];
 const hazardsList = ["Spikes", "Toxic Spikes", "Stealth Rock", "Sticky Web"];
 const menuPropsDown = {
   anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
@@ -74,36 +74,31 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
         }
       }
     }));
-    
-    // Si se activa, establecer duración predeterminada
+
     if (value) {
-      let defaultDuration = 4;
-      
-      // Pantallas con duración predeterminada de 5 (o 8 con Light Clay)
-      if (["Reflect", "Lightscreen", "Aurora Veil"].includes(effect)) {
-        defaultDuration = 5;
-      } else if (effect === "Tailwind") {
+      let defaultDuration;
+      if (effect === "tailwind") {
+        defaultDuration = 4;
+      } else {
         defaultDuration = 4;
       }
-      
       setBattleConditions(prev => ({
         ...prev,
         sideEffectsDuration: {
-          ...prev.sideEffectsDuration || {},
+          ...prev.sideEffectsDuration,
           [side]: {
-            ...prev.sideEffectsDuration?.[side] || {},
+            ...prev.sideEffectsDuration?.[side],
             [effect]: defaultDuration
           }
         }
       }));
     } else {
-      // Si se desactiva, resetear duración
       setBattleConditions(prev => ({
         ...prev,
         sideEffectsDuration: {
-          ...prev.sideEffectsDuration || {},
+          ...prev.sideEffectsDuration,
           [side]: {
-            ...prev.sideEffectsDuration?.[side] || {},
+            ...prev.sideEffectsDuration?.[side],
             [effect]: 0
           }
         }
