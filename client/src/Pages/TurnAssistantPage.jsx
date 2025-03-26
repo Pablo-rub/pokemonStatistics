@@ -47,9 +47,7 @@ import useDraggable from "../hooks/useDraggable";
 //revealed pokemon
 //stats
 //fainted
-//screens
-//tailwind >= -> ==
-//conditions duration
+//any duration tw, screens
 //tera active
 //tera individual
 //moves

@@ -1148,6 +1148,126 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       params.tailwindDurationOpponentSide = battleConditions.sideEffectsDuration.opponentSide.tailwind;
     }
     
+    // Filtro Reflect para "Your Side"
+    if (battleConditions.sideEffects.yourSide.reflect === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1))
+            AND t.screens.reflect.player1 = TRUE
+            AND t.screens.reflect.duration1 = @reflectDurationYourSide
+          )
+          OR
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2))
+            AND t.screens.reflect.player2 = TRUE
+            AND t.screens.reflect.duration2 = @reflectDurationYourSide
+          )
+        )
+      `;
+      params.reflectDurationYourSide = battleConditions.sideEffectsDuration.yourSide.reflect;
+    }
+
+    // Filtro Reflect para "Opponent Side"
+    if (battleConditions.sideEffects.opponentSide.reflect === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1))
+            AND t.screens.reflect.player1 = TRUE
+            AND t.screens.reflect.duration1 = @reflectDurationOpponentSide
+          )
+          OR
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2))
+            AND t.screens.reflect.player2 = TRUE
+            AND t.screens.reflect.duration2 = @reflectDurationOpponentSide
+          )
+        )
+      `;
+      params.reflectDurationOpponentSide = battleConditions.sideEffectsDuration.opponentSide.reflect;
+    }
+
+    // Filtro Lightscreen para "Your Side"
+    if (battleConditions.sideEffects.yourSide.lightscreen === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1))
+            AND t.screens.lightscreen.player1 = TRUE
+            AND t.screens.lightscreen.duration1 = @lightscreenDurationYourSide
+          )
+          OR
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2))
+            AND t.screens.lightscreen.player2 = TRUE
+            AND t.screens.lightscreen.duration2 = @lightscreenDurationYourSide
+          )
+        )
+      `;
+      params.lightscreenDurationYourSide = battleConditions.sideEffectsDuration.yourSide.lightscreen;
+    }
+
+    // Filtro Lightscreen para "Opponent Side"
+    if (battleConditions.sideEffects.opponentSide.lightscreen === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1))
+            AND t.screens.lightscreen.player1 = TRUE
+            AND t.screens.lightscreen.duration1 = @lightscreenDurationOpponentSide
+          )
+          OR
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2))
+            AND t.screens.lightscreen.player2 = TRUE
+            AND t.screens.lightscreen.duration2 = @lightscreenDurationOpponentSide
+          )
+        )
+      `;
+      params.lightscreenDurationOpponentSide = battleConditions.sideEffectsDuration.opponentSide.lightscreen;
+    }
+
+    // Filtro Auroraveil para "Your Side"
+    if (battleConditions.sideEffects.yourSide.auroraveil === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1))
+            AND t.screens.auroraveil.player1 = TRUE
+            AND t.screens.auroraveil.duration1 = @auroraveilDurationYourSide
+          )
+          OR
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2))
+            AND t.screens.auroraveil.player2 = TRUE
+            AND t.screens.auroraveil.duration2 = @auroraveilDurationYourSide
+          )
+        )
+      `;
+      params.auroraveilDurationYourSide = battleConditions.sideEffectsDuration.yourSide.auroraveil;
+    }
+
+    // Filtro Auroraveil para "Opponent Side"
+    if (battleConditions.sideEffects.opponentSide.auroraveil === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1))
+            AND t.screens.auroraveil.player1 = TRUE
+            AND t.screens.auroraveil.duration1 = @auroraveilDurationOpponentSide
+          )
+          OR
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2))
+            AND t.screens.auroraveil.player2 = TRUE
+            AND t.screens.auroraveil.duration2 = @auroraveilDurationOpponentSide
+          )
+        )
+      `;
+      params.auroraveilDurationOpponentSide = battleConditions.sideEffectsDuration.opponentSide.auroraveil;
+    }
+    
     // Asegurarnos de que se filtren los escenarios por ambos equipos
     matchingTurnsQuery += `
           AND (
