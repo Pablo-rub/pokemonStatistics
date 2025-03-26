@@ -458,7 +458,7 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
                           onChange={(e) => handleDurationChange('hazardLevel', `yourSide.${hazard}`, e.target.value)}
                           inputProps={{ 
                             min: 1, 
-                            max: hazard === "Spikes" ? 3 : 2, 
+                            max: hazard === "Spikes" ? 3 : hazard === "Toxic Spikes" ? 2 : 8, 
                             step: 1 
                           }}
                           sx={{ width: '80px' }}
@@ -492,7 +492,7 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
                           onChange={(e) => handleDurationChange('hazardLevel', `opponentSide.${hazard}`, e.target.value)}
                           inputProps={{ 
                             min: 1, 
-                            max: hazard === "Spikes" ? 3 : 2, 
+                            max: hazard === "Spikes" ? 3 : hazard === "Toxic Spikes" ? 2 : 8, 
                             step: 1 
                           }}
                           sx={{ width: '80px' }}

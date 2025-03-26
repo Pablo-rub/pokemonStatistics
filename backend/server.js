@@ -1267,6 +1267,140 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       `;
       params.auroraveilDurationOpponentSide = battleConditions.sideEffectsDuration.opponentSide.auroraveil;
     }
+
+    // Filtro Entry Hazards para "Your Side"
+    if (battleConditions.entryHazards?.yourSide?.["Spikes"] === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1))
+            AND t.spikes.player1.spikes >= @spikesLevelYourSide
+          )
+          OR
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2))
+            AND t.spikes.player2.spikes >= @spikesLevelYourSide
+          )
+        )
+      `;
+      params.spikesLevelYourSide = battleConditions.entryHazardsLevel?.yourSide?.["Spikes"] || 1;
+    }
+
+    if (battleConditions.entryHazards?.yourSide?.["Toxic Spikes"] === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1))
+            AND t.spikes.player1.toxic_spikes >= @toxicSpikesLevelYourSide
+          )
+          OR
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2))
+            AND t.spikes.player2.toxic_spikes >= @toxicSpikesLevelYourSide
+          )
+        )
+      `;
+      params.toxicSpikesLevelYourSide = battleConditions.entryHazardsLevel?.yourSide?.["Toxic Spikes"] || 1;
+    }
+
+    if (battleConditions.entryHazards?.yourSide?.["Stealth Rock"] === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1))
+            AND t.spikes.player1.stealth_rock = TRUE
+          )
+          OR
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2))
+            AND t.spikes.player2.stealth_rock = TRUE
+          )
+        )
+      `;
+    }
+
+    if (battleConditions.entryHazards?.yourSide?.["Sticky Web"] === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1))
+            AND t.spikes.player1.sticky_web = TRUE
+          )
+          OR
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2))
+            AND t.spikes.player2.sticky_web = TRUE
+          )
+        )
+      `;
+    }
+
+    // Filtro Entry Hazards para "Opponent Side"
+    if (battleConditions.entryHazards?.opponentSide?.["Spikes"] === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1))
+            AND t.spikes.player1.spikes >= @spikesLevelOpponentSide
+          )
+          OR
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2))
+            AND t.spikes.player2.spikes >= @spikesLevelOpponentSide
+          )
+        )
+      `;
+      params.spikesLevelOpponentSide = battleConditions.entryHazardsLevel?.opponentSide?.["Spikes"] || 1;
+    }
+
+    if (battleConditions.entryHazards?.opponentSide?.["Toxic Spikes"] === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1))
+            AND t.spikes.player1.toxic_spikes >= @toxicSpikesLevelOpponentSide
+          )
+          OR
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2))
+            AND t.spikes.player2.toxic_spikes >= @toxicSpikesLevelOpponentSide
+          )
+        )
+      `;
+      params.toxicSpikesLevelOpponentSide = battleConditions.entryHazardsLevel?.opponentSide?.["Toxic Spikes"] || 1;
+    }
+
+    if (battleConditions.entryHazards?.opponentSide?.["Stealth Rock"] === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1))
+            AND t.spikes.player1.stealth_rock = TRUE
+          )
+          OR
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2))
+            AND t.spikes.player2.stealth_rock = TRUE
+          )
+        )
+      `;
+    }
+
+    if (battleConditions.entryHazards?.opponentSide?.["Sticky Web"] === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1))
+            AND t.spikes.player1.sticky_web = TRUE
+          )
+          OR
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2))
+            AND t.spikes.player2.sticky_web = TRUE
+          )
+        )
+      `;
+    }
     
     // Asegurarnos de que se filtren los escenarios por ambos equipos
     matchingTurnsQuery += `
