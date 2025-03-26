@@ -36,6 +36,7 @@ import useDraggable from "../hooks/useDraggable";
 //texto de ayuda
 //texto fecha inicio recoleccion
 //que los select se desplieguen para abajo
+//fix teras in moves text
 
 //backend:
 //spikes
@@ -46,13 +47,13 @@ import useDraggable from "../hooks/useDraggable";
 //revealed pokemon
 //stats
 //fainted
-//screens?
+//screens
+//tailwind >= -> ==
 //conditions duration
 //tera active
 //tera individual
 //moves
 //life
-//volatile statuses
 //ver que hacer con el mirror
 
 function TurnAssistantPage() {
@@ -84,12 +85,12 @@ function TurnAssistantPage() {
     room: "",
     roomDuration: 0,
     sideEffects: {
-      yourSide: {},
-      opponentSide: {}
+      yourSide: { tailwind: false },
+      opponentSide: { tailwind: false }
     },
     sideEffectsDuration: {
-      yourSide: {},
-      opponentSide: {}
+      yourSide: { tailwind: 0 },
+      opponentSide: { tailwind: 0 }
     },
     entryHazards: {
       yourSide: {},

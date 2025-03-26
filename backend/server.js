@@ -626,7 +626,17 @@ app.delete('/api/users/:userId/saved-replays', async (req, res) => {
 // Turn Assistant endpoint - Find battle scenarios with specific Pokémon
 app.post('/api/turn-assistant/analyze', async (req, res) => {
   try {
-    const { pokemonData, battleConditions = { weather: "", field: "", room: "" } } = req.body;
+    const {
+      pokemonData,
+      battleConditions = { 
+        weather: "", 
+        field: "", 
+        room: "",
+        sideEffects: { yourSide: {}, opponentSide: {} },
+        sideEffectsDuration: { yourSide: {}, opponentSide: {} }
+      }
+    } = req.body;
+    console.log("Battle conditions received:", JSON.stringify(battleConditions, null, 2));
     
     if (!pokemonData || !pokemonData.topLeft || !pokemonData.topRight || 
         !pokemonData.bottomLeft || !pokemonData.bottomRight) {
@@ -1043,8 +1053,7 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
               SELECT 1 FROM UNNEST(
                 CASE
                   WHEN (
-                    t.starts_with.player1[OFFSET(0)] = @yourPokemon1 OR
-                    t.starts_with.player1[OFFSET(1)] = @yourPokemon1
+                    t.starts_with.player1[OFFSET(0)] = @yourPokemon1 OR t.starts_with.player1[OFFSET(1)] = @yourPokemon1
                   ) THEN t.revealed_pokemon.player1
                   ELSE t.revealed_pokemon.player2
                 END
@@ -1078,8 +1087,7 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
               SELECT 1 FROM UNNEST(
                 CASE
                   WHEN (
-                    t.starts_with.player1[OFFSET(0)] = @opponentPokemon1 OR
-                    t.starts_with.player1[OFFSET(1)] = @opponentPokemon1
+                    t.starts_with.player1[OFFSET(0)] = @opponentPokemon1 OR t.starts_with.player1[OFFSET(1)] = @opponentPokemon1
                   ) THEN t.revealed_pokemon.player1
                   ELSE t.revealed_pokemon.player2
                 END
@@ -1099,8 +1107,48 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     if (opponentVolatileStatusConditions.length > 0) {
       matchingTurnsQuery += ` AND (${opponentVolatileStatusConditions.join(' AND ')})`;
     }
+
+    // Filtro Tailwind para "Your Side"
+    if (battleConditions.sideEffects.yourSide.tailwind === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1))
+            AND t.tailwind.player1 = TRUE
+            AND t.tailwind.duration1 = @tailwindDurationYourSide
+          )
+          OR
+          (
+            ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2))
+            AND t.tailwind.player2 = TRUE
+            AND t.tailwind.duration2 = @tailwindDurationYourSide
+          )
+        )
+      `;
+      params.tailwindDurationYourSide = battleConditions.sideEffectsDuration.yourSide.tailwind;
+    }
+
+    // Filtro Tailwind para "Opponent Side"
+    if (battleConditions.sideEffects.opponentSide.tailwind === true) {
+      matchingTurnsQuery += `
+        AND (
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1))
+            AND t.tailwind.player1 = TRUE
+            AND t.tailwind.duration1 = @tailwindDurationOpponentSide
+          )
+          OR
+          (
+            ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2))
+            AND t.tailwind.player2 = TRUE
+            AND t.tailwind.duration2 = @tailwindDurationOpponentSide
+          )
+        )
+      `;
+      params.tailwindDurationOpponentSide = battleConditions.sideEffectsDuration.opponentSide.tailwind;
+    }
     
-    // AQUÍ ESTÁ LA CORRECCIÓN PRINCIPAL: Asegurarnos de que se filtren los escenarios por ambos equipos
+    // Asegurarnos de que se filtren los escenarios por ambos equipos
     matchingTurnsQuery += `
           AND (
             -- Caso 1: Tus Pokémon están en player1 y los del oponente en player2
@@ -1452,7 +1500,7 @@ function parseMoveString(moveString) {
   return { move: moveString, isSpreadMove };
 }
 
-// Define un objeto de mapeo para los estados no volátiles
+// Define un objeto de mapeo para los estados non-volatile
 const statusMapping = {
   "burn": "brn",
   "freeze": "frz",

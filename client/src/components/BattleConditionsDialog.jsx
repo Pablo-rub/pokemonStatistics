@@ -34,7 +34,7 @@ function DraggablePaperComponent(props) {
   return <Paper ref={ref} {...props} style={{ ...props.style, ...style }} onMouseDown={handleMouseDown} />;
 }
 
-const sideEffectsList = ["Tailwind", "Reflect", "Lightscreen", "Aurora Veil"];
+const sideEffectsList = ["tailwind", "reflect", "lightscreen", "aurora veil"];
 const hazardsList = ["Spikes", "Toxic Spikes", "Stealth Rock", "Sticky Web"];
 const menuPropsDown = {
   anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
@@ -175,7 +175,7 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
       setBattleConditions(prev => ({ ...prev, [`${type}Duration`]: newValue }));
     } else if (type === "sideEffect") {
       const [side, effect] = key.split('.');
-      if (effect === "Tailwind") {
+      if (effect === "tailwind") {
         newValue = Math.max(0, Math.min(5, newValue));
       } else {
         newValue = Math.max(0, Math.min(8, newValue));
@@ -300,7 +300,7 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
                   type="number"
                   value={battleConditions.weatherDuration || 0}
                   onChange={(e) => handleDurationChange('weather', 'weather', e.target.value)}
-                  inputProps={{ min: 0, max: 8, step: 1 }}
+                  inputProps={{ min: 1, max: 8, step: 1 }}
                   sx={{ width: '80px' }}
                 />
               </Box>
@@ -331,7 +331,7 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
                   type="number"
                   value={battleConditions.fieldDuration || 0}
                   onChange={(e) => handleDurationChange('field', 'field', e.target.value)}
-                  inputProps={{ min: 0, max: 8, step: 1 }}
+                  inputProps={{ min: 1, max: 8, step: 1 }}
                   sx={{ width: '80px' }}
                 />
               </Box>
@@ -362,7 +362,7 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
                   type="number"
                   value={battleConditions.roomDuration || 0}
                   onChange={(e) => handleDurationChange('room', 'room', e.target.value)}
-                  inputProps={{ min: 0, max: 8, step: 1 }}
+                  inputProps={{ min: 1, max: 8, step: 1 }}
                   sx={{ width: '80px' }}
                 />
               </Box>
@@ -398,7 +398,7 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
                         type="number"
                         value={battleConditions.sideEffectsDuration?.yourSide?.[effect] || 0}
                         onChange={(e) => handleDurationChange('sideEffect', `yourSide.${effect}`, e.target.value)}
-                        inputProps={{ min: 0, max: 8, step: 1 }}
+                        inputProps={{ min: 1, max: effect === "tailwind" ? 5 : 8, step: 1 }}
                         sx={{ width: '80px' }}
                       />
                     </Box>
@@ -426,7 +426,7 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
                         type="number"
                         value={battleConditions.sideEffectsDuration?.opponentSide?.[effect] || 0}
                         onChange={(e) => handleDurationChange('sideEffect', `opponentSide.${effect}`, e.target.value)}
-                        inputProps={{ min: 0, max: 8, step: 1 }}
+                        inputProps={{ min: 1, max: 8, step: 1 }}
                         sx={{ width: '80px' }}
                       />
                     </Box>
@@ -462,7 +462,7 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
                           value={battleConditions.entryHazardsLevel?.yourSide?.[hazard] || 0}
                           onChange={(e) => handleDurationChange('hazardLevel', `yourSide.${hazard}`, e.target.value)}
                           inputProps={{ 
-                            min: 0, 
+                            min: 1, 
                             max: hazard === "Spikes" ? 3 : 2, 
                             step: 1 
                           }}
@@ -496,7 +496,7 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
                           value={battleConditions.entryHazardsLevel?.opponentSide?.[hazard] || 0}
                           onChange={(e) => handleDurationChange('hazardLevel', `opponentSide.${hazard}`, e.target.value)}
                           inputProps={{ 
-                            min: 0, 
+                            min: 1, 
                             max: hazard === "Spikes" ? 3 : 2, 
                             step: 1 
                           }}
