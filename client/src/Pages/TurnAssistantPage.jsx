@@ -48,8 +48,6 @@ import useDraggable from "../hooks/useDraggable";
 //stats
 //fainted
 //any duration tw, screens
-//tera active
-//tera individual
 //moves
 //life
 //ver que hacer con el mirror

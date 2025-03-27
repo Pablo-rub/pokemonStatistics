@@ -1406,45 +1406,70 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     if (pokemonData.topLeft.teraType && pokemonData.topLeft.teraType.trim() !== "") {
       matchingTurnsQuery += `
         AND (
-          ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) AND EXISTS (
-             SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) p
-             WHERE p.name = '${yourPokemon[0]}' 
-               AND LOWER(p.tera.type) = LOWER(@yourTeraTypeTopLeft)
-               ${pokemonData.topLeft.teraActive ? "AND p.tera.active = @yourTeraActiveTopLeft" : ""}
-          ))
+          (
+            '${yourPokemon[0]}' IN UNNEST(t.starts_with.player1)
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(r.teams.p1) AS team
+                 WHERE team.name = '${yourPokemon[0]}' 
+                   AND LOWER(team.tera_type) = LOWER(@yourTeraTypeTopLeft)
+            )
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS p
+                 WHERE p.name = '${yourPokemon[0]}' 
+                   AND p.tera.active = @yourTeraActiveTopLeft
+            )
+          )
           OR
-          ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) AND EXISTS (
-             SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) p
-             WHERE p.name = '${yourPokemon[0]}' 
-               AND LOWER(p.tera.type) = LOWER(@yourTeraTypeTopLeft)
-               ${pokemonData.topLeft.teraActive ? "AND p.tera.active = @yourTeraActiveTopLeft" : ""}
-          ))
+          (
+            '${yourPokemon[0]}' IN UNNEST(t.starts_with.player2)
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(r.teams.p2) AS team
+                 WHERE team.name = '${yourPokemon[0]}' 
+                   AND LOWER(team.tera_type) = LOWER(@yourTeraTypeTopLeft)
+            )
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS p
+                 WHERE p.name = '${yourPokemon[0]}' 
+                   AND p.tera.active = @yourTeraActiveTopLeft
+            )
+          )
         )
       `;
       params.yourTeraTypeTopLeft = pokemonData.topLeft.teraType;
-      // Solo se establece el parámetro si se marca como active
-      if (pokemonData.topLeft.teraActive) {
-        params.yourTeraActiveTopLeft = pokemonData.topLeft.teraActive;
-      }
+      params.yourTeraActiveTopLeft = pokemonData.topLeft.teraActive;
     }
 
     // Filtro Tera para Top Right (Your Side)
     if (pokemonData.topRight.teraType && pokemonData.topRight.teraType.trim() !== "") {
       matchingTurnsQuery += `
         AND (
-          ('${yourPokemon[1]}' IN UNNEST(t.starts_with.player1) AND EXISTS (
-             SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) p
-             WHERE p.name = '${yourPokemon[1]}' 
-               AND LOWER(p.tera.type) = LOWER(@yourTeraTypeTopRight)
-               AND p.tera.active = @yourTeraActiveTopRight
-          ))
+          (
+            '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1)
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(r.teams.p1) AS team
+                 WHERE team.name = '${yourPokemon[1]}' 
+                   AND LOWER(team.tera_type) = LOWER(@yourTeraTypeTopRight)
+            )
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS p
+                 WHERE p.name = '${yourPokemon[1]}' 
+                   AND p.tera.active = @yourTeraActiveTopRight
+            )
+          )
           OR
-          ('${yourPokemon[1]}' IN UNNEST(t.starts_with.player2) AND EXISTS (
-             SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) p
-             WHERE p.name = '${yourPokemon[1]}' 
-               AND LOWER(p.tera.type) = LOWER(@yourTeraTypeTopRight)
-               AND p.tera.active = @yourTeraActiveTopRight
-          ))
+          (
+            '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2)
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(r.teams.p2) AS team
+                 WHERE team.name = '${yourPokemon[1]}' 
+                   AND LOWER(team.tera_type) = LOWER(@yourTeraTypeTopRight)
+            )
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS p
+                 WHERE p.name = '${yourPokemon[1]}' 
+                   AND p.tera.active = @yourTeraActiveTopRight
+            )
+          )
         )
       `;
       params.yourTeraTypeTopRight = pokemonData.topRight.teraType;
@@ -1455,19 +1480,33 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     if (pokemonData.bottomLeft.teraType && pokemonData.bottomLeft.teraType.trim() !== "") {
       matchingTurnsQuery += `
         AND (
-          ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) AND EXISTS (
-             SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) p
-             WHERE p.name = '${opponentPokemon[0]}' 
-               AND LOWER(p.tera.type) = LOWER(@opponentTeraTypeBottomLeft)
-               AND p.tera.active = @opponentTeraActiveBottomLeft
-          ))
+          (
+            '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1)
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(r.teams.p1) AS team
+                 WHERE team.name = '${opponentPokemon[0]}' 
+                   AND LOWER(team.tera_type) = LOWER(@opponentTeraTypeBottomLeft)
+            )
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS p
+                 WHERE p.name = '${opponentPokemon[0]}' 
+                   AND p.tera.active = @opponentTeraActiveBottomLeft
+            )
+          )
           OR
-          ('${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) AND EXISTS (
-             SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) p
-             WHERE p.name = '${opponentPokemon[0]}' 
-               AND LOWER(p.tera.type) = LOWER(@opponentTeraTypeBottomLeft)
-               AND p.tera.active = @opponentTeraActiveBottomLeft
-          ))
+          (
+            '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2)
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(r.teams.p2) AS team
+                 WHERE team.name = '${opponentPokemon[0]}' 
+                   AND LOWER(team.tera_type) = LOWER(@opponentTeraTypeBottomLeft)
+            )
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS p
+                 WHERE p.name = '${opponentPokemon[0]}' 
+                   AND p.tera.active = @opponentTeraActiveBottomLeft
+            )
+          )
         )
       `;
       params.opponentTeraTypeBottomLeft = pokemonData.bottomLeft.teraType;
@@ -1478,19 +1517,33 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     if (pokemonData.bottomRight.teraType && pokemonData.bottomRight.teraType.trim() !== "") {
       matchingTurnsQuery += `
         AND (
-          ('${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1) AND EXISTS (
-             SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) p
-             WHERE p.name = '${opponentPokemon[1]}' 
-               AND LOWER(p.tera.type) = LOWER(@opponentTeraTypeBottomRight)
-               AND p.tera.active = @opponentTeraActiveBottomRight
-          ))
+          (
+            '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(r.teams.p1) AS team
+                 WHERE team.name = '${opponentPokemon[1]}' 
+                   AND LOWER(team.tera_type) = LOWER(@opponentTeraTypeBottomRight)
+            )
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS p
+                 WHERE p.name = '${opponentPokemon[1]}' 
+                   AND p.tera.active = @opponentTeraActiveBottomRight
+            )
+          )
           OR
-          ('${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2) AND EXISTS (
-             SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) p
-             WHERE p.name = '${opponentPokemon[1]}' 
-               AND LOWER(p.tera.type) = LOWER(@opponentTeraTypeBottomRight)
-               AND p.tera.active = @opponentTeraActiveBottomRight
-          ))
+          (
+            '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(r.teams.p2) AS team
+                 WHERE team.name = '${opponentPokemon[1]}' 
+                   AND LOWER(team.tera_type) = LOWER(@opponentTeraTypeBottomRight)
+            )
+            AND EXISTS (
+                 SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS p
+                 WHERE p.name = '${opponentPokemon[1]}' 
+                   AND p.tera.active = @opponentTeraActiveBottomRight
+            )
+          )
         )
       `;
       params.opponentTeraTypeBottomRight = pokemonData.bottomRight.teraType;
