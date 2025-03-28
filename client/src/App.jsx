@@ -8,7 +8,8 @@ import PublicGamesPage from "./Pages/PublicGamesPage.jsx";
 import ProfilePage from "./Pages/ProfilePage.jsx";
 import FinishSignIn from "./Pages/FinishSignIn.jsx";
 import SavedGamesPage from "./Pages/SavedGamesPage.jsx";
-import ForumPage from "./Pages/ForumPage.jsx"; // Importar la página del foro
+import ForumPage from "./Pages/ForumPage.jsx";
+import ForumTopicPage from "./Pages/ForumTopicPage.jsx"; // Importar la nueva página
 
 function App() {
   return (
@@ -21,7 +22,8 @@ function App() {
         <Route path="/rankings" element={<RankingsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/finishSignIn" element={<FinishSignIn />} />
-        <Route path="/forum" element={<ForumPage />} /> {/* Añadir ruta al foro */}
+        <Route path="/forum" element={<ForumPage />} />
+        <Route path="/forum/:topicId" element={<ForumTopicPage />} /> {/* Añadir ruta para temas específicos */}
       </Route>
     </Routes>
   );
