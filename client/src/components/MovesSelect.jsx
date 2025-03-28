@@ -2,49 +2,45 @@ import React from 'react';
 import { Autocomplete, TextField, Chip } from '@mui/material';
 
 const MovesSelect = ({ movesList, selectedMoves, setSelectedMoves }) => {
-  const handleChange = (event, newValue) => {
-    // Limitar la selección a 4 movimientos
-    if (newValue.length <= 4) {
-      setSelectedMoves(newValue);
-    }
-  };
-
   return (
     <Autocomplete
       multiple
       options={movesList}
-      getOptionLabel={(option) => option.name}
+      getOptionLabel={(option) => typeof option === 'string' ? option : option.name}
       value={selectedMoves}
-      onChange={handleChange}
-      filterSelectedOptions
+      onChange={(e, newValue) => {
+        // Limitar a máximo 4 movimientos
+        if (newValue.length <= 4) {
+          setSelectedMoves(newValue);
+        }
+      }}
       renderInput={(params) => (
         <TextField 
-          {...params}
-          variant="outlined"
-          label="Select up to 4 moves"
-          placeholder={selectedMoves.length > 0 ? "" : "Moves"}
+          {...params} 
+          label="Moves (max 4)" 
+          variant="outlined" 
           InputLabelProps={{ style: { color: 'white' } }}
-          InputProps={{
-            ...params.InputProps,
-            style: { color: 'white' }
-          }}
         />
       )}
       renderTags={(value, getTagProps) =>
         value.map((option, index) => (
-          <Chip 
-            key={option.name} 
-            label={option.name} 
+          <Chip
+            label={typeof option === 'string' ? option : option.name}
             {...getTagProps({ index })}
+            sx={{ 
+              backgroundColor: '#24CC9F',
+              color: 'black',
+              '& .MuiChip-deleteIcon': {
+                color: 'black',
+                '&:hover': { color: 'darkred' }
+              }
+            }}
           />
         ))
       }
       sx={{
-        mt: 1,
-        '& .MuiOutlinedInput-root': {
-          '& fieldset': { borderColor: 'white' },
-        },
-        '& .MuiSvgIcon-root': { color: 'white' },
+        '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
+        '& .MuiSvgIcon-root': { color: 'white' }
       }}
     />
   );
