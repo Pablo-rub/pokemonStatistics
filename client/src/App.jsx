@@ -8,6 +8,7 @@ import PublicGamesPage from "./Pages/PublicGamesPage.jsx";
 import ProfilePage from "./Pages/ProfilePage.jsx";
 import FinishSignIn from "./Pages/FinishSignIn.jsx";
 import SavedGamesPage from "./Pages/SavedGamesPage.jsx";
+import ForumPage from "./Pages/ForumPage.jsx"; // Importar la página del foro
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
         <Route path="/rankings" element={<RankingsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/finishSignIn" element={<FinishSignIn />} />
+        <Route path="/forum" element={<ForumPage />} /> {/* Añadir ruta al foro */}
       </Route>
     </Routes>
   );
