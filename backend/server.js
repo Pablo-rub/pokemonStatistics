@@ -736,6 +736,49 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
         WHERE t.turn_number > 0 
     `;
 
+    // Ejemplo de procesamiento de movimientos para un Pokémon (por ejemplo, topLeft)
+    if (pokemonData.topLeft.moves && pokemonData.topLeft.moves.length > 0) {
+      // Normalizar: extrae y procesa los nombres de movimientos
+      const moveStrings = pokemonData.topLeft.moves.map(move => {
+        let moveName;
+        if (typeof move === 'string') {
+          moveName = move;
+        } else if (move && move.name) {
+          moveName = move.name;
+        } else {
+          moveName = String(move);
+        }
+        // Convertir a minúsculas y eliminar espacios para que coincida con el formato en la BD
+        return moveName.trim().toLowerCase().replace(/\s+/g, '');
+      });
+
+      console.log("Top Left moves (normalized):", moveStrings);
+
+      matchingTurnsQuery += `
+        AND (
+          ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) AND EXISTS (
+             SELECT 1 FROM UNNEST(r.teams.p1) AS team_pokemon
+             WHERE team_pokemon.name = '${yourPokemon[0]}'
+               AND EXISTS (
+                 SELECT team_move FROM UNNEST(team_pokemon.moves) AS team_move
+                 WHERE LOWER(REPLACE(team_move, ' ', '')) IN UNNEST(@yourMovesTopLeft)
+               )
+          ))
+          OR
+          ('${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) AND EXISTS (
+             SELECT 1 FROM UNNEST(r.teams.p2) AS team_pokemon
+             WHERE team_pokemon.name = '${yourPokemon[0]}'
+               AND EXISTS (
+                 SELECT team_move FROM UNNEST(team_pokemon.moves) AS team_move
+                 WHERE LOWER(REPLACE(team_move, ' ', '')) IN UNNEST(@yourMovesTopLeft)
+               )
+          ))
+        )
+      `;
+
+      params.yourMovesTopLeft = moveStrings;
+    }
+
     // Build item conditions for your Pokémon
     let yourItemConditions = [];
     
@@ -1548,6 +1591,111 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       `;
       params.opponentTeraTypeBottomRight = pokemonData.bottomRight.teraType;
       params.opponentTeraActiveBottomRight = pokemonData.bottomRight.teraActive;
+    }
+
+    // Build move conditions for your Pokémon (assumes moves are selected in the PokemonDialog)
+    let yourMoveConditions = [];
+    // Iterate for each of your Pokémon (topLeft and topRight)
+    [yourPokemon[0], yourPokemon[1]].forEach((poke, i) => {
+      const moves = pokemonData[i === 0 ? 'topLeft' : 'topRight'].moves; // selected moves for the Pokémon
+      if (moves && moves.length > 0) {
+        moves.forEach((move, j) => {
+          // Extract move name based on type and normalize it
+          let moveName;
+          if (typeof move === 'string') {
+            moveName = move;
+          } else if (move && move.name) {
+            moveName = move.name;
+          } else {
+            moveName = String(move);
+          }
+          
+          // Normalize: remove spaces, convert to lowercase
+          const formattedMove = moveName.trim().toLowerCase().replace(/\s+/g, '');
+          
+          // Set parameter for this move
+          params[`yourMove${i+1}_${j+1}`] = formattedMove;
+          
+          // Add condition to find this move in the appropriate team's Pokemon moves array
+          yourMoveConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @yourPokemon${i+1} AND 
+                EXISTS (
+                  SELECT 1 FROM UNNEST(p.moves) m
+                  WHERE LOWER(REPLACE(m, ' ', '')) = @yourMove${i+1}_${j+1}
+                )
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @yourPokemon${i+1} AND 
+                EXISTS (
+                  SELECT 1 FROM UNNEST(p.moves) m
+                  WHERE LOWER(REPLACE(m, ' ', '')) = @yourMove${i+1}_${j+1}
+                )
+              )
+            )
+          `);
+        });
+      }
+    });
+
+    // Add move conditions to the query if any exist
+    if (yourMoveConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${yourMoveConditions.join(' AND ')})`;
+    }
+
+    // Build move conditions for opponent's Pokémon (bottomLeft and bottomRight)
+    let opponentMoveConditions = [];
+    [opponentPokemon[0], opponentPokemon[1]].forEach((poke, i) => {
+      // Usar "bottomLeft" para i===0 y "bottomRight" para i===1
+      const position = i === 0 ? 'bottomLeft' : 'bottomRight';
+      const moves = pokemonData[position].moves; // movimientos seleccionados para este Pokémon del oponente
+      if (moves && moves.length > 0) {
+        moves.forEach((move, j) => {
+          let moveName;
+          if (typeof move === 'string') {
+            moveName = move;
+          } else if (move && move.name) {
+            moveName = move.name;
+          } else {
+            moveName = String(move);
+          }
+          // Normalizar: quitar espacios, convertir a minúsculas
+          const formattedMove = moveName.trim().toLowerCase().replace(/\s+/g, '');
+          // Establecer parámetro para este movimiento
+          params[`opponentMove${i+1}_${j+1}`] = formattedMove;
+          
+          // Condición para encontrar este movimiento en el Pokémon del oponente
+          opponentMoveConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) p
+                WHERE p.name = @opponentPokemon${i+1} AND 
+                  EXISTS(
+                    SELECT 1 FROM UNNEST(p.moves) m
+                    WHERE LOWER(REPLACE(m, ' ', '')) = @opponentMove${i+1}_${j+1}
+                  )
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) p
+                WHERE p.name = @opponentPokemon${i+1} AND 
+                  EXISTS(
+                    SELECT 1 FROM UNNEST(p.moves) m
+                    WHERE LOWER(REPLACE(m, ' ', '')) = @opponentMove${i+1}_${j+1}
+                  )
+              )
+            )
+          `);
+        });
+      }
+    });
+
+    if (opponentMoveConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${opponentMoveConditions.join(' AND ')})`;
     }
     
     // Asegurarnos de que se filtren los escenarios por ambos equipos

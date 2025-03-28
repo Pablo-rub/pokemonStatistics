@@ -48,7 +48,7 @@ import useDraggable from "../hooks/useDraggable";
 //stats
 //fainted
 //any duration tw, screens
-//moves
+//check moves miraidon discharge vs miraidon discharge
 //life
 //ver que hacer con el mirror
 
