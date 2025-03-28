@@ -17,6 +17,7 @@ import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import AssistantIcon from '@mui/icons-material/Assistant';
 import LoginIcon from '@mui/icons-material/Login';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import ForumIcon from '@mui/icons-material/Forum'; // Añadir icono de foro
 import { useAuth } from '../contexts/AuthContext';
 import LoginDialog from './LoginDialog';
 
@@ -50,6 +51,7 @@ const Sidebar = () => {
     { text: 'Public Games', path: '/public-games', icon: <PublicIcon /> },
     { text: 'Rankings', path: '/rankings', icon: <LeaderboardIcon /> },
     { text: 'Turn Assistant', path: '/turn-assistant', icon: <AssistantIcon /> },
+    { text: 'Forum', path: '/forum', icon: <ForumIcon /> }, // Añadir elemento de menú para el foro
   ];
 
   return (
