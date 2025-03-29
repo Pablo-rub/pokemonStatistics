@@ -1698,6 +1698,179 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       matchingTurnsQuery += ` AND (${opponentMoveConditions.join(' AND ')})`;
     }
     
+    // Supongamos que ya se han construido las condiciones de moves, items, etc.
+    // Ahora añadimos condiciones para filtrar por vida y stats
+
+    // Agrega parámetros para el primer Pokémon de "tu" equipo (topLeft)
+    params['yourHp1'] = pokemonData.topLeft.stats.hp;
+    params['yourAtk1'] = pokemonData.topLeft.stats.atk;
+    params['yourDef1'] = pokemonData.topLeft.stats.def;
+    params['yourSpa1'] = pokemonData.topLeft.stats.spa;
+    params['yourSpd1'] = pokemonData.topLeft.stats.spd;
+    params['yourSpe1'] = pokemonData.topLeft.stats.spe;
+    params['yourAcc1'] = pokemonData.topLeft.stats.acc;
+    params['yourEva1'] = pokemonData.topLeft.stats.eva;
+
+    // Agrega parámetros para el segundo Pokémon de "tu" equipo (topRight)
+    params['yourHp2'] = pokemonData.topRight.stats.hp;
+    params['yourAtk2'] = pokemonData.topRight.stats.atk;
+    params['yourDef2'] = pokemonData.topRight.stats.def;
+    params['yourSpa2'] = pokemonData.topRight.stats.spa;
+    params['yourSpd2'] = pokemonData.topRight.stats.spd;
+    params['yourSpe2'] = pokemonData.topRight.stats.spe;
+    params['yourAcc2'] = pokemonData.topRight.stats.acc;
+    params['yourEva2'] = pokemonData.topRight.stats.eva;
+
+    // Condición para el primer Pokémon: el filtro debe encontrar en 
+    // t.revealed_pokemon (ya sea de player1 o player2) un elemento 
+    // donde el nombre y los stats coincidan exactamente.
+    const yourStatCondition1 = `
+      (
+        EXISTS(
+          SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) rp
+          WHERE rp.name = @yourPokemon1
+            AND rp.remaining_hp = @yourHp1
+            AND rp.stats.atk = @yourAtk1
+            AND rp.stats.def = @yourDef1
+            AND rp.stats.spa = @yourSpa1
+            AND rp.stats.spd = @yourSpd1
+            AND rp.stats.spe = @yourSpe1
+            AND rp.stats.acc = @yourAcc1
+            AND rp.stats.eva = @yourEva1
+        )
+        OR
+        EXISTS(
+          SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) rp
+          WHERE rp.name = @yourPokemon1
+            AND rp.remaining_hp = @yourHp1
+            AND rp.stats.atk = @yourAtk1
+            AND rp.stats.def = @yourDef1
+            AND rp.stats.spa = @yourSpa1
+            AND rp.stats.spd = @yourSpd1
+            AND rp.stats.spe = @yourSpe1
+            AND rp.stats.acc = @yourAcc1
+            AND rp.stats.eva = @yourEva1
+        )
+      )
+    `;
+
+    // Condición para el segundo Pokémon:
+    const yourStatCondition2 = `
+      (
+        EXISTS(
+          SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) rp
+          WHERE rp.name = @yourPokemon2
+            AND rp.remaining_hp = @yourHp2
+            AND rp.stats.atk = @yourAtk2
+            AND rp.stats.def = @yourDef2
+            AND rp.stats.spa = @yourSpa2
+            AND rp.stats.spd = @yourSpd2
+            AND rp.stats.spe = @yourSpe2
+            AND rp.stats.acc = @yourAcc2
+            AND rp.stats.eva = @yourEva2
+        )
+        OR
+        EXISTS(
+          SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) rp
+          WHERE rp.name = @yourPokemon2
+            AND rp.remaining_hp = @yourHp2
+            AND rp.stats.atk = @yourAtk2
+            AND rp.stats.def = @yourDef2
+            AND rp.stats.spa = @yourSpa2
+            AND rp.stats.spd = @yourSpd2
+            AND rp.stats.spe = @yourSpe2
+            AND rp.stats.acc = @yourAcc2
+            AND rp.stats.eva = @yourEva2
+        )
+      )
+    `;
+
+    // Parámetros para el primer Pokémon del oponente (bottomLeft)
+    params['opponentHp1']  = pokemonData.bottomLeft.stats.hp;
+    params['opponentAtk1'] = pokemonData.bottomLeft.stats.atk;
+    params['opponentDef1'] = pokemonData.bottomLeft.stats.def;
+    params['opponentSpa1'] = pokemonData.bottomLeft.stats.spa;
+    params['opponentSpd1'] = pokemonData.bottomLeft.stats.spd;
+    params['opponentSpe1'] = pokemonData.bottomLeft.stats.spe;
+    params['opponentAcc1'] = pokemonData.bottomLeft.stats.acc;
+    params['opponentEva1'] = pokemonData.bottomLeft.stats.eva;
+
+    // Parámetros para el segundo Pokémon del oponente (bottomRight)
+    params['opponentHp2']  = pokemonData.bottomRight.stats.hp;
+    params['opponentAtk2'] = pokemonData.bottomRight.stats.atk;
+    params['opponentDef2'] = pokemonData.bottomRight.stats.def;
+    params['opponentSpa2'] = pokemonData.bottomRight.stats.spa;
+    params['opponentSpd2'] = pokemonData.bottomRight.stats.spd;
+    params['opponentSpe2'] = pokemonData.bottomRight.stats.spe;
+    params['opponentAcc2'] = pokemonData.bottomRight.stats.acc;
+    params['opponentEva2'] = pokemonData.bottomRight.stats.eva;
+
+    // Condición para el primer Pokémon del oponente:
+    const opponentStatCondition1 = `
+      (
+        EXISTS(
+          SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) rp
+          WHERE rp.name = @opponentPokemon1
+            AND rp.remaining_hp = @opponentHp1
+            AND rp.stats.atk = @opponentAtk1
+            AND rp.stats.def = @opponentDef1
+            AND rp.stats.spa = @opponentSpa1
+            AND rp.stats.spd = @opponentSpd1
+            AND rp.stats.spe = @opponentSpe1
+            AND rp.stats.acc = @opponentAcc1
+            AND rp.stats.eva = @opponentEva1
+        )
+        OR
+        EXISTS(
+          SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) rp
+          WHERE rp.name = @opponentPokemon1
+            AND rp.remaining_hp = @opponentHp1
+            AND rp.stats.atk = @opponentAtk1
+            AND rp.stats.def = @opponentDef1
+            AND rp.stats.spa = @opponentSpa1
+            AND rp.stats.spd = @opponentSpd1
+            AND rp.stats.spe = @opponentSpe1
+            AND rp.stats.acc = @opponentAcc1
+            AND rp.stats.eva = @opponentEva1
+        )
+      )
+    `;
+
+    // Condición para el segundo Pokémon del oponente:
+    const opponentStatCondition2 = `
+      (
+        EXISTS(
+          SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) rp
+          WHERE rp.name = @opponentPokemon2
+            AND rp.remaining_hp = @opponentHp2
+            AND rp.stats.atk = @opponentAtk2
+            AND rp.stats.def = @opponentDef2
+            AND rp.stats.spa = @opponentSpa2
+            AND rp.stats.spd = @opponentSpd2
+            AND rp.stats.spe = @opponentSpe2
+            AND rp.stats.acc = @opponentAcc2
+            AND rp.stats.eva = @opponentEva2
+        )
+        OR
+        EXISTS(
+          SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) rp
+          WHERE rp.name = @opponentPokemon2
+            AND rp.remaining_hp = @opponentHp2
+            AND rp.stats.atk = @opponentAtk2
+            AND rp.stats.def = @opponentDef2
+            AND rp.stats.spa = @opponentSpa2
+            AND rp.stats.spd = @opponentSpd2
+            AND rp.stats.spe = @opponentSpe2
+            AND rp.stats.acc = @opponentAcc2
+            AND rp.stats.eva = @opponentEva2
+        )
+      )
+    `;
+
+    // Agrega las condiciones de stats al query (después de las condiciones de moves, items, etc.)
+    matchingTurnsQuery += ` AND (${yourStatCondition1} AND ${yourStatCondition2})`;
+    matchingTurnsQuery += ` AND (${opponentStatCondition1} AND ${opponentStatCondition2})`;
+
     // Asegurarnos de que se filtren los escenarios por ambos equipos
     matchingTurnsQuery += `
           AND (
