@@ -95,8 +95,10 @@ const BattleField = ({ onPokemonSelect, onTeamSelectYour, onTeamSelectOpponent, 
     return (
       <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap', mt: 1 }}>
         {team.map((pokemon, idx) => (
-          <Box key={idx} sx={{ cursor: 'pointer' }} title={pokemon.name}>
-            <PokemonSprite pokemon={pokemon} size={60} />
+          <Box key={idx} sx={{ cursor: 'pointer' }} title={pokemon?.name || ''}>
+            {pokemon ? (
+              <PokemonSprite pokemon={pokemon} size={60} />
+            ) : null}
           </Box>
         ))}
       </Box>
@@ -125,7 +127,7 @@ const BattleField = ({ onPokemonSelect, onTeamSelectYour, onTeamSelectOpponent, 
 
       {/* Visualización del equipo - Ahora separada del botón */}
       <Box sx={{ textAlign: 'center', mb: 2 }}>
-        {yourTeam.length === 6 ? (
+        {yourTeam.some(p => p) ? (
           renderTeam(yourTeam)
         ) : (
           <Typography variant="body2" color="white">
