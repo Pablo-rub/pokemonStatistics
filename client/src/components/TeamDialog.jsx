@@ -101,7 +101,34 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
     }, [pokemonList]);
 
     const handleChange = (index, newValue) => {
+        //console.log("Changing team at index", index, "to value:", newValue);
         const newTeam = [...team];
+        
+        // Verifica explícitamente el formato del valor y asegúrate de que tenga name
+        if (newValue) {
+            // Si es un string, conviértelo a objeto
+            if (typeof newValue === 'string') {
+                newValue = { name: newValue };
+            } 
+            // Si ya es un objeto pero no tiene name o name está vacío, asegúrate de arreglarlo
+            else if (typeof newValue === 'object') {
+                if (!newValue.name || newValue.name === '') {
+                    console.warn("Selected pokemon doesn't have a name property:", newValue);
+                    // Si hay alguna propiedad que podría ser el nombre, úsala
+                    if (newValue.label) {
+                        newValue.name = newValue.label;
+                    } else if (newValue.value) {
+                        newValue.name = newValue.value;
+                    } else if (newValue.toString) {
+                        newValue.name = newValue.toString();
+                    } else {
+                        // Si todo falla, usa un placeholder
+                        newValue.name = `Pokemon-${index}`;
+                    }
+                }
+            }
+        }
+        
         newTeam[index] = newValue;
         setTeam(newTeam);
         setError('');
@@ -113,27 +140,38 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
         setSearchTerms(newSearchTerms);
     };
 
-    const handleSubmit = () => {
-        if (team.every(p => p)) {
-            // Incluir información de revealed, fainted y detalles adicionales
-            const teamWithMetadata = team.map((pokemon, index) => ({
-                ...pokemon,
-                revealed: revealed[index] || false,
-                fainted: fainted[index] || false,
-                item: pokemonDetails[index].item || null,
-                ability: pokemonDetails[index].ability || null,
-                moves: pokemonDetails[index].moves || [],
-                status: pokemonDetails[index].status || null,
-                teraType: pokemonDetails[index].teraType || null,
-                teraActive: pokemonDetails[index].teraActive || false
-            }));
-            
-            onSelectTeam(teamWithMetadata);
-            onClose();
-            setError('');
-        } else {
-            setError('Please select all Pokémon for the team.');
+    const handleSelectTeam = () => {
+        console.log("Raw team objects (before processing):", JSON.stringify(team));
+        
+        // Procesa el array para asegurarse de tener 6 objetos válidos con propiedad name
+        const selectedTeam = team.map((p, index) => {
+            if (!p) {
+                alert(`Team slot ${index + 1} is empty.`);
+                return null;
+            }
+            // Si es un string, conviértelo a objeto; de lo contrario, usar el objeto existente
+            return typeof p === 'string' ? { name: p } : p;
+        });
+        
+        // Verifica que no exista ningún slot vacío
+        if (selectedTeam.some(p => p === null)) {
+            return;
         }
+        
+        // Verifica que no haya duplicados
+        const names = selectedTeam.map(p => p.name);
+        if (new Set(names).size !== names.length) {
+            alert("Duplicate Pokémon found in the team.");
+            return;
+        }
+        
+        console.log("Selected team to send:", selectedTeam);
+        
+        // Envía el equipo completo al callback
+        onSelectTeam(selectedTeam);
+        
+        // Cierra el diálogo
+        onClose();
     };
 
     // Toggle expanded details for a Pokemon
@@ -262,15 +300,20 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                 {/* Selector existente para el Pokémon */}
                                 <Autocomplete
                                     options={localPokemonList}
-                                    getOptionLabel={(option) => (option && option.name ? option.name : (typeof option === 'string' ? option : ''))}
+                                    getOptionLabel={(option) => {
+                                        // Asegúrate de que devuelva siempre un string válido
+                                        if (!option) return '';
+                                        return typeof option === 'object' && option.name ? option.name : String(option);
+                                    }}
                                     filterOptions={filterOptions}
-                                    isOptionEqualToValue={(option, value) =>
-                                        option && value ? 
-                                            (option.name === value.name || 
-                                             option === value || 
-                                             option.name === value || 
-                                             option === value.name) : false
-                                    }
+                                    // Simplifica la función de comparación para que sea más precisa
+                                    isOptionEqualToValue={(option, value) => {
+                                        if (!option || !value) return false;
+                                        if (typeof option === 'object' && typeof value === 'object') {
+                                            return option.name === value.name;
+                                        }
+                                        return option === value;
+                                    }}
                                     loading={loading}
                                     value={team[index]}
                                     onChange={(event, newValue) => handleChange(index, newValue)}
@@ -484,7 +527,7 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                 <Button onClick={onClose} variant="contained" color="error">
                     Cancel
                 </Button>
-                <Button onClick={handleSubmit} variant="contained" color="success" disabled={!team.every(p => p)}>
+                <Button onClick={handleSelectTeam} variant="contained" color="success" disabled={!team.every(p => p)}>
                     Select Team
                 </Button>
             </DialogActions>

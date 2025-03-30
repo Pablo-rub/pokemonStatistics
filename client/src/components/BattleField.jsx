@@ -4,7 +4,7 @@ import PokemonSprite from './PokemonSprite';
 import PokemonDialog from './PokemonDialog';
 import TeamDialog from './TeamDialog';  // nuevo componente de selección de equipo
 
-const BattleField = ({ onPokemonSelect, pokemonList = [] }) => {
+const BattleField = ({ onPokemonSelect, onTeamSelectYour, onTeamSelectOpponent, pokemonList = [] }) => {
   // Estados existentes para los slots individuales...
   const [dialogOpen, setDialogOpen] = useState({
     topLeft: false,
@@ -216,13 +216,27 @@ const BattleField = ({ onPokemonSelect, pokemonList = [] }) => {
       <TeamDialog
         open={teamDialogOpen.your}
         onClose={() => setTeamDialogOpen(prev => ({ ...prev, your: false }))}
-        onSelectTeam={setYourTeam}
+        onSelectTeam={(selectedTeam) => {
+          console.log("Team selected in BattleField:", selectedTeam);
+          // Llama al callback recibido desde TurnAssistantPage, si existe.
+          if (typeof onTeamSelectYour === 'function') {
+            onTeamSelectYour(selectedTeam);
+          }
+          // (Opcional) Actualiza el estado local, si se utiliza localmente
+          setYourTeam(selectedTeam);
+        }}
         pokemonList={pokemonList}
       />
       <TeamDialog
         open={teamDialogOpen.opponent}
         onClose={() => setTeamDialogOpen(prev => ({ ...prev, opponent: false }))}
-        onSelectTeam={setOpponentTeam}
+        onSelectTeam={(selectedTeam) => {
+          console.log("Opponent team selected in BattleField:", selectedTeam);
+          if (typeof onTeamSelectOpponent === 'function') {
+            onTeamSelectOpponent(selectedTeam);
+          }
+          setOpponentTeam(selectedTeam);
+        }}
         pokemonList={pokemonList}
       />
     </Box>
