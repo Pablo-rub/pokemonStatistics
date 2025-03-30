@@ -824,10 +824,12 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     // Agregar parámetros de equipo si se envía la información completa (6 Pokémon) para el lado tuyo
     if (pokemonData.teamYour && Array.isArray(pokemonData.teamYour) && pokemonData.teamYour.length === 6) {
       // Para cada uno de los dos principales, tomar sus detalles (los mismos que se han enviado en topLeft y topRight)
+      params.yourPokemon1 = pokemonData.topLeft.name;
       params.yourItem1 = pokemonData.topLeft.item || null;
       params.yourAbility1 = pokemonData.topLeft.ability || null;
       params.yourTeraType1 = pokemonData.topLeft.teraType || null;
       
+      params.yourPokemon2 = pokemonData.topRight.name;
       params.yourItem2 = pokemonData.topRight.item || null;
       params.yourAbility2 = pokemonData.topRight.ability || null;
       params.yourTeraType2 = pokemonData.topRight.teraType || null;
@@ -851,29 +853,33 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       `;
     }
     
-    // Similarmente, para el equipo del oponente
+    // Agregar parámetros de equipo si se envía la información completa (6 Pokémon) para el lado del oponente
     if (pokemonData.teamOpponent && Array.isArray(pokemonData.teamOpponent) && pokemonData.teamOpponent.length === 6) {
+      // Para cada uno de los dos principales del oponente (en este caso se espera que bottomLeft y bottomRight contengan sus datos)
+      params.opponentPokemon1 = pokemonData.bottomLeft.name;
       params.oppItem1 = pokemonData.bottomLeft.item || null;
-      params.oppAbility1 = pokemonData.bottomLeft.ability || null;
+      params.opponentAbility1 = pokemonData.bottomLeft.ability || null;
       params.oppTeraType1 = pokemonData.bottomLeft.teraType || null;
       
+      params.opponentPokemon2 = pokemonData.bottomRight.name;
       params.oppItem2 = pokemonData.bottomRight.item || null;
-      params.oppAbility2 = pokemonData.bottomRight.ability || null;
+      params.opponentAbility2 = pokemonData.bottomRight.ability || null;
       params.oppTeraType2 = pokemonData.bottomRight.teraType || null;
       
+      // Agregar condición para que en el team del oponente (teams.p2) aparezcan EXACTAMENTE estos Pokémon con sus datos
       matchingTurnsQuery += `
         AND EXISTS (
           SELECT 1 FROM r.teams.p2 AS t
           WHERE t.name = @opponentPokemon1
             AND t.item = @oppItem1
-            AND t.ability = @oppAbility1
+            AND t.ability = @opponentAbility1
             AND t.tera_type = @oppTeraType1
         )
         AND EXISTS (
           SELECT 1 FROM r.teams.p2 AS t
           WHERE t.name = @opponentPokemon2
             AND t.item = @oppItem2
-            AND t.ability = @oppAbility2
+            AND t.ability = @opponentAbility2
             AND t.tera_type = @oppTeraType2
         )
       `;

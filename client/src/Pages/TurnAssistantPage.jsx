@@ -41,6 +41,7 @@ import TeamDialog from "../components/TeamDialog";
 
 //backend:
 //teams
+//teams items, abilities, tera types, tera actives, moves, non volatile status
 //revealed pokemon
 //fainted
 //any duration tw, screens
@@ -188,27 +189,26 @@ function TurnAssistantPage() {
     }
     
     // Verificar que los Pokémon activos están en el equipo completo, si éste existe
-    console.log(yourTeam && yourTeam.length === 6);
-    console.log("yourTeam actual:", yourTeam);
-    console.log("yourTeam length:", yourTeam.length);
-    if (yourTeam && yourTeam.length === 6) {
-      const normalize = (str) => str.toLowerCase().trim();
-      const yourTeamNames = yourTeam.map(p => normalize(p.name));
-      console.log("Your Names:", yourTeamNames);
-      console.log("Active topLeft normalized:", normalize(selectedPokemon.topLeft.name));
-      console.log("Active topRight normalized:", normalize(selectedPokemon.topRight.name));
-      
+    const validYourTeam = yourTeam.filter(p => p && p.name);
+    if (validYourTeam.length === 6) {
+      const yourTeamNames = validYourTeam.map(p => p.name.toLowerCase().trim());
+      console.log("Your team names:", yourTeamNames);
+      console.log("Active topLeft normalized:", selectedPokemon.topLeft.name.toLowerCase().trim());
+      console.log("Active topRight normalized:", selectedPokemon.topRight.name.toLowerCase().trim());
+
       if (
-        !yourTeamNames.includes(normalize(selectedPokemon.topLeft.name)) ||
-        !yourTeamNames.includes(normalize(selectedPokemon.topRight.name))
+        !yourTeamNames.includes(selectedPokemon.topLeft.name.toLowerCase().trim()) ||
+        !yourTeamNames.includes(selectedPokemon.topRight.name.toLowerCase().trim())
       ) {
         setError("Both active Pokémon (topLeft and topRight) must be part of your team.");
         return;
       }
     }
-    if (teamOpponent && teamOpponent.length === 6) {
+
+    const validOpponentTeam = teamOpponent.filter(p => p && p.name);
+    if (validOpponentTeam.length === 6) {
       const normalize = (str) => str.toLowerCase().trim();
-      const teamOpponentNames = teamOpponent.map(p => normalize(p.name));
+      const teamOpponentNames = validOpponentTeam.map(p => normalize(p.name));
       if (
         !teamOpponentNames.includes(normalize(selectedPokemon.bottomLeft.name)) ||
         !teamOpponentNames.includes(normalize(selectedPokemon.bottomRight.name))
@@ -219,16 +219,16 @@ function TurnAssistantPage() {
     }
     
     // Verificación mejorada para equipos completos
-    if (yourTeam && yourTeam.length === 6) {
+    if (validYourTeam.length === 6) {
       // Verificar que topLeft está en el equipo completo
-      const yourPokemon1 = yourTeam.find(p => p.name === selectedPokemon.topLeft.name);
+      const yourPokemon1 = validYourTeam.find(p => p.name === selectedPokemon.topLeft.name);
       if (!yourPokemon1) {
         setError(`${selectedPokemon.topLeft.name} must be part of your team.`);
         return;
       }
       
       // Verificar que topRight está en el equipo completo
-      const yourPokemon2 = yourTeam.find(p => p.name === selectedPokemon.topRight.name);
+      const yourPokemon2 = validYourTeam.find(p => p.name === selectedPokemon.topRight.name);
       if (!yourPokemon2) {
         setError(`${selectedPokemon.topRight.name} must be part of your team.`);
         return;

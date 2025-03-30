@@ -234,7 +234,9 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
 
     // Añade esta función de reseteo después de handleSubmit
     const handleClearData = () => {
-        setTeam(Array(6).fill(null));
+        // Crear un equipo vacío, que indique que no hay ningún Pokémon seleccionado
+        const clearedTeam = Array(6).fill(null);
+        setTeam(clearedTeam);
         setSearchTerms(Array(6).fill(''));
         setRevealed({});
         setFainted({});
@@ -248,6 +250,10 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
             teraActive: false
         }));
         setError('');
+        // Notificar al componente padre que el equipo se ha limpiado
+        if (typeof onSelectTeam === 'function') {
+            onSelectTeam(clearedTeam);
+        }
     };
 
     return (
