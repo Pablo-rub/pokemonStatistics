@@ -134,9 +134,10 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
         setError('');
     };
 
-    const handleSearchChange = (index, newSearch) => {
+    const handleSearchChange = (index, newInputValue) => {
+        // Actualiza el término de búsqueda para este slot
         const newSearchTerms = [...searchTerms];
-        newSearchTerms[index] = newSearch;
+        newSearchTerms[index] = newInputValue;
         setSearchTerms(newSearchTerms);
     };
 
@@ -222,8 +223,13 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
     };
 
     const filterOptions = createFilterOptions({
-        matchFrom: 'start',
-        stringify: (option) => (option && option.name ? option.name : ''),
+        matchFrom: 'any', // Cambia 'start' a 'any' para buscar en cualquier parte del nombre
+        stringify: (option) => {
+            if (!option) return '';
+            return typeof option === 'string' ? option : (option.name || '');
+        },
+        ignoreCase: true, // Asegura que la búsqueda ignore mayúsculas/minúsculas
+        trim: true // Elimina espacios innecesarios
     });
     
     const teraTypes = [

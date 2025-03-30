@@ -821,9 +821,9 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       `;
     }
     
-    // Agregar parámetros de equipo si se envía la información completa (6 Pokémon) para el lado tuyo
-    if (pokemonData.teamYour && Array.isArray(pokemonData.teamYour) && pokemonData.teamYour.length === 6) {
-      // Para cada uno de los dos principales, tomar sus detalles (los mismos que se han enviado en topLeft y topRight)
+    // Filtrar tu equipo si se envía la información completa (6 Pokémon válidos)
+    if (pokemonData.teamYour && Array.isArray(pokemonData.teamYour) && pokemonData.teamYour.filter(p => p && p.name).length === 6) {
+      // Para cada uno de los dos principales, usamos los datos enviados (por ejemplo, topLeft y topRight)
       params.yourPokemon1 = pokemonData.topLeft.name;
       params.yourItem1 = pokemonData.topLeft.item || null;
       params.yourAbility1 = pokemonData.topLeft.ability || null;
@@ -834,7 +834,6 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       params.yourAbility2 = pokemonData.topRight.ability || null;
       params.yourTeraType2 = pokemonData.topRight.teraType || null;
       
-      // Agregar condición para que en el team (teams.p1) aparezcan EXACTAMENTE estos Pokémon con sus datos
       matchingTurnsQuery += `
         AND EXISTS (
           SELECT 1 FROM r.teams.p1 AS t
@@ -853,9 +852,8 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       `;
     }
     
-    // Agregar parámetros de equipo si se envía la información completa (6 Pokémon) para el lado del oponente
-    if (pokemonData.teamOpponent && Array.isArray(pokemonData.teamOpponent) && pokemonData.teamOpponent.length === 6) {
-      // Para cada uno de los dos principales del oponente (en este caso se espera que bottomLeft y bottomRight contengan sus datos)
+    // Filtrar el equipo del oponente, usando los datos de bottomLeft y bottomRight, si se ha confirmado el equipo
+    if (pokemonData.teamOpponent && Array.isArray(pokemonData.teamOpponent) && pokemonData.teamOpponent.filter(p => p && p.name).length === 6) {
       params.opponentPokemon1 = pokemonData.bottomLeft.name;
       params.oppItem1 = pokemonData.bottomLeft.item || null;
       params.opponentAbility1 = pokemonData.bottomLeft.ability || null;
@@ -866,7 +864,6 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       params.opponentAbility2 = pokemonData.bottomRight.ability || null;
       params.oppTeraType2 = pokemonData.bottomRight.teraType || null;
       
-      // Agregar condición para que en el team del oponente (teams.p2) aparezcan EXACTAMENTE estos Pokémon con sus datos
       matchingTurnsQuery += `
         AND EXISTS (
           SELECT 1 FROM r.teams.p2 AS t
