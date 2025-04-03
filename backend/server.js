@@ -634,8 +634,11 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
         room: "",
         sideEffects: { yourSide: {}, opponentSide: {} },
         sideEffectsDuration: { yourSide: {}, opponentSide: {} }
-      }
+      },
+      yourTeam = [],
+      opponentTeam = [],
     } = req.body;
+
     console.log("Battle conditions received:", JSON.stringify(battleConditions, null, 2));
     
     if (!pokemonData || !pokemonData.topLeft || !pokemonData.topRight ||
@@ -821,65 +824,33 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       `;
     }
     
-    // Filtrar tu equipo si se envía la información completa (6 Pokémon válidos)
-    if (pokemonData.teamYour && Array.isArray(pokemonData.teamYour) && pokemonData.teamYour.filter(p => p && p.name).length === 6) {
-      // Para cada uno de los dos principales, usamos los datos enviados (por ejemplo, topLeft y topRight)
-      params.yourPokemon1 = pokemonData.topLeft.name;
-      params.yourItem1 = pokemonData.topLeft.item || null;
-      params.yourAbility1 = pokemonData.topLeft.ability || null;
-      params.yourTeraType1 = pokemonData.topLeft.teraType || null;
+    // Filtrar el equipo "yourTeam" de manera general
+    if (yourTeam && Array.isArray(yourTeam)) {
+      // Extraer los nombres del equipo enviados por separado
+      const yourTeamNames = yourTeam.filter(p => p && p.name).map(p => p.name);
+      console.log("Team Your Names:", yourTeamNames); // Depuración
       
-      params.yourPokemon2 = pokemonData.topRight.name;
-      params.yourItem2 = pokemonData.topRight.item || null;
-      params.yourAbility2 = pokemonData.topRight.ability || null;
-      params.yourTeraType2 = pokemonData.topRight.teraType || null;
-      
-      matchingTurnsQuery += `
-        AND EXISTS (
-          SELECT 1 FROM r.teams.p1 AS t
-          WHERE t.name = @yourPokemon1
-            AND t.item = @yourItem1
-            AND t.ability = @yourAbility1
-            AND t.tera_type = @yourTeraType1
-        )
-        AND EXISTS (
-          SELECT 1 FROM r.teams.p1 AS t
-          WHERE t.name = @yourPokemon2
-            AND t.item = @yourItem2
-            AND t.ability = @yourAbility2
-            AND t.tera_type = @yourTeraType2
-        )
-      `;
-    }
-    
-    // Filtrar el equipo del oponente, usando los datos de bottomLeft y bottomRight, si se ha confirmado el equipo
-    if (pokemonData.teamOpponent && Array.isArray(pokemonData.teamOpponent) && pokemonData.teamOpponent.filter(p => p && p.name).length === 6) {
-      params.opponentPokemon1 = pokemonData.bottomLeft.name;
-      params.oppItem1 = pokemonData.bottomLeft.item || null;
-      params.opponentAbility1 = pokemonData.bottomLeft.ability || null;
-      params.oppTeraType1 = pokemonData.bottomLeft.teraType || null;
-      
-      params.opponentPokemon2 = pokemonData.bottomRight.name;
-      params.oppItem2 = pokemonData.bottomRight.item || null;
-      params.opponentAbility2 = pokemonData.bottomRight.ability || null;
-      params.oppTeraType2 = pokemonData.bottomRight.teraType || null;
-      
-      matchingTurnsQuery += `
-        AND EXISTS (
-          SELECT 1 FROM r.teams.p2 AS t
-          WHERE t.name = @opponentPokemon1
-            AND t.item = @oppItem1
-            AND t.ability = @opponentAbility1
-            AND t.tera_type = @oppTeraType1
-        )
-        AND EXISTS (
-          SELECT 1 FROM r.teams.p2 AS t
-          WHERE t.name = @opponentPokemon2
-            AND t.item = @oppItem2
-            AND t.ability = @opponentAbility2
-            AND t.tera_type = @oppTeraType2
-        )
-      `;
+      if (yourTeamNames.length > 0) {
+        if (yourTeamNames.length === 6) {
+          // Para un equipo completo, exigir que en r.teams.p1 se encuentren EXACTAMENTE los 6 Pokémon (sin importar el orden)
+          matchingTurnsQuery += `
+            AND (
+              SELECT COUNT(1)
+              FROM r.teams.p1 AS t_inner
+              WHERE t_inner.name IN (${yourTeamNames.map(name => `'${name}'`).join(',')})
+            ) = ${yourTeamNames.length}
+          `;
+        } else {
+          // Para equipos incompletos, exigir que se encuentren todos los nombres enviados
+          matchingTurnsQuery += `
+            AND (
+              SELECT COUNT(1)
+              FROM r.teams.p1 AS t_inner
+              WHERE t_inner.name IN (${yourTeamNames.map(name => `'${name}'`).join(',')})
+            ) >= ${yourTeamNames.length}
+          `;
+        }
+      }
     }
     
     // Se añaden condiciones para que ambos equipos estén correctamente posicionados
