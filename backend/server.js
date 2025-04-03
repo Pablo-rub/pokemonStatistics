@@ -853,6 +853,35 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       }
     }
     
+    // Filtrar el equipo "opponentTeam" de manera general
+    if (opponentTeam && Array.isArray(opponentTeam)) {
+      // Extraer los nombres del equipo enviados por separado para el oponente
+      const opponentTeamNames = opponentTeam.filter(p => p && p.name).map(p => p.name);
+      console.log("Opponent Team Names:", opponentTeamNames); // Depuración
+      
+      if (opponentTeamNames.length > 0) {
+        if (opponentTeamNames.length === 6) {
+          // Para un equipo completo, exigir que en r.teams.p2 se encuentren EXACTAMENTE los 6 Pokémon
+          matchingTurnsQuery += `
+            AND (
+              SELECT COUNT(1)
+              FROM r.teams.p2 AS t_inner
+              WHERE t_inner.name IN (${opponentTeamNames.map(name => `'${name}'`).join(',')})
+            ) = ${opponentTeamNames.length}
+          `;
+        } else {
+          // Para equipos incompletos, exigir que se encuentren todos los nombres enviados
+          matchingTurnsQuery += `
+            AND (
+              SELECT COUNT(1)
+              FROM r.teams.p2 AS t_inner
+              WHERE t_inner.name IN (${opponentTeamNames.map(name => `'${name}'`).join(',')})
+            ) >= ${opponentTeamNames.length}
+          `;
+        }
+      }
+    }
+    
     // Se añaden condiciones para que ambos equipos estén correctamente posicionados
     matchingTurnsQuery += `
           AND (
