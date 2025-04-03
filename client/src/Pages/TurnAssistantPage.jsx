@@ -106,7 +106,7 @@ function TurnAssistantPage() {
 
   // Agrega estados para los equipos
   const [yourTeam, setyourTeam] = useState([]);
-  const [teamOpponent, setTeamOpponent] = useState([]);
+  const [opponentTeam, setopponentTeam] = useState([]);
 
   // Agrega estado para el diálogo de selección de equipo
   const [yourTeamDialogOpen, setyourTeamDialogOpen] = useState(false);
@@ -187,31 +187,14 @@ function TurnAssistantPage() {
       setError("Your opponent cannot use the same Pokémon twice. Please select different Pokémon for the opponent.");
       return;
     }
-    
-    // Verificar que los Pokémon activos están en el equipo completo, si éste existe
-    const validYourTeam = yourTeam.filter(p => p && p.name);
-    if (validYourTeam.length === 6) {
-      const yourTeamNames = validYourTeam.map(p => p.name.toLowerCase().trim());
-      console.log("Your team names:", yourTeamNames);
-      console.log("Active topLeft normalized:", selectedPokemon.topLeft.name.toLowerCase().trim());
-      console.log("Active topRight normalized:", selectedPokemon.topRight.name.toLowerCase().trim());
 
-      if (
-        !yourTeamNames.includes(selectedPokemon.topLeft.name.toLowerCase().trim()) ||
-        !yourTeamNames.includes(selectedPokemon.topRight.name.toLowerCase().trim())
-      ) {
-        setError("Both active Pokémon (topLeft and topRight) must be part of your team.");
-        return;
-      }
-    }
-
-    const validOpponentTeam = teamOpponent.filter(p => p && p.name);
+    const validOpponentTeam = opponentTeam.filter(p => p && p.name);
     if (validOpponentTeam.length === 6) {
       const normalize = (str) => str.toLowerCase().trim();
-      const teamOpponentNames = validOpponentTeam.map(p => normalize(p.name));
+      const opponentTeamNames = validOpponentTeam.map(p => normalize(p.name));
       if (
-        !teamOpponentNames.includes(normalize(selectedPokemon.bottomLeft.name)) ||
-        !teamOpponentNames.includes(normalize(selectedPokemon.bottomRight.name))
+        !opponentTeamNames.includes(normalize(selectedPokemon.bottomLeft.name)) ||
+        !opponentTeamNames.includes(normalize(selectedPokemon.bottomRight.name))
       ) {
         setError("Both active Pokémon (bottomLeft and bottomRight) must be part of the opponent's team.");
         return;
@@ -219,6 +202,7 @@ function TurnAssistantPage() {
     }
     
     // Verificación mejorada para equipos completos
+    const validYourTeam = yourTeam.filter(p => p && p.name);
     if (validYourTeam.length === 6) {
       // Verificar que topLeft está en el equipo completo
       const yourPokemon1 = validYourTeam.find(p => p.name === selectedPokemon.topLeft.name);
@@ -275,16 +259,16 @@ function TurnAssistantPage() {
     }
     
     // Realizar la misma verificación para el equipo del oponente
-    if (teamOpponent && teamOpponent.length === 6) {
+    if (opponentTeam && opponentTeam.length === 6) {
       // Verificar que bottomLeft está en el equipo completo
-      const oppPokemon1 = teamOpponent.find(p => p.name === selectedPokemon.bottomLeft.name);
+      const oppPokemon1 = opponentTeam.find(p => p.name === selectedPokemon.bottomLeft.name);
       if (!oppPokemon1) {
         setError(`${selectedPokemon.bottomLeft.name} must be part of opponent's team.`);
         return;
       }
       
       // Verificar que bottomRight está en el equipo completo
-      const oppPokemon2 = teamOpponent.find(p => p.name === selectedPokemon.bottomRight.name);
+      const oppPokemon2 = opponentTeam.find(p => p.name === selectedPokemon.bottomRight.name);
       if (!oppPokemon2) {
         setError(`${selectedPokemon.bottomRight.name} must be part of opponent's team.`);
         return;
@@ -335,8 +319,8 @@ function TurnAssistantPage() {
       const response = await axios.post("http://localhost:5000/api/turn-assistant/analyze", {
         pokemonData: selectedPokemon,
         battleConditions: battleConditions,
-        yourTeam,
-        teamOpponent
+        yourTeam: yourTeam || [],
+        opponentTeam: opponentTeam || [],
       });
       
       if (response.data) {
@@ -487,8 +471,8 @@ function TurnAssistantPage() {
   }, [yourTeam]);
 
   useEffect(() => {
-    console.log("Updated opponentTeam:", teamOpponent);
-  }, [teamOpponent]);
+    console.log("Updated opponentTeam:", opponentTeam);
+  }, [opponentTeam]);
 
   return (
     <Box sx={{ padding: 3 }}>
@@ -554,7 +538,7 @@ function TurnAssistantPage() {
             }}
             onTeamSelectOpponent={(selectedTeam) => {
               console.log("Opponent team selected (from BattleField):", selectedTeam);
-              setTeamOpponent(selectedTeam);
+              setopponentTeam(selectedTeam);
             }}
             pokemonList={pokemonList}
           />
@@ -652,7 +636,7 @@ function TurnAssistantPage() {
             onClose={() => setTeamDialogOpen(prev => ({ ...prev, opponent: false }))}
             onSelectTeam={(selectedTeam) => {
               console.log("Opponent team selected:", selectedTeam);
-              setTeamOpponent(selectedTeam);
+              setopponentTeam(selectedTeam);
             }}
             pokemonList={pokemonList}
           />
