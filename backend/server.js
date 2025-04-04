@@ -824,31 +824,38 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       `;
     }
     
-    // Filtrar el equipo "yourTeam" de manera general, validando nombre, item, ability, tera_type, tera_active, moves y status
+    // Filtrar el equipo "yourTeam" de manera general, validando nombre, item, ability, tera_type, tera_active, moves, status y si está revelado (revealed)
     if (yourTeam && Array.isArray(yourTeam)) {
       if (yourTeam.length > 0) {
         if (yourTeam.length === 6) {
-          // Para un equipo completo, exigir que cada miembro se encuentre EXACTAMENTE con sus atributos en r.teams.p1
           yourTeam.forEach(member => {
             matchingTurnsQuery += `
               AND EXISTS (
-                SELECT 1 FROM UNNEST(r.teams.p1) AS t
-                WHERE t.name = '${member.name}'
-                ${member.item ? `AND t.item = '${member.item}'` : ''}
-                ${member.ability ? `AND t.ability = '${member.ability}'` : ''}
+                SELECT 1 FROM UNNEST(r.teams.p1) AS tm
+                WHERE tm.name = '${member.name}'
+                ${member.item ? `AND tm.item = '${member.item}'` : ''}
+                ${member.ability ? `AND tm.ability = '${member.ability}'` : ''}
                 ${member.moves && member.moves.length > 0 ? `
                   AND (
-                    SELECT COUNT(1) 
-                    FROM UNNEST(t.moves) AS move 
+                    SELECT COUNT(1)
+                    FROM UNNEST(tm.moves) AS move
                     WHERE move IN (${member.moves.map(m => `'${m}'`).join(',')})
                   ) = ${member.moves.length}
                 ` : ''}
-                ${member.tera_type ? `AND t.tera_type = '${member.tera_type}'` : ''}
+                ${member.tera_type ? `AND tm.tera_type = '${member.tera_type}'` : ''}
+                ${member.revealed 
+                  ? `
+                    AND EXISTS (
+                      SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                      WHERE rp.name = '${member.name}'
+                    )
+                  ` 
+                  : ''}
               )
             `;
           });
         } else {
-          // Para equipos incompletos, exigir que se encuentren todos los miembros enviados (solo por nombre)
+          // Para equipos incompletos, exigir que se encuentren todos los nombres enviados (solo por nombre)
           const yourTeamNames = yourTeam.filter(p => p && p.name).map(p => p.name);
           matchingTurnsQuery += `
             AND (
@@ -880,6 +887,14 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
                   ) = ${member.moves.length}
                 ` : ''}
                 ${member.tera_type ? `AND t.tera_type = '${member.tera_type}'` : ''}
+                ${member.revealed 
+                  ? `
+                    AND EXISTS (
+                      SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                      WHERE rp.name = '${member.name}'
+                    )
+                  ` 
+                  : ''}
               )
             `;
           });
