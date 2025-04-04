@@ -38,6 +38,7 @@ import TeamDialog from "../components/TeamDialog";
 //texto fecha inicio recoleccion
 //que los select se desplieguen para abajo
 //fix teras in moves text
+//fix clear team
 
 //backend:
 //any duration tw, screens

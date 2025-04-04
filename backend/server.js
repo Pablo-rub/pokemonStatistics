@@ -925,44 +925,69 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
           opponentTeam.forEach(member => {
             matchingTurnsQuery += `
               AND EXISTS (
-                SELECT 1 FROM UNNEST(r.teams.p2) AS t
-                WHERE t.name = '${member.name}'
-                ${member.item ? `AND t.item = '${member.item}'` : ''}
-                ${member.ability ? `AND t.ability = '${member.ability}'` : ''}
-                ${member.moves && member.moves.length > 0 ? `
-                  AND (
-                    SELECT COUNT(1) 
-                    FROM UNNEST(t.moves) AS move 
-                    WHERE move IN (${member.moves.map(m => `'${m}'`).join(',')})
-                  ) = ${member.moves.length}
-                ` : ''}
-                ${member.tera_type ? `AND t.tera_type = '${member.tera_type}'` : ''}
-                ${member.fainted
-                  ? `
-                      AND EXISTS (
-                        SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
-                        WHERE rp.name = '${member.name}'
-                          AND rp.fighting_status = 0
-                      )
-                    `
-                  : (member.revealed
-                    ? `
-                        AND EXISTS (
-                          SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
-                          WHERE rp.name = '${member.name}'
-                        )
-                      `
-                    : '')}
+                SELECT 1 FROM UNNEST(r.teams.p2) AS tm
+                WHERE tm.name = '${member.name}'
+                  ${member.item ? `AND tm.item = '${member.item}'` : ''}
+                  ${member.ability ? `AND tm.ability = '${member.ability}'` : ''}
+                  ${member.moves && member.moves.length > 0 ? `
+                    AND (
+                      SELECT COUNT(1)
+                      FROM UNNEST(tm.moves) AS move
+                      WHERE move IN (${member.moves.map(m => `'${m}'`).join(',')})
+                    ) = ${member.moves.length}
+                  ` : ''}
+                  ${member.tera_type ? `AND tm.tera_type = '${member.tera_type}'` : ''}
               )
             `;
+
+            // Si se quiere filtrar por revelado o fainted, usar los arrays de player2
+            if (member.fainted) {
+              matchingTurnsQuery += `
+                AND EXISTS (
+                  SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                  WHERE rp.name = '${member.name}'
+                    AND rp.remaining_hp = 0
+                )
+              `;
+            } else if (member.revealed) {
+              matchingTurnsQuery += `
+                AND EXISTS (
+                  SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                  WHERE rp.name = '${member.name}'
+                )
+              `;
+            }
+
+            // Filtros adicionales para non-volatile status y tera_active
+            if (!member.fainted) {
+              if (member.nonVolatileStatus) {
+                matchingTurnsQuery += `
+                  AND EXISTS (
+                    SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                    WHERE rp.name = '${member.name}'
+                      AND rp.non_volatile_status = '${member.nonVolatileStatus}'
+                  )
+                `;
+              }
+              if (member.tera_active !== undefined) {
+                matchingTurnsQuery += `
+                  AND EXISTS (
+                    SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                    WHERE rp.name = '${member.name}'
+                      AND rp.tera.active = ${member.tera_active ? 'TRUE' : 'FALSE'}
+                  )
+                `;
+              }
+            }
           });
         } else {
-          const opponentTeamNames = opponentTeam.filter(p => p && p.name).map(p => p.name);
+          // Lógica para equipos incompletos (solo por nombre, por ejemplo)
+          const opponentTeamNames = opponentTeam.filter(p => p && p.name).map(p => `'${p.name}'`).join(',');
           matchingTurnsQuery += `
             AND (
               SELECT COUNT(1)
               FROM r.teams.p2 AS t
-              WHERE t.name IN (${opponentTeamNames.map(name => `'${name}'`).join(',')})
+              WHERE t.name IN (${opponentTeamNames})
             ) >= ${opponentTeamNames.length}
           `;
         }
