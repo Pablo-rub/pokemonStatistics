@@ -835,6 +835,7 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
                 SELECT 1 FROM UNNEST(r.teams.p1) AS t
                 WHERE t.name = '${member.name}'
                 ${member.item ? `AND t.item = '${member.item}'` : ''}
+                ${member.ability ? `AND t.ability = '${member.ability}'` : ''}
               )
             `;
           });
@@ -862,6 +863,7 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
                 SELECT 1 FROM UNNEST(r.teams.p2) AS t
                 WHERE t.name = '${member.name}'
                 ${member.item ? `AND t.item = '${member.item}'` : ''}
+                ${member.ability ? `AND t.ability = '${member.ability}'` : ''}
               )
             `;
           });
