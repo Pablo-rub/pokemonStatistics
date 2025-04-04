@@ -833,26 +833,54 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
               AND EXISTS (
                 SELECT 1 FROM UNNEST(r.teams.p1) AS tm
                 WHERE tm.name = '${member.name}'
-                ${member.item ? `AND tm.item = '${member.item}'` : ''}
-                ${member.ability ? `AND tm.ability = '${member.ability}'` : ''}
-                ${member.moves && member.moves.length > 0 ? `
-                  AND (
-                    SELECT COUNT(1)
-                    FROM UNNEST(tm.moves) AS move
-                    WHERE move IN (${member.moves.map(m => `'${m}'`).join(',')})
-                  ) = ${member.moves.length}
-                ` : ''}
-                ${member.tera_type ? `AND tm.tera_type = '${member.tera_type}'` : ''}
-                ${member.revealed 
-                  ? `
-                    AND EXISTS (
-                      SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
-                      WHERE rp.name = '${member.name}'
-                    )
-                  ` 
-                  : ''}
+                  ${member.item ? `AND tm.item = '${member.item}'` : ''}
+                  ${member.ability ? `AND tm.ability = '${member.ability}'` : ''}
+                  ${member.moves && member.moves.length > 0 ? `
+                    AND (
+                      SELECT COUNT(1)
+                      FROM UNNEST(tm.moves) AS move
+                      WHERE move IN (${member.moves.map(m => `'${m}'`).join(',')})
+                    ) = ${member.moves.length}
+                  ` : ''}
+                  ${member.tera_type ? `AND tm.tera_type = '${member.tera_type}'` : ''}
               )
             `;
+
+            // Primero, verifica que el Pokémon esté en el equipo:
+            matchingTurnsQuery += `
+              AND EXISTS (
+                SELECT 1 FROM UNNEST(r.teams.p1) AS tm
+                WHERE tm.name = '${member.name}'
+                  ${member.item ? `AND tm.item = '${member.item}'` : ''}
+                  ${member.ability ? `AND tm.ability = '${member.ability}'` : ''}
+                  ${member.moves && member.moves.length > 0 ? `
+                    AND (
+                      SELECT COUNT(1)
+                      FROM UNNEST(tm.moves) AS move
+                      WHERE move IN (${member.moves.map(m => `'${m}'`).join(',')})
+                    ) = ${member.moves.length}
+                  ` : ''}
+                  ${member.tera_type ? `AND tm.tera_type = '${member.tera_type}'` : ''}
+              )
+            `;
+
+            // Luego, si se quiere filtrar por revelado o fainted, se agrega a nivel de turno (usando "t")
+            if (member.fainted) {
+              matchingTurnsQuery += `
+                AND EXISTS (
+                  SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                  WHERE rp.name = '${member.name}'
+                    AND rp.remaining_hp = 0
+                )
+              `;
+            } else if (member.revealed) {
+              matchingTurnsQuery += `
+                AND EXISTS (
+                  SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                  WHERE rp.name = '${member.name}'
+                )
+              `;
+            }
           });
         } else {
           // Para equipos incompletos, exigir que se encuentren todos los nombres enviados (solo por nombre)
@@ -887,14 +915,22 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
                   ) = ${member.moves.length}
                 ` : ''}
                 ${member.tera_type ? `AND t.tera_type = '${member.tera_type}'` : ''}
-                ${member.revealed 
+                ${member.fainted
                   ? `
-                    AND EXISTS (
-                      SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
-                      WHERE rp.name = '${member.name}'
-                    )
-                  ` 
-                  : ''}
+                      AND EXISTS (
+                        SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                        WHERE rp.name = '${member.name}'
+                          AND rp.fighting_status = 0
+                      )
+                    `
+                  : (member.revealed
+                    ? `
+                        AND EXISTS (
+                          SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                          WHERE rp.name = '${member.name}'
+                        )
+                      `
+                    : '')}
               )
             `;
           });
