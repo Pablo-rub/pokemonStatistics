@@ -12,7 +12,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import useDraggable from '../hooks/useDraggable';
 
 //TODO
-// El status debe de añadirse como atributo en la base d edatos, ahora mismo no está
+// El nonVolatileStatus debe de añadirse como atributo en la base d edatos, ahora mismo no está
 
 // Checkbox con estilo blanco
 const WhiteCheckbox = styled(Checkbox)(({ theme }) => ({
@@ -54,7 +54,7 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
         item: '',
         ability: '',
         moves: [],
-        status: '',
+        nonVolatileStatus: '',
         teraType: '',
         teraActive: false
     }));
@@ -63,7 +63,7 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
     const [itemsList, setItemsList] = useState([]);
     const [abilitiesList, setAbilitiesList] = useState([]);
     const [movesList, setMovesList] = useState([]);
-    const [statusList, setStatusList] = useState([]);
+    const [nonVolatileStatusList, setnonVolatileStatusList] = useState([]);
     
     // Obtener las listas al montar el componente
     useEffect(() => {
@@ -85,18 +85,18 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
             .then(data => setMovesList(data))
             .catch(err => console.error("Error fetching moves:", err));
         
-        // Status
+        // nonVolatileStatus
         fetch(process.env.PUBLIC_URL + '/nonvolatile.txt')
             .then(res => res.text())
             .then(text => {
-                const statuses = text
+                const nonVolatileStatuses = text
                     .trim()
                     .split('\n')
                     .map(s => s.trim())
                     .filter(Boolean);
-                setStatusList(statuses);
+                setnonVolatileStatusList(nonVolatileStatuses);
             })
-            .catch(err => console.error("Error fetching non-volatile statuses:", err));
+            .catch(err => console.error("Error fetching non-volatile nonVolatileStatuses:", err));
     }, []);
 
     useEffect(() => {
@@ -152,7 +152,7 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                 item: pokemonDetails[index].item,
                 ability: pokemonDetails[index].ability,
                 moves: pokemonDetails[index].moves,
-                status: pokemonDetails[index].status,
+                nonVolatileStatus: pokemonDetails[index].nonVolatileStatus,
                 tera_type: pokemonDetails[index].teraType,
                 tera_active: pokemonDetails[index].teraActive,
                 revealed: revealed[index] !== undefined ? revealed[index] : false,
@@ -246,9 +246,11 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
             item: '',
             ability: '',
             moves: [],
-            status: '',
+            nonVolatileStatus: '',
             teraType: '',
-            teraActive: false
+            teraActive: false,
+            revealed: false,
+            fainted: false
         }));
         setError('');
         // Notificar al componente padre que el equipo se ha limpiado
@@ -453,15 +455,15 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                             </FormControl>
                                         </Grid>
                                         
-                                        {/* Status */}
-                                        {revealed[index] && (
+                                        {/* nonVolatileStatus */}
+                                        {revealed[index] && !fainted[index] && (
                                             <Grid item xs={12} sm={6}>
                                                 <FormControl fullWidth>
                                                     <Autocomplete
-                                                        options={statusList}
+                                                        options={nonVolatileStatusList}
                                                         getOptionLabel={(option) => option || ''}
-                                                        value={pokemonDetails[index].status || null}
-                                                        onChange={(_, newValue) => updatePokemonDetail(index, 'status', newValue || '')}
+                                                        value={pokemonDetails[index].nonVolatileStatus || null}
+                                                        onChange={(_, newValue) => updatePokemonDetail(index, 'nonVolatileStatus', newValue || '')}
                                                         renderInput={(params) => (
                                                             <TextField 
                                                                 {...params} 
@@ -502,8 +504,8 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                                         }}
                                                     />
                                                 </FormControl>
-                                                {/* Solo mostrar Tera Active si hay un tipo Tera seleccionado */}
-                                                {pokemonDetails[index].teraType && revealed[index] && (
+                                                {/* Tera Active */}
+                                                {pokemonDetails[index].teraType && !fainted[index] && revealed[index] && (
                                                     <FormControlLabel
                                                         control={
                                                             <WhiteCheckbox
