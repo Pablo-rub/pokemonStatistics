@@ -836,6 +836,7 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
                 WHERE t.name = '${member.name}'
                 ${member.item ? `AND t.item = '${member.item}'` : ''}
                 ${member.ability ? `AND t.ability = '${member.ability}'` : ''}
+                ${member.tera_type ? `AND t.tera_type = '${member.tera_type}'` : ''}
               )
             `;
           });
@@ -864,6 +865,7 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
                 WHERE t.name = '${member.name}'
                 ${member.item ? `AND t.item = '${member.item}'` : ''}
                 ${member.ability ? `AND t.ability = '${member.ability}'` : ''}
+                ${member.tera_type ? `AND t.tera_type = '${member.tera_type}'` : ''}
               )
             `;
           });
