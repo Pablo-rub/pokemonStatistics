@@ -40,10 +40,6 @@ import TeamDialog from "../components/TeamDialog";
 //fix teras in moves text
 
 //backend:
-//teams
-//teams items, abilities, tera types, tera actives, moves
-//revealed pokemon
-//fainted
 //any duration tw, screens
 //check moves miraidon discharge vs miraidon discharge
 //ver que hacer con el mirror
