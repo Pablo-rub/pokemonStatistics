@@ -155,7 +155,8 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                 status: pokemonDetails[index].status,
                 tera_type: pokemonDetails[index].teraType,
                 tera_active: pokemonDetails[index].teraActive,
-                revealed: revealed[index] !== undefined ? revealed[index] : false
+                revealed: revealed[index] !== undefined ? revealed[index] : false,
+                fainted: fainted[index] !== undefined ? fainted[index] : false
             };
         });
 
