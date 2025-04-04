@@ -41,7 +41,7 @@ import TeamDialog from "../components/TeamDialog";
 
 //backend:
 //teams
-//teams items, abilities, tera types, tera actives, moves, non volatile status
+//teams items, abilities, tera types, tera actives, moves
 //revealed pokemon
 //fainted
 //any duration tw, screens

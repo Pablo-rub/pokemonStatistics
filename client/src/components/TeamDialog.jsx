@@ -11,6 +11,9 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import useDraggable from '../hooks/useDraggable';
 
+//TODO
+// El status debe de añadirse como atributo en la base d edatos, ahora mismo no está
+
 // Checkbox con estilo blanco
 const WhiteCheckbox = styled(Checkbox)(({ theme }) => ({
     color: 'white',
@@ -142,37 +145,30 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
     };
 
     const handleSelectTeam = () => {
-        console.log("Raw team objects (before processing):", JSON.stringify(team));
-        
-        // Procesa el array para asegurarse de tener 6 objetos válidos con propiedad name
-        const selectedTeam = team.map((p, index) => {
-            if (!p) {
-                alert(`Team slot ${index + 1} is empty.`);
-                return null;
-            }
-            // Si es un string, conviértelo a objeto; de lo contrario, usar el objeto existente
-            return typeof p === 'string' ? { name: p } : p;
+        // Combinar para cada slot la información básica (team) y los detalles (pokemonDetails)
+        const teamWithDetails = team.map((pokemon, index) => {
+            if (!pokemon) return null;
+            return {
+                ...pokemon,
+                item: pokemonDetails[index].item,
+                ability: pokemonDetails[index].ability,
+                moves: pokemonDetails[index].moves,
+                status: pokemonDetails[index].status,
+                teraType: pokemonDetails[index].teraType,
+                teraActive: pokemonDetails[index].teraActive
+            };
         });
-        
-        // Verifica que no exista ningún slot vacío
-        if (selectedTeam.some(p => p === null)) {
+
+        // Verificar que no queden espacios nulos, según tu lógica
+        if (teamWithDetails.some(member => !member)) {
+            setError('El equipo debe estar completo.');
             return;
         }
-        
-        // Verifica que no haya duplicados
-        const names = selectedTeam.map(p => p.name);
-        if (new Set(names).size !== names.length) {
-            alert("Duplicate Pokémon found in the team.");
-            return;
+
+        // Envía el equipo completo con detalles al padre
+        if (typeof onSelectTeam === 'function') {
+            onSelectTeam(teamWithDetails);
         }
-        
-        console.log("Selected team to send:", selectedTeam);
-        
-        // Envía el equipo completo al callback
-        onSelectTeam(selectedTeam);
-        
-        // Cierra el diálogo
-        onClose();
     };
 
     // Toggle expanded details for a Pokemon
@@ -459,28 +455,30 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                         </Grid>
                                         
                                         {/* Status */}
-                                        <Grid item xs={12} sm={6}>
-                                            <FormControl fullWidth>
-                                                <Autocomplete
-                                                    options={statusList}
-                                                    getOptionLabel={(option) => option || ''}
-                                                    value={pokemonDetails[index].status || null}
-                                                    onChange={(_, newValue) => updatePokemonDetail(index, 'status', newValue || '')}
-                                                    renderInput={(params) => (
-                                                        <TextField 
-                                                            {...params} 
-                                                            label="Non-Volatile Status" 
-                                                            variant="outlined"
-                                                            InputLabelProps={{ style: { color: 'white' } }}
-                                                        />
-                                                    )}
-                                                    sx={{
-                                                        '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
-                                                        '& .MuiSvgIcon-root': { color: 'white' }
-                                                    }}
-                                                />
-                                            </FormControl>
-                                        </Grid>
+                                        {revealed[index] && (
+                                            <Grid item xs={12} sm={6}>
+                                                <FormControl fullWidth>
+                                                    <Autocomplete
+                                                        options={statusList}
+                                                        getOptionLabel={(option) => option || ''}
+                                                        value={pokemonDetails[index].status || null}
+                                                        onChange={(_, newValue) => updatePokemonDetail(index, 'status', newValue || '')}
+                                                        renderInput={(params) => (
+                                                            <TextField 
+                                                                {...params} 
+                                                                label="Non‑Volatile Status" 
+                                                                variant="outlined"
+                                                                InputLabelProps={{ style: { color: 'white' } }}
+                                                            />
+                                                        )}
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
+                                                            '& .MuiSvgIcon-root': { color: 'white' }
+                                                        }}
+                                                    />
+                                                </FormControl>
+                                            </Grid>
+                                        )}
                                         
                                         {/* Tera Type y Tera Active */}
                                         <Grid item xs={12} sm={6}>
@@ -506,7 +504,7 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                                     />
                                                 </FormControl>
                                                 {/* Solo mostrar Tera Active si hay un tipo Tera seleccionado */}
-                                                {pokemonDetails[index].teraType && (
+                                                {pokemonDetails[index].teraType && revealed[index] && (
                                                     <FormControlLabel
                                                         control={
                                                             <WhiteCheckbox

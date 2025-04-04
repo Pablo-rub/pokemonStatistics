@@ -824,58 +824,54 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       `;
     }
     
-    // Filtrar el equipo "yourTeam" de manera general
+    // Filtrar el equipo "yourTeam" de manera general, validando nombre, item, ability, tera_type, tera_active, moves y status
     if (yourTeam && Array.isArray(yourTeam)) {
-      // Extraer los nombres del equipo enviados por separado
-      const yourTeamNames = yourTeam.filter(p => p && p.name).map(p => p.name);
-      console.log("Team Your Names:", yourTeamNames); // Depuración
-      
-      if (yourTeamNames.length > 0) {
-        if (yourTeamNames.length === 6) {
-          // Para un equipo completo, exigir que en r.teams.p1 se encuentren EXACTAMENTE los 6 Pokémon (sin importar el orden)
-          matchingTurnsQuery += `
-            AND (
-              SELECT COUNT(1)
-              FROM r.teams.p1 AS t_inner
-              WHERE t_inner.name IN (${yourTeamNames.map(name => `'${name}'`).join(',')})
-            ) = ${yourTeamNames.length}
-          `;
+      if (yourTeam.length > 0) {
+        if (yourTeam.length === 6) {
+          // Para un equipo completo, exigir que cada miembro se encuentre EXACTAMENTE con sus atributos en r.teams.p1
+          yourTeam.forEach(member => {
+            matchingTurnsQuery += `
+              AND EXISTS (
+                SELECT 1 FROM UNNEST(r.teams.p1) AS t
+                WHERE t.name = '${member.name}'
+                ${member.item ? `AND t.item = '${member.item}'` : ''}
+              )
+            `;
+          });
         } else {
-          // Para equipos incompletos, exigir que se encuentren todos los nombres enviados
+          // Para equipos incompletos, exigir que se encuentren todos los miembros enviados (solo por nombre)
+          const yourTeamNames = yourTeam.filter(p => p && p.name).map(p => p.name);
           matchingTurnsQuery += `
             AND (
               SELECT COUNT(1)
-              FROM r.teams.p1 AS t_inner
-              WHERE t_inner.name IN (${yourTeamNames.map(name => `'${name}'`).join(',')})
+              FROM r.teams.p1 AS t
+              WHERE t.name IN (${yourTeamNames.map(name => `'${name}'`).join(',')})
             ) >= ${yourTeamNames.length}
           `;
         }
       }
     }
     
-    // Filtrar el equipo "opponentTeam" de manera general
+    // Filtrar el equipo "opponentTeam" de manera general, validando nombre, item, ability, tera_type, tera_active, moves y status
     if (opponentTeam && Array.isArray(opponentTeam)) {
-      // Extraer los nombres del equipo enviados por separado para el oponente
-      const opponentTeamNames = opponentTeam.filter(p => p && p.name).map(p => p.name);
-      console.log("Opponent Team Names:", opponentTeamNames); // Depuración
-      
-      if (opponentTeamNames.length > 0) {
-        if (opponentTeamNames.length === 6) {
-          // Para un equipo completo, exigir que en r.teams.p2 se encuentren EXACTAMENTE los 6 Pokémon
-          matchingTurnsQuery += `
-            AND (
-              SELECT COUNT(1)
-              FROM r.teams.p2 AS t_inner
-              WHERE t_inner.name IN (${opponentTeamNames.map(name => `'${name}'`).join(',')})
-            ) = ${opponentTeamNames.length}
-          `;
+      if (opponentTeam.length > 0) {
+        if (opponentTeam.length === 6) {
+          opponentTeam.forEach(member => {
+            matchingTurnsQuery += `
+              AND EXISTS (
+                SELECT 1 FROM UNNEST(r.teams.p2) AS t
+                WHERE t.name = '${member.name}'
+                ${member.item ? `AND t.item = '${member.item}'` : ''}
+              )
+            `;
+          });
         } else {
-          // Para equipos incompletos, exigir que se encuentren todos los nombres enviados
+          const opponentTeamNames = opponentTeam.filter(p => p && p.name).map(p => p.name);
           matchingTurnsQuery += `
             AND (
               SELECT COUNT(1)
-              FROM r.teams.p2 AS t_inner
-              WHERE t_inner.name IN (${opponentTeamNames.map(name => `'${name}'`).join(',')})
+              FROM r.teams.p2 AS t
+              WHERE t.name IN (${opponentTeamNames.map(name => `'${name}'`).join(',')})
             ) >= ${opponentTeamNames.length}
           `;
         }
