@@ -881,6 +881,28 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
                 )
               `;
             }
+
+            // Si el Pokémon no está fainted y se envían filtros adicionales:
+            if (!member.fainted) {
+              if (member.nonVolatileStatus) {
+                matchingTurnsQuery += `
+                  AND EXISTS (
+                    SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                    WHERE rp.name = '${member.name}'
+                      AND rp.non_volatile_status = '${member.nonVolatileStatus}'
+                  )
+                `;
+              }
+              if (member.tera_active !== undefined) {
+                matchingTurnsQuery += `
+                  AND EXISTS (
+                    SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                    WHERE rp.name = '${member.name}'
+                      AND rp.tera.active = ${member.tera_active ? 'TRUE' : 'FALSE'}
+                  )
+                `;
+              }
+            }
           });
         } else {
           // Para equipos incompletos, exigir que se encuentren todos los nombres enviados (solo por nombre)
