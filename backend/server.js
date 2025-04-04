@@ -836,6 +836,13 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
                 WHERE t.name = '${member.name}'
                 ${member.item ? `AND t.item = '${member.item}'` : ''}
                 ${member.ability ? `AND t.ability = '${member.ability}'` : ''}
+                ${member.moves && member.moves.length > 0 ? `
+                  AND (
+                    SELECT COUNT(1) 
+                    FROM UNNEST(t.moves) AS move 
+                    WHERE move IN (${member.moves.map(m => `'${m}'`).join(',')})
+                  ) = ${member.moves.length}
+                ` : ''}
                 ${member.tera_type ? `AND t.tera_type = '${member.tera_type}'` : ''}
               )
             `;
@@ -865,6 +872,13 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
                 WHERE t.name = '${member.name}'
                 ${member.item ? `AND t.item = '${member.item}'` : ''}
                 ${member.ability ? `AND t.ability = '${member.ability}'` : ''}
+                ${member.moves && member.moves.length > 0 ? `
+                  AND (
+                    SELECT COUNT(1) 
+                    FROM UNNEST(t.moves) AS move 
+                    WHERE move IN (${member.moves.map(m => `'${m}'`).join(',')})
+                  ) = ${member.moves.length}
+                ` : ''}
                 ${member.tera_type ? `AND t.tera_type = '${member.tera_type}'` : ''}
               )
             `;
