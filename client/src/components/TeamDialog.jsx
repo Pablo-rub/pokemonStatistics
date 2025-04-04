@@ -145,7 +145,6 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
     };
 
     const handleSelectTeam = () => {
-        // Combinar para cada slot la información básica (team) y los detalles (pokemonDetails)
         const teamWithDetails = team.map((pokemon, index) => {
             if (!pokemon) return null;
             return {
@@ -154,18 +153,17 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                 ability: pokemonDetails[index].ability,
                 moves: pokemonDetails[index].moves,
                 status: pokemonDetails[index].status,
-                teraType: pokemonDetails[index].teraType,
-                teraActive: pokemonDetails[index].teraActive
+                tera_type: pokemonDetails[index].teraType,
+                tera_active: pokemonDetails[index].teraActive,
+                revealed: revealed[index] !== undefined ? revealed[index] : false
             };
         });
 
-        // Verificar que no queden espacios nulos, según tu lógica
         if (teamWithDetails.some(member => !member)) {
             setError('El equipo debe estar completo.');
             return;
         }
 
-        // Envía el equipo completo con detalles al padre
         if (typeof onSelectTeam === 'function') {
             onSelectTeam(teamWithDetails);
         }
