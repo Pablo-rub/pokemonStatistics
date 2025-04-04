@@ -56,7 +56,7 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
         moves: [],
         nonVolatileStatus: '',
         teraType: '',
-        teraActive: false
+        teraActive: null
     }));
     
     // Listas para los selectores
@@ -152,11 +152,10 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                 item: pokemonDetails[index].item,
                 ability: pokemonDetails[index].ability,
                 moves: pokemonDetails[index].moves,
-                nonVolatileStatus: pokemonDetails[index].nonVolatileStatus,
+                non_volatile_status: pokemonDetails[index].nonVolatileStatus,
                 tera_type: pokemonDetails[index].teraType,
                 tera_active: pokemonDetails[index].teraActive,
                 revealed: revealed[index] !== undefined ? revealed[index] : false,
-                fainted: fainted[index] !== undefined ? fainted[index] : false
             };
         });
 
@@ -168,6 +167,7 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
         if (typeof onSelectTeam === 'function') {
             onSelectTeam(teamWithDetails);
         }
+        onClose();
     };
 
     // Toggle expanded details for a Pokemon
