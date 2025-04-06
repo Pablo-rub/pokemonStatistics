@@ -1115,6 +1115,95 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       matchingTurnsQuery += ` AND (${activeAbilityConditions.join(' AND ')})`;
     }
 
+    // Objeto de mapeo para non volatile statuses
+    const statusMapping = {
+      "burn": "brn",
+      "freeze": "frz",
+      "frostbite": "frt",
+      "paralysis": "par",
+      "poison": "psn",
+      "badly poisoned": "tox",
+      "sleep": "slp"
+    };
+
+    let activeNonVolatileStatusConditions = [];
+
+    // Para tus Pokémon activos (lado player1: topLeft, topRight)
+    ["topLeft", "topRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.nonVolatileStatus && details.nonVolatileStatus.trim() !== "") {
+        if (details.nonVolatileStatus.toLowerCase() === "none") {
+          activeNonVolatileStatusConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                WHERE rp.name = @yourPokemon${idx+1} AND (rp.non_volatile_status IS NULL OR rp.non_volatile_status = '')
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                WHERE rp.name = @yourPokemon${idx+1} AND (rp.non_volatile_status IS NULL OR rp.non_volatile_status = '')
+              )
+            )
+          `);
+        } else {
+          const mappedStatus = statusMapping[details.nonVolatileStatus.toLowerCase()] || details.nonVolatileStatus.toLowerCase();
+          activeNonVolatileStatusConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                WHERE rp.name = @yourPokemon${idx+1}
+                  AND LOWER(rp.non_volatile_status) = '${mappedStatus}'
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                WHERE rp.name = @yourPokemon${idx+1}
+                  AND LOWER(rp.non_volatile_status) = '${mappedStatus}'
+              )
+            )
+          `);
+        }
+      }
+    });
+
+    // Para los Pokémon activos del oponente (lado player2: bottomLeft, bottomRight)
+    ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.nonVolatileStatus && details.nonVolatileStatus.trim() !== "") {
+        if (details.nonVolatileStatus.toLowerCase() === "none") {
+          activeNonVolatileStatusConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+              WHERE rp.name = @opponentPokemon${idx+1} AND (rp.non_volatile_status IS NULL OR rp.non_volatile_status = '')
+            )
+          `);
+        } else {
+          const mappedStatus = statusMapping[details.nonVolatileStatus.toLowerCase()] || details.nonVolatileStatus.toLowerCase();
+          activeNonVolatileStatusConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                WHERE rp.name = @opponentPokemon${idx+1}
+                  AND LOWER(rp.non_volatile_status) = '${mappedStatus}'
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                WHERE rp.name = @opponentPokemon${idx+1}
+                  AND LOWER(rp.non_volatile_status) = '${mappedStatus}'
+              )
+            )
+          `);
+        }
+      }
+    });
+
+    // Si se generaron condiciones, se agregan al query general:
+    if (activeNonVolatileStatusConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${activeNonVolatileStatusConditions.join(' AND ')})`;
+    }
+
     // Se añaden condiciones para que ambos equipos estén correctamente posicionados
     matchingTurnsQuery += `
           AND (
