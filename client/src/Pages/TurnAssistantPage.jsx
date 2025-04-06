@@ -33,16 +33,22 @@ import TeamDialog from "../components/TeamDialog";
 
 //todo
 //iu:
-//boton ir para arriba
 //texto de ayuda
 //texto fecha inicio recoleccion
 //que los select se desplieguen para abajo
 //fix teras in moves text
+//fix clear team
+//reset no elimina los pokemon activos
 
 //backend:
+//comprobar activos
+//tris
+//añadir nones
 //any duration tw, screens
 //check moves miraidon discharge vs miraidon discharge
 //ver que hacer con el mirror
+
+//new format replays
 
 function TurnAssistantPage() {
   const [selectedPokemon, setSelectedPokemon] = useState({
