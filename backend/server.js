@@ -1039,25 +1039,39 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     // Inicializar un array para las condiciones de abilities activas
     let activeAbilityConditions = [];
 
-    // Para tus Pokémon activos (lado player1: topLeft, topRight)
+    // Buscar la habilidad en ambos lados para tus Pokémon activos
     ["topLeft", "topRight"].forEach((slot, idx) => {
       const details = pokemonData[slot];
       if (details && details.ability && details.ability.trim() !== "") {
         if (details.ability === "No Ability") {
           activeAbilityConditions.push(`
-            EXISTS(
-              SELECT 1 FROM UNNEST(r.teams.p1) AS p
-              WHERE p.name = @yourPokemon${idx+1} AND (p.ability IS NULL OR p.ability = '')
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) AS p
+                WHERE p.name = @yourPokemon${idx+1} AND (p.ability IS NULL OR p.ability = '')
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) AS p
+                WHERE p.name = @yourPokemon${idx+1} AND (p.ability IS NULL OR p.ability = '')
+              )
             )
           `);
         } else {
-          // Normalización más agresiva para manejar diferentes formatos
           const formattedAbility = details.ability.toLowerCase().replace(/[^a-z0-9]/g, '');
           activeAbilityConditions.push(`
-            EXISTS(
-              SELECT 1 FROM UNNEST(r.teams.p1) AS p
-              WHERE p.name = @yourPokemon${idx+1}
-                AND LOWER(REPLACE(REPLACE(REPLACE(p.ability, ' ', ''), '-', ''), '_', '')) = '${formattedAbility}'
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) AS p
+                WHERE p.name = @yourPokemon${idx+1}
+                  AND LOWER(REPLACE(REPLACE(REPLACE(p.ability, ' ', ''), '-', ''), '_', '')) = '${formattedAbility}'
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) AS p
+                WHERE p.name = @yourPokemon${idx+1}
+                  AND LOWER(REPLACE(REPLACE(REPLACE(p.ability, ' ', ''), '-', ''), '_', '')) = '${formattedAbility}'
+              )
             )
           `);
         }
@@ -1076,12 +1090,20 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
             )
           `);
         } else {
-          const formattedAbility = details.ability.replace(/\s+/g, '').toLowerCase();
+          const formattedAbility = details.ability.toLowerCase().replace(/[^a-z0-9]/g, '');
           activeAbilityConditions.push(`
-            EXISTS(
-              SELECT 1 FROM UNNEST(r.teams.p2) AS p
-              WHERE p.name = @opponentPokemon${idx+1}
-                AND LOWER(REPLACE(p.ability, ' ', '')) = '${formattedAbility}'
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) AS p
+                WHERE p.name = @opponentPokemon${idx+1}
+                  AND LOWER(REPLACE(p.ability, ' ', '')) = '${formattedAbility}'
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) AS p
+                WHERE p.name = @opponentPokemon${idx+1}
+                  AND LOWER(REPLACE(p.ability, ' ', '')) = '${formattedAbility}'
+              )
             )
           `);
         }
