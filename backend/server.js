@@ -866,16 +866,18 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
                   )
                 `;
               }
-              // Filtros adicionales: sólo si el valor es explícito (no null)
-              if (member.nonVolatileStatus) {
+              // Filtrado de non‑volatile status en revealed_pokemon:
+              //console.log("Non-volatile status:", member.non_volatile_status);
+              if (member.non_volatile_status && member.non_volatile_status.trim() !== "") {
                 matchingTurnsQuery += `
                   AND EXISTS (
                     SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
                     WHERE rp.name = '${member.name}'
-                      AND rp.non_volatile_status = '${member.nonVolatileStatus}'
+                      AND rp.non_volatile_status = '${member.non_volatile_status}'
                   )
                 `;
               }
+              // Filtrado de tera active en revealed_pokemon:
               if (member.tera_active !== null && member.tera_active !== undefined) {
                 matchingTurnsQuery += `
                   AND EXISTS (
@@ -943,12 +945,12 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
 
             // Filtros adicionales para non-volatile status y tera_active
             if (!member.fainted) {
-              if (member.nonVolatileStatus) {
+              if (member.non_volatile_status) {
                 matchingTurnsQuery += `
                   AND EXISTS (
                     SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
                     WHERE rp.name = '${member.name}'
-                      AND rp.non_volatile_status = '${member.nonVolatileStatus}'
+                      AND rp.non_volatile_status = '${member.non_volatile_status}'
                   )
                 `;
               }
