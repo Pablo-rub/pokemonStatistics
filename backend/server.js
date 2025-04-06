@@ -979,6 +979,120 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       }
     }
     
+    // Filtro para los items de los 4 Pokémon activos (seleccionados en Pokémon Dialog)
+    let activeItemConditions = [];
+
+    // Para tus Pokémon activos (lado player1)
+    ["topLeft", "topRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot]; // debes asegurarte de tener este objeto con la info
+      if (details && details.item && details.item.trim() !== "") {
+        // Caso especial para "No Item"
+        if (details.item === "No Item") {
+          activeItemConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p1) AS p
+              WHERE p.name = @yourPokemon${idx+1} AND (p.item IS NULL OR p.item = '')
+            )
+          `);
+        } else {
+          const formattedItem = details.item.replace(/\s+/g, '').toLowerCase();
+          activeItemConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p1) AS p
+              WHERE p.name = @yourPokemon${idx+1}
+                AND LOWER(REPLACE(p.item, ' ', '')) = '${formattedItem}'
+            )
+          `);
+        }
+      }
+    });
+
+    // Para los Pokémon activos del oponente (lado player2)
+    ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.item && details.item.trim() !== "") {
+        if (details.item === "No Item") {
+          activeItemConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @opponentPokemon${idx+1} AND (p.item IS NULL OR p.item = '')
+            )
+          `);
+        } else {
+          const formattedItem = details.item.replace(/\s+/g, '').toLowerCase();
+          activeItemConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @opponentPokemon${idx+1}
+                AND LOWER(REPLACE(p.item, ' ', '')) = '${formattedItem}'
+            )
+          `);
+        }
+      }
+    });
+
+    // Si se generaron condiciones, se agregan al query general:
+    if (activeItemConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${activeItemConditions.join(' AND ')})`;
+    }
+
+    // Inicializar un array para las condiciones de abilities activas
+    let activeAbilityConditions = [];
+
+    // Para tus Pokémon activos (lado player1: topLeft, topRight)
+    ["topLeft", "topRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.ability && details.ability.trim() !== "") {
+        if (details.ability === "No Ability") {
+          activeAbilityConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p1) AS p
+              WHERE p.name = @yourPokemon${idx+1} AND (p.ability IS NULL OR p.ability = '')
+            )
+          `);
+        } else {
+          // Normalización más agresiva para manejar diferentes formatos
+          const formattedAbility = details.ability.toLowerCase().replace(/[^a-z0-9]/g, '');
+          activeAbilityConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p1) AS p
+              WHERE p.name = @yourPokemon${idx+1}
+                AND LOWER(REPLACE(REPLACE(REPLACE(p.ability, ' ', ''), '-', ''), '_', '')) = '${formattedAbility}'
+            )
+          `);
+        }
+      }
+    });
+
+    // Para los Pokémon activos del oponente (lado player2: bottomLeft, bottomRight)
+    ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.ability && details.ability.trim() !== "") {
+        if (details.ability === "No Ability") {
+          activeAbilityConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @opponentPokemon${idx+1} AND (p.ability IS NULL OR p.ability = '')
+            )
+          `);
+        } else {
+          const formattedAbility = details.ability.replace(/\s+/g, '').toLowerCase();
+          activeAbilityConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @opponentPokemon${idx+1}
+                AND LOWER(REPLACE(p.ability, ' ', '')) = '${formattedAbility}'
+            )
+          `);
+        }
+      }
+    });
+
+    // Si se generaron condiciones, se añaden al query general:
+    if (activeAbilityConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${activeAbilityConditions.join(' AND ')})`;
+    }
+
     // Se añaden condiciones para que ambos equipos estén correctamente posicionados
     matchingTurnsQuery += `
           AND (
