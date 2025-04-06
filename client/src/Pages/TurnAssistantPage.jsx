@@ -33,7 +33,6 @@ import TeamDialog from "../components/TeamDialog";
 
 //todo
 //iu:
-//boton ir para arriba
 //texto de ayuda
 //texto fecha inicio recoleccion
 //que los select se desplieguen para abajo
@@ -42,7 +41,11 @@ import TeamDialog from "../components/TeamDialog";
 //reset no elimina los pokemon activos
 
 //backend:
+//non volatile status en teams
+//comprobar activos
 //any duration tw, screens
+//tris
+//añadir nones
 //check moves miraidon discharge vs miraidon discharge
 //ver que hacer con el mirror
 

@@ -148,8 +148,8 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
             const heldItem = (pokemonDetails[index].item || '').replace(/\s/g, '');
             const ability = (pokemonDetails[index].ability || '').replace(/\s/g, '');
             const moves = pokemonDetails[index].moves.map(move => move.replace(/\s/g, ''));
-            const nonVolatileStatus = (pokemonDetails[index].nonVolatileStatus || 'none').replace(/\s/g, '');
-            
+            const nonVolatileStatus = pokemonDetails[index].nonVolatileStatus;
+
             return {
                 ...pokemon,
                 item: heldItem,
