@@ -39,6 +39,7 @@ import TeamDialog from "../components/TeamDialog";
 //que los select se desplieguen para abajo
 //fix teras in moves text
 //fix clear team
+//reset no elimina los pokemon activos
 
 //backend:
 //any duration tw, screens

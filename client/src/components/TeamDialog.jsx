@@ -10,6 +10,7 @@ import { createFilterOptions } from '@mui/material/Autocomplete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import useDraggable from '../hooks/useDraggable';
+import TriStateCheckbox from '../components/TriStateCheckBox';
 
 // Checkbox con estilo blanco
 const WhiteCheckbox = styled(Checkbox)(({ theme }) => ({
@@ -144,15 +145,21 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
     const handleSelectTeam = () => {
         const teamWithDetails = team.map((pokemon, index) => {
             if (!pokemon) return null;
+            const heldItem = (pokemonDetails[index].item || '').replace(/\s/g, '');
+            const ability = (pokemonDetails[index].ability || '').replace(/\s/g, '');
+            const moves = pokemonDetails[index].moves.map(move => move.replace(/\s/g, ''));
+            const nonVolatileStatus = (pokemonDetails[index].nonVolatileStatus || 'none').replace(/\s/g, '');
+            
             return {
                 ...pokemon,
-                item: pokemonDetails[index].item,
-                ability: pokemonDetails[index].ability,
-                moves: pokemonDetails[index].moves,
-                non_volatile_status: pokemonDetails[index].nonVolatileStatus,
+                item: heldItem,
+                ability: ability,
+                moves: moves,
+                non_volatile_status: nonVolatileStatus,
                 tera_type: pokemonDetails[index].teraType,
                 tera_active: pokemonDetails[index].teraActive,
                 revealed: revealed[index] !== undefined ? revealed[index] : false,
+                fainted: fainted[index] !== undefined ? fainted[index] : false
             };
         });
 
@@ -160,7 +167,6 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
             setError('El equipo debe estar completo.');
             return;
         }
-
         if (typeof onSelectTeam === 'function') {
             onSelectTeam(teamWithDetails);
         }
@@ -457,7 +463,7 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                             <Grid item xs={12} sm={6}>
                                                 <FormControl fullWidth>
                                                     <Autocomplete
-                                                        options={nonVolatileStatusList}
+                                                        options={['none', ...nonVolatileStatusList]}
                                                         getOptionLabel={(option) => option || ''}
                                                         value={pokemonDetails[index].nonVolatileStatus || null}
                                                         onChange={(_, newValue) => updatePokemonDetail(index, 'nonVolatileStatus', newValue || '')}
@@ -505,9 +511,9 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                                 {pokemonDetails[index].teraType && !fainted[index] && revealed[index] && (
                                                     <FormControlLabel
                                                         control={
-                                                            <WhiteCheckbox
-                                                                checked={pokemonDetails[index].teraActive || false}
-                                                                onChange={(e) => updatePokemonDetail(index, 'teraActive', e.target.checked)}
+                                                            <TriStateCheckbox
+                                                                value={pokemonDetails[index].teraActive}
+                                                                onChange={(newValue) => updatePokemonDetail(index, 'teraActive', newValue)}
                                                             />
                                                         }
                                                         label="Tera Active"
