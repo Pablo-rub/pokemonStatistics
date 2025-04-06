@@ -11,9 +11,6 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import useDraggable from '../hooks/useDraggable';
 
-//TODO
-// El nonVolatileStatus debe de añadirse como atributo en la base d edatos, ahora mismo no está
-
 // Checkbox con estilo blanco
 const WhiteCheckbox = styled(Checkbox)(({ theme }) => ({
     color: 'white',
