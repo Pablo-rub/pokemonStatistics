@@ -2,8 +2,7 @@
 import React from 'react';
 import { IconButton, Box } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
-import CloseIcon from '@mui/icons-material/Close';
-import IndeterminateCheckBoxIcon from '@mui/icons-material/IndeterminateCheckBox';
+import DisabledByDefaultIcon from '@mui/icons-material/DisabledByDefault';
 
 const TriStateCheckbox = ({ value, onChange, ...props }) => {
   const handleClick = () => {
@@ -39,7 +38,7 @@ const TriStateCheckbox = ({ value, onChange, ...props }) => {
   } else if (value === false) {
     icon = (
       <Box sx={commonStyle}>
-        <CloseIcon style={{ color: 'white', fontSize: 16 }} />
+        <DisabledByDefaultIcon style={{ color: 'white', fontSize: 16 }} />
       </Box>
     );
   } else {

@@ -637,6 +637,8 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       },
       yourTeam = [],
       opponentTeam = [],
+      filterStats = false,
+      statChanges = {}
     } = req.body;
 
     console.log("Battle conditions received:", JSON.stringify(battleConditions, null, 2));
@@ -824,6 +826,50 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       `;
     }
     
+    // Filtro para Stats (sólo si se activó el filtro)
+    if (filterStats) {
+      let statsConditions = [];
+      // Para tus Pokémon activos (lado player1)
+      ["topLeft", "topRight"].forEach((slot, idx) => {
+                statsConditions.push(`
+          EXISTS(
+            SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+            WHERE rp.name = @yourPokemon${idx+1}
+              AND rp.remaining_hs = ${statChanges.hp}
+              AND rp.stats.atk = ${statChanges.atk}
+              AND rp.stats.def = ${statChanges.def}
+              AND rp.stats.spa = ${statChanges.spa}
+              AND rp.stats.spd = ${statChanges.spd}
+              AND rp.stats.spe = ${statChanges.spe}
+              AND rp.stats.acc = ${statChanges.acc}
+              AND rp.stats.eva = ${statChanges.eva}
+          )
+        `);
+      });
+
+      // Para los Pokémon activos del oponente (lado player2)
+      ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+        statsConditions.push(`
+          EXISTS(
+            SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+            WHERE rp.name = @opponentPokemon${idx+1}
+              AND rp.remaining_hs = ${statChanges.hp}
+              AND rp.stats.atk = ${statChanges.atk}
+              AND rp.stats.def = ${statChanges.def}
+              AND rp.stats.spa = ${statChanges.spa}
+              AND rp.stats.spd = ${statChanges.spd}
+              AND rp.stats.spe = ${statChanges.spe}
+              AND rp.stats.acc = ${statChanges.acc}
+              AND rp.stats.eva = ${statChanges.eva}
+          )
+        `);
+      });
+
+      if (statsConditions.length > 0) {
+        matchingTurnsQuery += ` AND (${statsConditions.join(' AND ')})`;
+      }
+    }
+    
     // Filtrar el equipo "yourTeam" de manera general, validando nombre, item, ability, tera_type, tera_active, moves, status y si está revelado (revealed)
     if (yourTeam && Array.isArray(yourTeam)) {
       if (yourTeam.length > 0) {
@@ -979,6 +1025,1173 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       }
     }
     
+    // Filtro para los items de los 4 Pokémon activos (seleccionados en Pokémon Dialog)
+    let activeItemConditions = [];
+
+    // Para tus Pokémon activos (lado player1)
+    ["topLeft", "topRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot]; // debes asegurarte de tener este objeto con la info
+      if (details && details.item && details.item.trim() !== "") {
+        // Caso especial para "No Item"
+        if (details.item === "No Item") {
+          activeItemConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p1) AS p
+              WHERE p.name = @yourPokemon${idx+1} AND (p.item IS NULL OR p.item = '')
+            )
+          `);
+        } else {
+          const formattedItem = details.item.replace(/\s+/g, '').toLowerCase();
+          activeItemConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p1) AS p
+              WHERE p.name = @yourPokemon${idx+1}
+                AND LOWER(REPLACE(p.item, ' ', '')) = '${formattedItem}'
+            )
+          `);
+        }
+      }
+    });
+
+    // Para los Pokémon activos del oponente (lado player2)
+    ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.item && details.item.trim() !== "") {
+        if (details.item === "No Item") {
+          activeItemConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @opponentPokemon${idx+1} AND (p.item IS NULL OR p.item = '')
+            )
+          `);
+        } else {
+          const formattedItem = details.item.replace(/\s+/g, '').toLowerCase();
+          activeItemConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @opponentPokemon${idx+1}
+                AND LOWER(REPLACE(p.item, ' ', '')) = '${formattedItem}'
+            )
+          `);
+        }
+      }
+    });
+
+    // Si se generaron condiciones, se agregan al query general:
+    if (activeItemConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${activeItemConditions.join(' AND ')})`;
+    }
+
+    // Inicializar un array para las condiciones de abilities activas
+    let activeAbilityConditions = [];
+
+    // Buscar la habilidad en ambos lados para tus Pokémon activos
+    ["topLeft", "topRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.ability && details.ability.trim() !== "") {
+        if (details.ability === "No Ability") {
+          activeAbilityConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) AS p
+                WHERE p.name = @yourPokemon${idx+1} AND (p.ability IS NULL OR p.ability = '')
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) AS p
+                WHERE p.name = @yourPokemon${idx+1} AND (p.ability IS NULL OR p.ability = '')
+              )
+            )
+          `);
+        } else {
+          const formattedAbility = details.ability.toLowerCase().replace(/[^a-z0-9]/g, '');
+          activeAbilityConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) AS p
+                WHERE p.name = @yourPokemon${idx+1}
+                  AND LOWER(REPLACE(REPLACE(REPLACE(p.ability, ' ', ''), '-', ''), '_', '')) = '${formattedAbility}'
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) AS p
+                WHERE p.name = @yourPokemon${idx+1}
+                  AND LOWER(REPLACE(REPLACE(REPLACE(p.ability, ' ', ''), '-', ''), '_', '')) = '${formattedAbility}'
+              )
+            )
+          `);
+        }
+      }
+    });
+
+    // Para los Pokémon activos del oponente (lado player2: bottomLeft, bottomRight)
+    ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.ability && details.ability.trim() !== "") {
+        if (details.ability === "No Ability") {
+          activeAbilityConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @opponentPokemon${idx+1} AND (p.ability IS NULL OR p.ability = '')
+            )
+          `);
+        } else {
+          const formattedAbility = details.ability.toLowerCase().replace(/[^a-z0-9]/g, '');
+          activeAbilityConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p1) AS p
+                WHERE p.name = @opponentPokemon${idx+1}
+                  AND LOWER(REPLACE(p.ability, ' ', '')) = '${formattedAbility}'
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(r.teams.p2) AS p
+                WHERE p.name = @opponentPokemon${idx+1}
+                  AND LOWER(REPLACE(p.ability, ' ', '')) = '${formattedAbility}'
+              )
+            )
+          `);
+        }
+      }
+    });
+
+    // Si se generaron condiciones, se añaden al query general:
+    if (activeAbilityConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${activeAbilityConditions.join(' AND ')})`;
+    }
+
+    // Objeto de mapeo para non volatile statuses
+    const statusMapping = {
+      "burn": "brn",
+      "freeze": "frz",
+      "frostbite": "frt",
+      "paralysis": "par",
+      "poison": "psn",
+      "badly poisoned": "tox",
+      "sleep": "slp"
+    };
+
+    let activeNonVolatileStatusConditions = [];
+
+    // Para tus Pokémon activos (lado player1: topLeft, topRight)
+    ["topLeft", "topRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.nonVolatileStatus && details.nonVolatileStatus.trim() !== "") {
+        if (details.nonVolatileStatus.toLowerCase() === "none") {
+          activeNonVolatileStatusConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                WHERE rp.name = @yourPokemon${idx+1} AND (rp.non_volatile_status IS NULL OR rp.non_volatile_status = '')
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                WHERE rp.name = @yourPokemon${idx+1} AND (rp.non_volatile_status IS NULL OR rp.non_volatile_status = '')
+              )
+            )
+          `);
+        } else {
+          const mappedStatus = statusMapping[details.nonVolatileStatus.toLowerCase()] || details.nonVolatileStatus.toLowerCase();
+          activeNonVolatileStatusConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                WHERE rp.name = @yourPokemon${idx+1}
+                  AND LOWER(rp.non_volatile_status) = '${mappedStatus}'
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                WHERE rp.name = @yourPokemon${idx+1}
+                  AND LOWER(rp.non_volatile_status) = '${mappedStatus}'
+              )
+            )
+          `);
+        }
+      }
+    });
+
+    // Para los Pokémon activos del oponente (lado player2: bottomLeft, bottomRight)
+    ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.nonVolatileStatus && details.nonVolatileStatus.trim() !== "") {
+        if (details.nonVolatileStatus.toLowerCase() === "none") {
+          activeNonVolatileStatusConditions.push(`
+            EXISTS(
+              SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+              WHERE rp.name = @opponentPokemon${idx+1} AND (rp.non_volatile_status IS NULL OR rp.non_volatile_status = '')
+            )
+          `);
+        } else {
+          const mappedStatus = statusMapping[details.nonVolatileStatus.toLowerCase()] || details.nonVolatileStatus.toLowerCase();
+          activeNonVolatileStatusConditions.push(`
+            (
+              EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                WHERE rp.name = @opponentPokemon${idx+1}
+                  AND LOWER(rp.non_volatile_status) = '${mappedStatus}'
+              )
+              OR
+              EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                WHERE rp.name = @opponentPokemon${idx+1}
+                  AND LOWER(rp.non_volatile_status) = '${mappedStatus}'
+              )
+            )
+          `);
+        }
+      }
+    });
+
+    // Si se generaron condiciones, se agregan al query general:
+    if (activeNonVolatileStatusConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${activeNonVolatileStatusConditions.join(' AND ')})`;
+    }
+
+    // Filtro para los volatile statuses de los 4 Pokémon activos (seleccionados en Pokémon Dialog)
+    let activeVolatileStatusConditions = [];
+
+    // Para tus Pokémon activos (lado player1)
+    ["topLeft", "topRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.volatileStatuses && details.volatileStatuses.length > 0) {
+        // Normalizar cada volatile status: pasar a minúsculas y quitar espacios
+        const normalizedStatuses = details.volatileStatuses.map(s => s.toLowerCase().replace(/\s+/g, ''));
+        activeVolatileStatusConditions.push(`
+          EXISTS(
+            SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp,
+                   UNNEST(rp.volatile_status) AS vs
+            WHERE rp.name = @yourPokemon${idx+1}
+              AND LOWER(REPLACE(vs.name, ' ', '')) IN (${normalizedStatuses.map(s => `'${s}'`).join(',')})
+          )
+        `);
+      }
+    });
+
+    // Para los Pokémon activos del oponente (lado player2)
+    ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.volatileStatuses && details.volatileStatuses.length > 0) {
+        const normalizedStatuses = details.volatileStatuses.map(s => s.toLowerCase().replace(/\s+/g, ''));
+        activeVolatileStatusConditions.push(`
+          EXISTS(
+            SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp,
+                   UNNEST(rp.volatile_status) AS vs
+            WHERE rp.name = @opponentPokemon${idx+1}
+              AND LOWER(REPLACE(vs.name, ' ', '')) IN (${normalizedStatuses.map(s => `'${s}'`).join(',')})
+          )
+        `);
+      }
+    });
+
+    // Si se generaron condiciones, se agregan al query general:
+    if (activeVolatileStatusConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${activeVolatileStatusConditions.join(' AND ')})`;
+    }
+
+    // Filtro para los moves de los 4 Pokémon activos (seleccionados en Pokémon Dialog)
+    let activeMovesConditions = [];
+
+    // Para tus Pokémon activos (lado player1)
+    ["topLeft", "topRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.moves && details.moves.length > 0) {
+        // Extraer el nombre del movimiento si es objeto o usar el valor directamente
+        const movesArray = details.moves.map(m => (typeof m === 'object' && m.name ? m.name : m));
+        // Normalizar cada movimiento: pasar a minúsculas y quitar espacios
+        const normalizedMoves = movesArray.map(m => m.toLowerCase().replace(/\s+/g, ''));
+        activeMovesConditions.push(`
+          (
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p1) AS p
+              WHERE p.name = @yourPokemon${idx+1}
+                AND (
+                  SELECT COUNT(1)
+                  FROM UNNEST(p.moves) AS move
+                  WHERE LOWER(REPLACE(move, ' ', '')) IN (${normalizedMoves.map(m => `'${m}'`).join(',')})
+                ) = ${normalizedMoves.length}
+            )
+            OR
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @yourPokemon${idx+1}
+                AND (
+                  SELECT COUNT(1)
+                  FROM UNNEST(p.moves) AS move
+                  WHERE LOWER(REPLACE(move, ' ', '')) IN (${normalizedMoves.map(m => `'${m}'`).join(',')})
+                ) = ${normalizedMoves.length}
+            )
+          )
+        `);
+      }
+    });
+
+    // Para los Pokémon activos del oponente (lado player2)
+    ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.moves && details.moves.length > 0) {
+        const movesArray = details.moves.map(m => (typeof m === 'object' && m.name ? m.name : m));
+        const normalizedMoves = movesArray.map(m => m.toLowerCase().replace(/\s+/g, ''));
+        activeMovesConditions.push(`
+          (
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p1) AS p
+              WHERE p.name = @opponentPokemon${idx+1}
+                AND (
+                  SELECT COUNT(1)
+                  FROM UNNEST(p.moves) AS move
+                  WHERE LOWER(REPLACE(move, ' ', '')) IN (${normalizedMoves.map(m => `'${m}'`).join(',')})
+                ) = ${normalizedMoves.length}
+            )
+            OR
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @opponentPokemon${idx+1}
+                AND (
+                  SELECT COUNT(1)
+                  FROM UNNEST(p.moves) AS move
+                  WHERE LOWER(REPLACE(move, ' ', '')) IN (${normalizedMoves.map(m => `'${m}'`).join(',')})
+                ) = ${normalizedMoves.length}
+            )
+          )
+        `);
+      }
+    });
+
+    // Si se generaron condiciones, se agregan al query general:
+    if (activeMovesConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${activeMovesConditions.join(' AND ')})`;
+    }
+
+    // Filtro para los tera type de los 4 Pokémon activos (seleccionados en Pokémon Dialog)
+    let activeTeraTypeConditions = [];
+
+    // Para tus Pokémon activos (lado player1)
+    ["topLeft", "topRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.teraType && details.teraType.trim() !== "") {
+        const normalizedTeraType = details.teraType.toLowerCase().replace(/\s+/g, '');
+        activeTeraTypeConditions.push(`
+          (
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p1) AS p
+              WHERE p.name = @yourPokemon${idx+1}
+                AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+            )
+            OR
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @yourPokemon${idx+1}
+                AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+            )
+          )
+        `);
+      }
+    });
+
+    // Para los Pokémon activos del oponente (lado player2)
+    ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.teraType && details.teraType.trim() !== "") {
+        const normalizedTeraType = details.teraType.toLowerCase().replace(/\s+/g, '');
+        activeTeraTypeConditions.push(`
+          (
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p1) AS p
+              WHERE p.name = @opponentPokemon${idx+1}
+                AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+            )
+            OR
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @opponentPokemon${idx+1}
+                AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+            )
+          )
+        `);
+      }
+    });
+
+    // Si se generaron condiciones, se agregan al query general:
+    if (activeTeraTypeConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${activeTeraTypeConditions.join(' AND ')})`;
+    }
+
+    // Filtro para Tera Active de los 4 Pokémon activos (seleccionados en Pokémon Dialog)
+    let activeTeraActiveConditions = [];
+
+    // Para tus Pokémon activos (lado player1)
+    ["topLeft", "topRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && typeof details.teraActive === 'boolean') {
+        const condition = details.teraActive ? 'TRUE' : 'FALSE';
+        activeTeraActiveConditions.push(`
+          (
+            EXISTS(
+              SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+              WHERE rp.name = @yourPokemon${idx+1}
+                AND rp.tera.active = ${condition}
+            )
+            OR
+            EXISTS(
+              SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+              WHERE rp.name = @yourPokemon${idx+1}
+                AND rp.tera.active = ${condition}
+            )
+          )
+        `);
+      }
+    });
+
+    // Para los Pokémon activos del oponente (lado player2)
+    ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && typeof details.teraActive === 'boolean') {
+        const condition = details.teraActive ? 'TRUE' : 'FALSE';
+        activeTeraActiveConditions.push(`
+          (
+            EXISTS(
+              SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+              WHERE rp.name = @opponentPokemon${idx+1}
+                AND rp.tera.active = ${condition}
+            )
+            OR
+            EXISTS(
+              SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+              WHERE rp.name = @opponentPokemon${idx+1}
+                AND rp.tera.active = ${condition}
+            )
+          )
+        `);
+      }
+    });
+
+    if (activeTeraActiveConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${activeTeraActiveConditions.join(' AND ')})`;
+    }
+
+        if (battleConditions.weather && battleConditions.weatherDuration) {
+      const normWeather = battleConditions.weather.toLowerCase().replace(/\s+/g, '');
+      if (normWeather === 'any') {
+        // No se aplica ningún filtro para weather
+      } else if (normWeather === 'none') {
+        matchingTurnsQuery += `
+          AND EXISTS (
+            SELECT 1 FROM UNNEST([t]) AS turn
+            WHERE (turn.weather.condition IS NULL OR TRIM(turn.weather.condition) = '')
+              AND turn.weather.duration = 0
+          )
+        `;
+      } else {
+        matchingTurnsQuery += `
+          AND EXISTS (
+            SELECT 1 FROM UNNEST([t]) AS turn
+            WHERE LOWER(REPLACE(turn.weather.condition, ' ', '')) LIKE '%${normWeather}%'
+              AND turn.weather.duration = ${battleConditions.weatherDuration}
+          )
+        `;
+      }
+    }
+
+    // Filtro para Field
+    if (battleConditions.field && battleConditions.fieldDuration) {
+      const normField = battleConditions.field.toLowerCase().replace(/\s+/g, '');
+      if (normField === 'any') {
+        // No se aplica ningún filtro para field
+      } else if (normField === 'none') {
+        matchingTurnsQuery += `
+          AND EXISTS (
+            SELECT 1 FROM UNNEST([t]) AS turn
+            WHERE (turn.field.terrain IS NULL OR TRIM(turn.field.terrain) = '')
+              AND turn.field.duration = 0
+          )
+        `;
+      } else {
+        matchingTurnsQuery += `
+          AND EXISTS (
+            SELECT 1 FROM UNNEST([t]) AS turn
+            WHERE LOWER(REPLACE(turn.field.terrain, ' ', '')) LIKE '%${normField}%'
+              AND turn.field.duration = ${battleConditions.fieldDuration}
+          )
+        `;
+      }
+    }
+
+    // Filtro para Room
+    if (battleConditions.room && battleConditions.roomDuration) {
+      const normRoom = battleConditions.room.toLowerCase().replace(/\s+/g, '');
+      if (normRoom === 'any') {
+        // No se aplica ningún filtro para room
+      } else if (normRoom === 'none') {
+        matchingTurnsQuery += `
+          AND EXISTS (
+            SELECT 1 FROM UNNEST([t]) AS turn
+            WHERE (turn.room.condition IS NULL OR TRIM(turn.room.condition) = '')
+              AND turn.room.duration = 0
+          )
+        `;
+      } else {
+        matchingTurnsQuery += `
+          AND EXISTS (
+            SELECT 1 FROM UNNEST([t]) AS turn
+            WHERE LOWER(REPLACE(turn.room.condition, ' ', '')) LIKE '%${normRoom}%'
+              AND turn.room.duration = ${battleConditions.roomDuration}
+          )
+        `;
+      }
+    }
+
+    // Filtro para Tailwind – Tu lado
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.yourSide &&
+      typeof battleConditions.sideEffects.yourSide.tailwind === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.yourSide &&
+      battleConditions.sideEffectsDuration.yourSide.tailwind !== undefined
+    ) {
+      const twYour = battleConditions.sideEffects.yourSide.tailwind ? 'TRUE' : 'FALSE';
+      const durationYour = battleConditions.sideEffectsDuration.yourSide.tailwind;
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.tailwind.player1 = ${twYour}
+              AND turn.tailwind.duration1 = ${durationYour}
+            )
+            OR
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.tailwind.player2 = ${twYour}
+              AND turn.tailwind.duration2 = ${durationYour}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para Tailwind – Oponente
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.opponentSide &&
+      typeof battleConditions.sideEffects.opponentSide.tailwind === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.opponentSide &&
+      battleConditions.sideEffectsDuration.opponentSide.tailwind !== undefined
+    ) {
+      const twOpponent = battleConditions.sideEffects.opponentSide.tailwind ? 'TRUE' : 'FALSE';
+      const durationOpponent = battleConditions.sideEffectsDuration.opponentSide.tailwind;
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.tailwind.player1 = ${twOpponent}
+              AND turn.tailwind.duration1 = ${durationOpponent}
+            )
+            OR
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.tailwind.player2 = ${twOpponent}
+              AND turn.tailwind.duration2 = ${durationOpponent}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para reflect – Tu lado
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.yourSide &&
+      typeof battleConditions.sideEffects.yourSide.reflect === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.yourSide &&
+      battleConditions.sideEffectsDuration.yourSide.reflect !== undefined
+    ) {
+      const reflectYour = battleConditions.sideEffects.yourSide.reflect ? 'TRUE' : 'FALSE';
+      const durationYour = battleConditions.sideEffectsDuration.yourSide.reflect;
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.screens.reflect.player1 = ${reflectYour}
+              AND turn.screens.reflect.duration1 = ${durationYour}
+            )
+            OR
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.screens.reflect.player2 = ${reflectYour}
+              AND turn.screens.reflect.duration2 = ${durationYour}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para reflect – Oponente
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.opponentSide &&
+      typeof battleConditions.sideEffects.opponentSide.reflect === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.opponentSide &&
+      battleConditions.sideEffectsDuration.opponentSide.reflect !== undefined
+    ) {
+      const reflectOpponent = battleConditions.sideEffects.opponentSide.reflect ? 'TRUE' : 'FALSE';
+      const durationOpponent = battleConditions.sideEffectsDuration.opponentSide.reflect;
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.screens.reflect.player1 = ${reflectOpponent}
+              AND turn.screens.reflect.duration1 = ${durationOpponent}
+            )
+            OR
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.screens.reflect.player2 = ${reflectOpponent}
+              AND turn.screens.reflect.duration2 = ${durationOpponent}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para light screen – Tu lado
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.yourSide &&
+      typeof battleConditions.sideEffects.yourSide.lightscreen === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.yourSide &&
+      battleConditions.sideEffectsDuration.yourSide.lightscreen !== undefined
+    ) {
+      // Usamos la misma nomenclatura: 'lightscreen'
+      const lightscreenYour = battleConditions.sideEffects.yourSide.lightscreen ? 'TRUE' : 'FALSE';
+      const durationYour = battleConditions.sideEffectsDuration.yourSide.lightscreen;
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player1)
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.screens.lightscreen.player1 = ${lightscreenYour}
+              AND turn.screens.lightscreen.duration1 >= ${durationYour}
+            )
+            OR
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player2)
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.screens.lightscreen.player2 = ${lightscreenYour}
+              AND turn.screens.lightscreen.duration2 >= ${durationYour}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para light screen – Oponente
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.opponentSide &&
+      typeof battleConditions.sideEffects.opponentSide.lightScreen === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.opponentSide &&
+      battleConditions.sideEffectsDuration.opponentSide.lightScreen !== undefined
+    ) {
+      const lightScreenOpponent = battleConditions.sideEffects.opponentSide.lightScreen ? 'TRUE' : 'FALSE';
+      const durationOpponent = battleConditions.sideEffectsDuration.opponentSide.lightScreen;
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.screens.lightscreen.player1 = ${lightScreenOpponent}
+              AND turn.screens.lightscreen.duration1 = ${durationOpponent}
+            )
+            OR
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.screens.lightscreen.player2 = ${lightScreenOpponent}
+              AND turn.screens.lightscreen.duration2 = ${durationOpponent}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para Aurora Veil – Tu lado
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.yourSide &&
+      battleConditions.sideEffects.yourSide.auroraveil !== undefined &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.yourSide &&
+      battleConditions.sideEffectsDuration.yourSide.auroraveil !== undefined
+    ) {
+      const avYour = battleConditions.sideEffects.yourSide.auroraveil ? 'TRUE' : 'FALSE';
+      const durationYourAV = battleConditions.sideEffectsDuration.yourSide.auroraveil;
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.screens.auroraveil.player1 = ${avYour}
+              AND turn.screens.auroraveil.duration1 = ${durationYourAV}
+            )
+            OR
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player2)
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.screens.auroraveil.player2 = ${avYour}
+              AND turn.screens.auroraveil.duration2 = ${durationYourAV}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para Aurora Veil – Oponente
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.opponentSide &&
+      battleConditions.sideEffects.opponentSide.auroraveil !== undefined &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.opponentSide &&
+      battleConditions.sideEffectsDuration.opponentSide.auroraveil !== undefined
+    ) {
+      const avOpp = battleConditions.sideEffects.opponentSide.auroraveil ? 'TRUE' : 'FALSE';
+      const durationOppAV = battleConditions.sideEffectsDuration.opponentSide.auroraveil;
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1)
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.screens.auroraveil.player1 = ${avOpp}
+              AND turn.screens.auroraveil.duration1 = ${durationOppAV}
+            )
+            OR
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2)
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.screens.auroraveil.player2 = ${avOpp}
+              AND turn.screens.auroraveil.duration2 = ${durationOppAV}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para aurora veil – Tu lado
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.yourSide &&
+      typeof battleConditions.sideEffects.yourSide.auroraVeil === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.yourSide &&
+      battleConditions.sideEffectsDuration.yourSide.auroraVeil !== undefined
+    ) {
+      const auroraVeilYour = battleConditions.sideEffects.yourSide.auroraVeil ? 'TRUE' : 'FALSE';
+      const durationYour = battleConditions.sideEffectsDuration.yourSide.auroraVeil;
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.aurora_veil.player1 = ${auroraVeilYour}
+              AND turn.aurora_veil.duration1 = ${durationYour}
+            )
+            OR
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.aurora_veil.player2 = ${auroraVeilYour}
+              AND turn.aurora_veil.duration2 = ${durationYour}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para aurora veil – Oponente
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.opponentSide &&
+      typeof battleConditions.sideEffects.opponentSide.auroraVeil === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.opponentSide &&
+      battleConditions.sideEffectsDuration.opponentSide.auroraVeil !== undefined
+    ) {
+      const auroraVeilOpponent = battleConditions.sideEffects.opponentSide.auroraVeil ? 'TRUE' : 'FALSE';
+      const durationOpponent = battleConditions.sideEffectsDuration.opponentSide.auroraVeil;
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.aurora_veil.player1 = ${auroraVeilOpponent}
+              AND turn.aurora_veil.duration1 = ${durationOpponent}
+            )
+            OR
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.aurora_veil.player2 = ${auroraVeilOpponent}
+              AND turn.aurora_veil.duration2 = ${durationOpponent}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para spikes – Tu lado
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.yourSide &&
+      typeof battleConditions.sideEffects.yourSide.spikes === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.yourSide &&
+      battleConditions.sideEffectsDuration.yourSide.spikes !== undefined
+    ) {
+      const spikesYour = battleConditions.sideEffects.yourSide.spikes ? 'TRUE' : 'FALSE';
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.spikes.spikes.player1 = ${spikesYour}
+            )
+            OR
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.spikes.spikes.player2 = ${spikesYour}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para spikes – Oponente
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.opponentSide &&
+      typeof battleConditions.sideEffects.opponentSide.spikes === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.opponentSide &&
+      battleConditions.sideEffectsDuration.opponentSide.spikes !== undefined
+    ) {
+      const spikesOpponent = battleConditions.sideEffects.opponentSide.spikes ? 'TRUE' : 'FALSE';
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.spikes.spikes.player1 = ${spikesOpponent}
+            )
+            OR
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.spikes.spikes.player2 = ${spikesOpponent}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para toxic spikes – Tu lado
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.yourSide &&
+      typeof battleConditions.sideEffects.yourSide.toxicSpikes === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.yourSide &&
+      battleConditions.sideEffectsDuration.yourSide.toxicSpikes !== undefined
+    ) {
+      const toxicSpikesYour = battleConditions.sideEffects.yourSide.toxicSpikes ? 'TRUE' : 'FALSE';
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.spikes.toxic_spikes.player1 = ${toxicSpikesYour}
+            )
+            OR
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.spikes.toxic_spikes.player2 = ${toxicSpikesYour}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para toxic spikes – Oponente
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.opponentSide &&
+      typeof battleConditions.sideEffects.opponentSide.toxicSpikes === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.opponentSide &&
+      battleConditions.sideEffectsDuration.opponentSide.toxicSpikes !== undefined
+    ) {
+      const toxicSpikesOpponent = battleConditions.sideEffects.opponentSide.toxicSpikes ? 'TRUE' : 'FALSE';
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.spikes.toxic_spikes.player1 = ${toxicSpikesOpponent}
+            )
+            OR
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.spikes.toxic_spikes.player2 = ${toxicSpikesOpponent}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para stealth rock – Tu lado
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.yourSide &&
+      typeof battleConditions.sideEffects.yourSide.stealthRock === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.yourSide &&
+      battleConditions.sideEffectsDuration.yourSide.stealthRock !== undefined
+    ) {
+      const stealthRockYour = battleConditions.sideEffects.yourSide.stealthRock ? 'TRUE' : 'FALSE';
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.spikes.stealth_rock.player1 = ${stealthRockYour}
+            )
+            OR
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.spikes.stealth_rock.player2 = ${stealthRockYour}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para stealth rock – Oponente
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.opponentSide &&
+      typeof battleConditions.sideEffects.opponentSide.stealthRock === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.opponentSide &&
+      battleConditions.sideEffectsDuration.opponentSide.stealthRock !== undefined
+    ) {
+      const stealthRockOpponent = battleConditions.sideEffects.opponentSide.stealthRock ? 'TRUE' : 'FALSE';
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.spikes.stealth_rock.player1 = ${stealthRockOpponent}
+            )
+            OR
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.spikes.stealth_rock.player2 = ${stealthRockOpponent}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para sticky web – Tu lado
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.yourSide &&
+      typeof battleConditions.sideEffects.yourSide.stickyWeb === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.yourSide &&
+      battleConditions.sideEffectsDuration.yourSide.stickyWeb !== undefined
+    ) {
+      const stickyWebYour = battleConditions.sideEffects.yourSide.stickyWeb ? 'TRUE' : 'FALSE';
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.spikes.sticky_web.player1 = ${stickyWebYour}
+            )
+            OR
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.spikes.sticky_web.player2 = ${stickyWebYour}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para sticky web – Oponente
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.opponentSide &&
+      typeof battleConditions.sideEffects.opponentSide.stickyWeb === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.opponentSide &&
+      battleConditions.sideEffectsDuration.opponentSide.stickyWeb !== undefined
+    ) {
+      const stickyWebOpponent = battleConditions.sideEffects.opponentSide.stickyWeb ? 'TRUE' : 'FALSE';
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.spikes.sticky_web.player1 = ${stickyWebOpponent}
+            )
+            OR
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.spikes.sticky_web.player2 = ${stickyWebOpponent}
+            )
+          )
+        )
+      `;
+    }
+
+    // Mapeo de nombres de hazards a las propiedades en la base de datos
+    const hazardsMapping = {
+      "Spikes": "spikes",
+      "Toxic Spikes": "toxic_spikes",
+      "Stealth Rock": "stealth_rock",
+      "Sticky Web": "sticky_web"
+    };
+
+    // Filtro para Entry Hazards – Tu lado
+    if (battleConditions.entryHazards && battleConditions.entryHazards.yourSide) {
+      for (const hazard in battleConditions.entryHazards.yourSide) {
+        if (battleConditions.entryHazards.yourSide[hazard] === true) {
+          const prop = hazardsMapping[hazard];
+          let hazardCondition = "";
+          // Para Spikes y Toxic Spikes son int (nivel mínimo)
+          if (hazard === "Spikes" || hazard === "Toxic Spikes") {
+            const level = (battleConditions.entryHazardsLevel?.yourSide?.[hazard]) || 0;
+            hazardCondition = `(turn.spikes.player1.${prop} = ${level})`;
+          } else {
+            // Para Stealth Rock y Sticky Web se espera un booleano y opcionalmente duración
+            hazardCondition = `(turn.spikes.player1.${prop} = TRUE)`;
+          }
+          matchingTurnsQuery += `
+            AND EXISTS (
+              SELECT 1 FROM UNNEST([t]) AS turn
+              WHERE (
+                (
+                  '${yourPokemon[0]}' IN UNNEST(t.starts_with.player1)
+                  AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1)
+                  AND ${hazardCondition}
+                )
+                OR
+                (
+                  '${yourPokemon[0]}' IN UNNEST(t.starts_with.player2)
+                  AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2)
+                  AND ${hazardCondition.replace("player1", "player2")}
+                )
+              )
+            )
+          `;
+        }
+      }
+    }
+
+    // Filtro para Entry Hazards – Oponente
+    if (battleConditions.entryHazards && battleConditions.entryHazards.opponentSide) {
+      for (const hazard in battleConditions.entryHazards.opponentSide) {
+        if (battleConditions.entryHazards.opponentSide[hazard] === true) {
+          const prop = hazardsMapping[hazard];
+          let hazardCondition = "";
+          if (hazard === "Spikes" || hazard === "Toxic Spikes") {
+            const level = (battleConditions.entryHazardsLevel?.opponentSide?.[hazard]) || 0;
+            hazardCondition = `(turn.spikes.player1.${prop} >= ${level})`;
+          } else {
+            hazardCondition = `(turn.spikes.player1.${prop} = TRUE)`;
+          }
+          matchingTurnsQuery += `
+            AND EXISTS (
+              SELECT 1 FROM UNNEST([t]) AS turn
+              WHERE (
+                (
+                  '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1)
+                  AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)
+                  AND ${hazardCondition}
+                )
+                OR
+                (
+                  '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2)
+                  AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)
+                  AND ${hazardCondition.replace("player1", "player2")}
+                )
+              )
+            )
+          `;
+        }
+      }
+    }
+
     // Se añaden condiciones para que ambos equipos estén correctamente posicionados
     matchingTurnsQuery += `
           AND (
