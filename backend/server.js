@@ -1472,15 +1472,75 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       matchingTurnsQuery += ` AND (${activeTeraActiveConditions.join(' AND ')})`;
     }
 
-    if (battleConditions.weather && battleConditions.weatherDuration) {
+        if (battleConditions.weather && battleConditions.weatherDuration) {
       const normWeather = battleConditions.weather.toLowerCase().replace(/\s+/g, '');
-      matchingTurnsQuery += `
-        AND EXISTS (
-          SELECT 1 FROM UNNEST([t]) AS turn
-          WHERE LOWER(REPLACE(turn.weather.condition, ' ', '')) LIKE '%${normWeather}%'
-            AND turn.weather.duration >= ${battleConditions.weatherDuration}
-        )
-      `;
+      if (normWeather === 'any') {
+        // No se aplica ningún filtro para weather
+      } else if (normWeather === 'none') {
+        matchingTurnsQuery += `
+          AND EXISTS (
+            SELECT 1 FROM UNNEST([t]) AS turn
+            WHERE (turn.weather.condition IS NULL OR TRIM(turn.weather.condition) = '')
+              AND turn.weather.duration = 0
+          )
+        `;
+      } else {
+        matchingTurnsQuery += `
+          AND EXISTS (
+            SELECT 1 FROM UNNEST([t]) AS turn
+            WHERE LOWER(REPLACE(turn.weather.condition, ' ', '')) LIKE '%${normWeather}%'
+              AND turn.weather.duration >= ${battleConditions.weatherDuration}
+          )
+        `;
+      }
+    }
+
+    // Filtro para Field
+    if (battleConditions.field && battleConditions.fieldDuration) {
+      const normField = battleConditions.field.toLowerCase().replace(/\s+/g, '');
+      if (normField === 'any') {
+        // No se aplica ningún filtro para field
+      } else if (normField === 'none') {
+        matchingTurnsQuery += `
+          AND EXISTS (
+            SELECT 1 FROM UNNEST([t]) AS turn
+            WHERE (turn.field.terrain IS NULL OR TRIM(turn.field.terrain) = '')
+              AND turn.field.duration = 0
+          )
+        `;
+      } else {
+        matchingTurnsQuery += `
+          AND EXISTS (
+            SELECT 1 FROM UNNEST([t]) AS turn
+            WHERE LOWER(REPLACE(turn.field.terrain, ' ', '')) LIKE '%${normField}%'
+              AND turn.field.duration >= ${battleConditions.fieldDuration}
+          )
+        `;
+      }
+    }
+
+    // Filtro para Room
+    if (battleConditions.room && battleConditions.roomDuration) {
+      const normRoom = battleConditions.room.toLowerCase().replace(/\s+/g, '');
+      if (normRoom === 'any') {
+        // No se aplica ningún filtro para room
+      } else if (normRoom === 'none') {
+        matchingTurnsQuery += `
+          AND EXISTS (
+            SELECT 1 FROM UNNEST([t]) AS turn
+            WHERE (turn.room.condition IS NULL OR TRIM(turn.room.condition) = '')
+              AND turn.room.duration = 0
+          )
+        `;
+      } else {
+        matchingTurnsQuery += `
+          AND EXISTS (
+            SELECT 1 FROM UNNEST([t]) AS turn
+            WHERE LOWER(REPLACE(turn.room.condition, ' ', '')) LIKE '%${normRoom}%'
+              AND turn.room.duration >= ${battleConditions.roomDuration}
+          )
+        `;
+      }
     }
 
     // Se añaden condiciones para que ambos equipos estén correctamente posicionados
