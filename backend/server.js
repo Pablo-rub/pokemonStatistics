@@ -1472,6 +1472,17 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       matchingTurnsQuery += ` AND (${activeTeraActiveConditions.join(' AND ')})`;
     }
 
+    if (battleConditions.weather && battleConditions.weatherDuration) {
+      const normWeather = battleConditions.weather.toLowerCase().replace(/\s+/g, '');
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE LOWER(REPLACE(turn.weather.condition, ' ', '')) LIKE '%${normWeather}%'
+            AND turn.weather.duration >= ${battleConditions.weatherDuration}
+        )
+      `;
+    }
+
     // Se añaden condiciones para que ambos equipos estén correctamente posicionados
     matchingTurnsQuery += `
           AND (
