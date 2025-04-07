@@ -1543,6 +1543,74 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       }
     }
 
+    // Filtro para Tailwind – Tu lado
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.yourSide &&
+      typeof battleConditions.sideEffects.yourSide.tailwind === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.yourSide &&
+      battleConditions.sideEffectsDuration.yourSide.tailwind !== undefined
+    ) {
+      const twYour = battleConditions.sideEffects.yourSide.tailwind ? 'TRUE' : 'FALSE';
+      const durationYour = battleConditions.sideEffectsDuration.yourSide.tailwind;
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.tailwind.player1 = ${twYour}
+              AND turn.tailwind.duration1 = ${durationYour}
+            )
+            OR
+            (
+              '${yourPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${yourPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.tailwind.player2 = ${twYour}
+              AND turn.tailwind.duration2 = ${durationYour}
+            )
+          )
+        )
+      `;
+    }
+
+    // Filtro para Tailwind – Oponente
+    if (
+      battleConditions.sideEffects &&
+      battleConditions.sideEffects.opponentSide &&
+      typeof battleConditions.sideEffects.opponentSide.tailwind === 'boolean' &&
+      battleConditions.sideEffectsDuration &&
+      battleConditions.sideEffectsDuration.opponentSide &&
+      battleConditions.sideEffectsDuration.opponentSide.tailwind !== undefined
+    ) {
+      const twOpponent = battleConditions.sideEffects.opponentSide.tailwind ? 'TRUE' : 'FALSE';
+      const durationOpponent = battleConditions.sideEffectsDuration.opponentSide.tailwind;
+      matchingTurnsQuery += `
+        AND EXISTS (
+          SELECT 1 FROM UNNEST([t]) AS turn
+          WHERE (
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player1) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player1)
+              AND turn.tailwind.player1 = ${twOpponent}
+              AND turn.tailwind.duration1 = ${durationOpponent}
+            )
+            OR
+            (
+              '${opponentPokemon[0]}' IN UNNEST(t.starts_with.player2) 
+              AND '${opponentPokemon[1]}' IN UNNEST(t.starts_with.player2)
+              AND turn.tailwind.player2 = ${twOpponent}
+              AND turn.tailwind.duration2 = ${durationOpponent}
+            )
+          )
+        )
+      `;
+    }
+
+
+
     // Se añaden condiciones para que ambos equipos estén correctamente posicionados
     matchingTurnsQuery += `
           AND (
