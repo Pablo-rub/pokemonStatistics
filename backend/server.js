@@ -637,6 +637,8 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       },
       yourTeam = [],
       opponentTeam = [],
+      filterStats = false,
+      statChanges = {}
     } = req.body;
 
     console.log("Battle conditions received:", JSON.stringify(battleConditions, null, 2));
@@ -822,6 +824,50 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
             AND p.stats.eva  = @oppEva2
         )
       `;
+    }
+    
+    // Filtro para Stats (sólo si se activó el filtro)
+    if (filterStats) {
+      let statsConditions = [];
+      // Para tus Pokémon activos (lado player1)
+      ["topLeft", "topRight"].forEach((slot, idx) => {
+                statsConditions.push(`
+          EXISTS(
+            SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+            WHERE rp.name = @yourPokemon${idx+1}
+              AND rp.remaining_hs = ${statChanges.hp}
+              AND rp.stats.atk = ${statChanges.atk}
+              AND rp.stats.def = ${statChanges.def}
+              AND rp.stats.spa = ${statChanges.spa}
+              AND rp.stats.spd = ${statChanges.spd}
+              AND rp.stats.spe = ${statChanges.spe}
+              AND rp.stats.acc = ${statChanges.acc}
+              AND rp.stats.eva = ${statChanges.eva}
+          )
+        `);
+      });
+
+      // Para los Pokémon activos del oponente (lado player2)
+      ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+        statsConditions.push(`
+          EXISTS(
+            SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+            WHERE rp.name = @opponentPokemon${idx+1}
+              AND rp.remaining_hs = ${statChanges.hp}
+              AND rp.stats.atk = ${statChanges.atk}
+              AND rp.stats.def = ${statChanges.def}
+              AND rp.stats.spa = ${statChanges.spa}
+              AND rp.stats.spd = ${statChanges.spd}
+              AND rp.stats.spe = ${statChanges.spe}
+              AND rp.stats.acc = ${statChanges.acc}
+              AND rp.stats.eva = ${statChanges.eva}
+          )
+        `);
+      });
+
+      if (statsConditions.length > 0) {
+        matchingTurnsQuery += ` AND (${statsConditions.join(' AND ')})`;
+      }
     }
     
     // Filtrar el equipo "yourTeam" de manera general, validando nombre, item, ability, tera_type, tera_active, moves, status y si está revelado (revealed)
