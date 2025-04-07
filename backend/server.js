@@ -1252,19 +1252,31 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     ["topLeft", "topRight"].forEach((slot, idx) => {
       const details = pokemonData[slot];
       if (details && details.moves && details.moves.length > 0) {
-        // Extraer el nombre del movimiento (si es objeto se usa la propiedad name)
+        // Extraer el nombre del movimiento si es objeto o usar el valor directamente
         const movesArray = details.moves.map(m => (typeof m === 'object' && m.name ? m.name : m));
-        // Normalizar cada movimiento a minúsculas y quitar espacios
+        // Normalizar cada movimiento: pasar a minúsculas y quitar espacios
         const normalizedMoves = movesArray.map(m => m.toLowerCase().replace(/\s+/g, ''));
         activeMovesConditions.push(`
-          EXISTS(
-            SELECT 1 FROM UNNEST(r.teams.p1) AS p
-            WHERE p.name = @yourPokemon${idx+1}
-              AND (
-                SELECT COUNT(1)
-                FROM UNNEST(p.moves) AS move
-                WHERE LOWER(REPLACE(move, ' ', '')) IN (${normalizedMoves.map(m => `'${m}'`).join(',')})
-              ) = ${normalizedMoves.length}
+          (
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p1) AS p
+              WHERE p.name = @yourPokemon${idx+1}
+                AND (
+                  SELECT COUNT(1)
+                  FROM UNNEST(p.moves) AS move
+                  WHERE LOWER(REPLACE(move, ' ', '')) IN (${normalizedMoves.map(m => `'${m}'`).join(',')})
+                ) = ${normalizedMoves.length}
+            )
+            OR
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @yourPokemon${idx+1}
+                AND (
+                  SELECT COUNT(1)
+                  FROM UNNEST(p.moves) AS move
+                  WHERE LOWER(REPLACE(move, ' ', '')) IN (${normalizedMoves.map(m => `'${m}'`).join(',')})
+                ) = ${normalizedMoves.length}
+            )
           )
         `);
       }
@@ -1277,14 +1289,26 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
         const movesArray = details.moves.map(m => (typeof m === 'object' && m.name ? m.name : m));
         const normalizedMoves = movesArray.map(m => m.toLowerCase().replace(/\s+/g, ''));
         activeMovesConditions.push(`
-          EXISTS(
-            SELECT 1 FROM UNNEST(r.teams.p2) AS p
-            WHERE p.name = @opponentPokemon${idx+1}
-              AND (
-                SELECT COUNT(1)
-                FROM UNNEST(p.moves) AS move
-                WHERE LOWER(REPLACE(move, ' ', '')) IN (${normalizedMoves.map(m => `'${m}'`).join(',')})
-              ) = ${normalizedMoves.length}
+          (
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p1) AS p
+              WHERE p.name = @opponentPokemon${idx+1}
+                AND (
+                  SELECT COUNT(1)
+                  FROM UNNEST(p.moves) AS move
+                  WHERE LOWER(REPLACE(move, ' ', '')) IN (${normalizedMoves.map(m => `'${m}'`).join(',')})
+                ) = ${normalizedMoves.length}
+            )
+            OR
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @opponentPokemon${idx+1}
+                AND (
+                  SELECT COUNT(1)
+                  FROM UNNEST(p.moves) AS move
+                  WHERE LOWER(REPLACE(move, ' ', '')) IN (${normalizedMoves.map(m => `'${m}'`).join(',')})
+                ) = ${normalizedMoves.length}
+            )
           )
         `);
       }
@@ -1302,13 +1326,20 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     ["topLeft", "topRight"].forEach((slot, idx) => {
       const details = pokemonData[slot];
       if (details && details.teraType && details.teraType.trim() !== "") {
-        // Normalizar: pasar a minúsculas y quitar espacios
         const normalizedTeraType = details.teraType.toLowerCase().replace(/\s+/g, '');
         activeTeraTypeConditions.push(`
-          EXISTS(
-            SELECT 1 FROM UNNEST(r.teams.p1) AS p
-            WHERE p.name = @yourPokemon${idx+1}
-              AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+          (
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p1) AS p
+              WHERE p.name = @yourPokemon${idx+1}
+                AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+            )
+            OR
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @yourPokemon${idx+1}
+                AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+            )
           )
         `);
       }
@@ -1320,10 +1351,18 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       if (details && details.teraType && details.teraType.trim() !== "") {
         const normalizedTeraType = details.teraType.toLowerCase().replace(/\s+/g, '');
         activeTeraTypeConditions.push(`
-          EXISTS(
-            SELECT 1 FROM UNNEST(r.teams.p2) AS p
-            WHERE p.name = @opponentPokemon${idx+1}
-              AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+          (
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p1) AS p
+              WHERE p.name = @opponentPokemon${idx+1}
+                AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+            )
+            OR
+            EXISTS(
+              SELECT 1 FROM UNNEST(r.teams.p2) AS p
+              WHERE p.name = @opponentPokemon${idx+1}
+                AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+            )
           )
         `);
       }
@@ -1332,6 +1371,59 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
     // Si se generaron condiciones, se agregan al query general:
     if (activeTeraTypeConditions.length > 0) {
       matchingTurnsQuery += ` AND (${activeTeraTypeConditions.join(' AND ')})`;
+    }
+
+    // Filtro para Tera Active de los 4 Pokémon activos (seleccionados en Pokémon Dialog)
+    let activeTeraActiveConditions = [];
+
+    // Para tus Pokémon activos (lado player1)
+    ["topLeft", "topRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && typeof details.teraActive === 'boolean') {
+        const condition = details.teraActive ? 'TRUE' : 'FALSE';
+        activeTeraActiveConditions.push(`
+          (
+            EXISTS(
+              SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+              WHERE rp.name = @yourPokemon${idx+1}
+                AND rp.tera.active = ${condition}
+            )
+            OR
+            EXISTS(
+              SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+              WHERE rp.name = @yourPokemon${idx+1}
+                AND rp.tera.active = ${condition}
+            )
+          )
+        `);
+      }
+    });
+
+    // Para los Pokémon activos del oponente (lado player2)
+    ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && typeof details.teraActive === 'boolean') {
+        const condition = details.teraActive ? 'TRUE' : 'FALSE';
+        activeTeraActiveConditions.push(`
+          (
+            EXISTS(
+              SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+              WHERE rp.name = @opponentPokemon${idx+1}
+                AND rp.tera.active = ${condition}
+            )
+            OR
+            EXISTS(
+              SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+              WHERE rp.name = @opponentPokemon${idx+1}
+                AND rp.tera.active = ${condition}
+            )
+          )
+        `);
+      }
+    });
+
+    if (activeTeraActiveConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${activeTeraActiveConditions.join(' AND ')})`;
     }
 
     // Se añaden condiciones para que ambos equipos estén correctamente posicionados
