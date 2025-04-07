@@ -1295,6 +1295,45 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       matchingTurnsQuery += ` AND (${activeMovesConditions.join(' AND ')})`;
     }
 
+    // Filtro para los tera type de los 4 Pokémon activos (seleccionados en Pokémon Dialog)
+    let activeTeraTypeConditions = [];
+
+    // Para tus Pokémon activos (lado player1)
+    ["topLeft", "topRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.teraType && details.teraType.trim() !== "") {
+        // Normalizar: pasar a minúsculas y quitar espacios
+        const normalizedTeraType = details.teraType.toLowerCase().replace(/\s+/g, '');
+        activeTeraTypeConditions.push(`
+          EXISTS(
+            SELECT 1 FROM UNNEST(r.teams.p1) AS p
+            WHERE p.name = @yourPokemon${idx+1}
+              AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+          )
+        `);
+      }
+    });
+
+    // Para los Pokémon activos del oponente (lado player2)
+    ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.teraType && details.teraType.trim() !== "") {
+        const normalizedTeraType = details.teraType.toLowerCase().replace(/\s+/g, '');
+        activeTeraTypeConditions.push(`
+          EXISTS(
+            SELECT 1 FROM UNNEST(r.teams.p2) AS p
+            WHERE p.name = @opponentPokemon${idx+1}
+              AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+          )
+        `);
+      }
+    });
+
+    // Si se generaron condiciones, se agregan al query general:
+    if (activeTeraTypeConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${activeTeraTypeConditions.join(' AND ')})`;
+    }
+
     // Se añaden condiciones para que ambos equipos estén correctamente posicionados
     matchingTurnsQuery += `
           AND (
