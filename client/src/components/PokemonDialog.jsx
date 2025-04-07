@@ -7,6 +7,9 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import DisabledByDefaultIcon from '@mui/icons-material/DisabledByDefault';
 import useDraggable from '../hooks/useDraggable';
 import MovesSelect from './MovesSelect';
 import VolatileStatusesSelect from './VolatileStatusesSelect';
@@ -31,7 +34,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
     eva: 0,
   });
   const [selectedTeraType, setSelectedTeraType] = useState('');
-  const [teraActive, setTeraActive] = useState(false);
+  const [teraActive, setTeraActive] = useState(null);
   const [statsExpanded, setStatsExpanded] = useState(false);
   const [filterStats, setFilterStats] = useState(false);
   
@@ -131,10 +134,20 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
       eva: 0,
     });
     setSelectedTeraType('');
-    setTeraActive(false);
+    setTeraActive(null);
   };
 
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+  const handleTeraActiveChange = () => {
+    if (teraActive === null) {
+      setTeraActive(true);
+    } else if (teraActive === true) {
+      setTeraActive(false);
+    } else {
+      setTeraActive(null);
+    }
+  };
 
   const teraTypes = [
     'Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice', 
@@ -279,13 +292,15 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                     {selectedTeraType && (
                       <FormControlLabel
                         control={
-                          <Checkbox 
-                            checked={teraActive}
-                            onChange={(e) => setTeraActive(e.target.checked)}
-                            sx={{ 
-                              color: 'white',
-                              '&.Mui-checked': { color: '#24CC9F' }
-                            }}
+                          <Checkbox
+                            // Si teraActive === true se muestra el tick (checked), y si es false se utiliza indeterminate para mostrar la X;
+                            // En estado null se muestra el icono sin marcar.
+                            checked={teraActive === true}
+                            indeterminate={teraActive === false}
+                            onClick={handleTeraActiveChange}
+                            icon={<CheckBoxOutlineBlankIcon sx={{ color: 'white' }} />}
+                            checkedIcon={<CheckBoxIcon sx={{ color: 'white' }} />}
+                            indeterminateIcon={<DisabledByDefaultIcon sx={{ color: 'white' }} />}
                           />
                         }
                         label="Tera Active"
