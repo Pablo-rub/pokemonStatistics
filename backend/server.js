@@ -1204,6 +1204,47 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       matchingTurnsQuery += ` AND (${activeNonVolatileStatusConditions.join(' AND ')})`;
     }
 
+    // Filtro para los volatile statuses de los 4 Pokémon activos (seleccionados en Pokémon Dialog)
+    let activeVolatileStatusConditions = [];
+
+    // Para tus Pokémon activos (lado player1)
+    ["topLeft", "topRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.volatileStatuses && details.volatileStatuses.length > 0) {
+        // Normalizar cada volatile status: pasar a minúsculas y quitar espacios
+        const normalizedStatuses = details.volatileStatuses.map(s => s.toLowerCase().replace(/\s+/g, ''));
+        activeVolatileStatusConditions.push(`
+          EXISTS(
+            SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp,
+                   UNNEST(rp.volatile_status) AS vs
+            WHERE rp.name = @yourPokemon${idx+1}
+              AND LOWER(REPLACE(vs.name, ' ', '')) IN (${normalizedStatuses.map(s => `'${s}'`).join(',')})
+          )
+        `);
+      }
+    });
+
+    // Para los Pokémon activos del oponente (lado player2)
+    ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.volatileStatuses && details.volatileStatuses.length > 0) {
+        const normalizedStatuses = details.volatileStatuses.map(s => s.toLowerCase().replace(/\s+/g, ''));
+        activeVolatileStatusConditions.push(`
+          EXISTS(
+            SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp,
+                   UNNEST(rp.volatile_status) AS vs
+            WHERE rp.name = @opponentPokemon${idx+1}
+              AND LOWER(REPLACE(vs.name, ' ', '')) IN (${normalizedStatuses.map(s => `'${s}'`).join(',')})
+          )
+        `);
+      }
+    });
+
+    // Si se generaron condiciones, se agregan al query general:
+    if (activeVolatileStatusConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${activeVolatileStatusConditions.join(' AND ')})`;
+    }
+
     // Filtro para los moves de los 4 Pokémon activos (seleccionados en Pokémon Dialog)
     let activeMovesConditions = [];
 
