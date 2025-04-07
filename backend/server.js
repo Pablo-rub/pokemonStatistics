@@ -1204,6 +1204,56 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       matchingTurnsQuery += ` AND (${activeNonVolatileStatusConditions.join(' AND ')})`;
     }
 
+    // Filtro para los moves de los 4 Pokémon activos (seleccionados en Pokémon Dialog)
+    let activeMovesConditions = [];
+
+    // Para tus Pokémon activos (lado player1)
+    ["topLeft", "topRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.moves && details.moves.length > 0) {
+        // Extraer el nombre del movimiento (si es objeto se usa la propiedad name)
+        const movesArray = details.moves.map(m => (typeof m === 'object' && m.name ? m.name : m));
+        // Normalizar cada movimiento a minúsculas y quitar espacios
+        const normalizedMoves = movesArray.map(m => m.toLowerCase().replace(/\s+/g, ''));
+        activeMovesConditions.push(`
+          EXISTS(
+            SELECT 1 FROM UNNEST(r.teams.p1) AS p
+            WHERE p.name = @yourPokemon${idx+1}
+              AND (
+                SELECT COUNT(1)
+                FROM UNNEST(p.moves) AS move
+                WHERE LOWER(REPLACE(move, ' ', '')) IN (${normalizedMoves.map(m => `'${m}'`).join(',')})
+              ) = ${normalizedMoves.length}
+          )
+        `);
+      }
+    });
+
+    // Para los Pokémon activos del oponente (lado player2)
+    ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
+      const details = pokemonData[slot];
+      if (details && details.moves && details.moves.length > 0) {
+        const movesArray = details.moves.map(m => (typeof m === 'object' && m.name ? m.name : m));
+        const normalizedMoves = movesArray.map(m => m.toLowerCase().replace(/\s+/g, ''));
+        activeMovesConditions.push(`
+          EXISTS(
+            SELECT 1 FROM UNNEST(r.teams.p2) AS p
+            WHERE p.name = @opponentPokemon${idx+1}
+              AND (
+                SELECT COUNT(1)
+                FROM UNNEST(p.moves) AS move
+                WHERE LOWER(REPLACE(move, ' ', '')) IN (${normalizedMoves.map(m => `'${m}'`).join(',')})
+              ) = ${normalizedMoves.length}
+          )
+        `);
+      }
+    });
+
+    // Si se generaron condiciones, se agregan al query general:
+    if (activeMovesConditions.length > 0) {
+      matchingTurnsQuery += ` AND (${activeMovesConditions.join(' AND ')})`;
+    }
+
     // Se añaden condiciones para que ambos equipos estén correctamente posicionados
     matchingTurnsQuery += `
           AND (
