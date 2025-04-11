@@ -211,12 +211,23 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                 <>
                   <FormControl fullWidth sx={{ mt: 2 }}>
                     <Autocomplete
-                      options={itemsList}
+                      options={[{ name: "None" }, ...itemsList]}
                       getOptionLabel={(option) => option.name}
-                      value={itemsList.find(item => item.name === selectedItem) || null}
-                      onChange={(e, newValue) => setSelectedItem(newValue ? newValue.name : '')}
+                      value={
+                        selectedItem === "None"
+                          ? { name: "None" }
+                          : itemsList.find(item => item.name === selectedItem) || null
+                      }
+                      onChange={(e, newValue) =>
+                        setSelectedItem(newValue ? newValue.name : '')
+                      }
                       renderInput={(params) => (
-                        <TextField {...params} label="Held Item" variant="outlined" InputLabelProps={{ style: { color: 'white' } }} />
+                        <TextField
+                          {...params}
+                          label="Held Item"
+                          variant="outlined"
+                          InputLabelProps={{ style: { color: 'white' } }}
+                        />
                       )}
                       sx={{
                         '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
@@ -227,14 +238,24 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                   </FormControl>
                   <FormControl fullWidth sx={{ mt: 2 }}>
                     <Autocomplete
-                      options={abilitiesList}
+                      options={[{ name: "None" }, ...abilitiesList]}
                       getOptionLabel={(option) => option.name}
-                      value={abilitiesList.find(ability => ability.name === selectedAbility) || null}
+                      value={
+                        selectedAbility
+                          ? (selectedAbility === "None"
+                                ? { name: "None" }
+                                : abilitiesList.find(ability => ability.name === selectedAbility) || null)
+                          : null
+                      }
                       onChange={(e, newValue) => setSelectedAbility(newValue ? newValue.name : '')}
                       renderInput={(params) => (
-                        <TextField {...params} label="Ability" variant="outlined" InputLabelProps={{ style: { color: 'white' } }} />
+                        <TextField
+                          {...params}
+                          label="Ability"
+                          variant="outlined"
+                          InputLabelProps={{ style: { color: 'white' } }}
+                        />
                       )}
-                      // Se elimina el mt interno para que solo se use el del FormControl
                       sx={{
                         '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
                         '& .MuiSvgIcon-root': { color: 'white' }
@@ -242,9 +263,10 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                     />
                   </FormControl>
 
+                  {/* Non Volatile Statuses */}
                   <FormControl fullWidth sx={{ mt: 2 }}>
                     <Autocomplete
-                      options={["Burn", "Freeze", "Paralysis", "Poison", "Badly poisoned", "Sleep"]}
+                      options={["None", "Burn", "Freeze", "Paralysis", "Poison", "Badly poisoned", "Sleep"]}
                       getOptionLabel={(option) => option}
                       value={selectedNonVolatileStatus}
                       onChange={(e, newValue) => setSelectedNonVolatileStatus(newValue || '')}
@@ -255,6 +277,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                     />
                   </FormControl>
 
+                  {/* Volatile Statuses */}
                   <FormControl fullWidth sx={{ mt: 2 }}>
                     <VolatileStatusesSelect
                       options={volatileStatuses}
