@@ -9,6 +9,9 @@ import { styled } from '@mui/material/styles';
 import { createFilterOptions } from '@mui/material/Autocomplete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import DisabledByDefaultIcon from '@mui/icons-material/DisabledByDefault';
 import useDraggable from '../hooks/useDraggable';
 import TriStateCheckbox from '../components/TriStateCheckBox';
 
@@ -533,6 +536,7 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                                             <TriStateCheckbox
                                                                 value={pokemonDetails[index].teraActive}
                                                                 onChange={(newValue) => updatePokemonDetail(index, 'teraActive', newValue)}
+                                                                sx={{ color: 'white' }}
                                                             />
                                                         }
                                                         label="Tera Active"
