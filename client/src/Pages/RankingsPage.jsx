@@ -8,13 +8,13 @@ import axios from 'axios';
 import { 
     XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend, CartesianGrid
 } from 'recharts';
-import FirstPageIcon from '@mui/icons-material/FirstPage';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
-import LastPageIcon from '@mui/icons-material/LastPage';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import RemoveIcon from '@mui/icons-material/Remove';
+import PokemonList from '../components/rankings/PokemonList';
+import DetailsPane from '../components/rankings/DetailsPane';
 
 //todo
 // que se muestren los mismos pokemon
@@ -361,19 +361,28 @@ const fetchPokemonDetails = async (pokemonName) => {
     };
 
     // Add this function to render category navigation
-    const renderCategoryNavigation = () => (
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-            <IconButton onClick={handlePrevCategory} sx={{ color: 'white' }}>
-                <NavigateBeforeIcon />
-            </IconButton>
-            <Typography variant="h6" sx={{ color: 'white' }}>
-                {categories[currentCategory].name}
-            </Typography>
-            <IconButton onClick={handleNextCategory} sx={{ color: 'white' }}>
-                <NavigateNextIcon />
-            </IconButton>
-        </Box>
-    );
+    const renderCategoryNavigation = () => {
+        // Si estamos en ranking de usage, se muestran todas las categorías;
+        // en caso contrario (por ejemplo, ranking de victorias) se excluye 'historicalUsage'.
+        const navCategories =
+            rankingType === 'usage'
+                ? categories
+                : categories.filter(category => category.key !== 'historicalUsage');
+
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                <IconButton onClick={handlePrevCategory} sx={{ color: 'white' }}>
+                    <NavigateBeforeIcon />
+                </IconButton>
+                <Typography variant="h6" sx={{ color: 'white' }}>
+                    {navCategories[currentCategory % navCategories.length].name}
+                </Typography>
+                <IconButton onClick={handleNextCategory} sx={{ color: 'white' }}>
+                    <NavigateNextIcon />
+                </IconButton>
+            </Box>
+        );
+    };
 
     // Function to prepare all historical data for a category (for combined chart)
     const prepareCategoryHistoricalData = (pokemonName, categoryKey) => {
@@ -803,7 +812,7 @@ const fetchPokemonDetails = async (pokemonName) => {
             return (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                     <Typography sx={{ color: 'white' }}>
-                        Select a Pokémon to see historical usage
+                        Select a Pokémon
                     </Typography>
                 </Box>
             );
@@ -1026,197 +1035,34 @@ const fetchPokemonDetails = async (pokemonName) => {
                 <Grid container spacing={2}>
                     {/* Pokémon list */}
                     <Grid item xs={12} md={3}>
-                        <Box sx={{ 
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 2
-                        }}>
-                            {isLoadingFormat ? (
-                                <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
-                                    <CircularProgress />
-                                </Box>
-                            ) : (
-                                <>
-                                    {getPaginatedData().map((pokemon) => (
-                                        <Paper
-                                            key={pokemon.rank}
-                                            onClick={() => handlePokemonSelect(pokemon)}
-                                            sx={{
-                                                p: 2,
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                backgroundColor: selectedPokemon?.name === pokemon.name ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                                                '&:hover': {
-                                                    backgroundColor: 'rgba(255, 255, 255, 0.05)'
-                                                }
-                                            }}
-                                        >
-                                            <Box sx={{ 
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 2,
-                                                width: '100%'
-                                            }}>
-                                                <PokemonSprite pokemon={{ name: pokemon.name }} />
-                                                <Box sx={{ flexGrow: 1 }}>
-                                                    <Typography>{pokemon.name}</Typography>
-                                                    <Typography variant="caption">{pokemon.percentage}%</Typography>
-                                                </Box>
-                                                <Typography variant="caption">#{pokemon.rank}</Typography>
-                                            </Box>
-                                        </Paper>
-                                    ))}
-                                    <Box sx={{ 
-                                        display: 'flex', 
-                                        justifyContent: 'center', 
-                                        alignItems: 'center',
-                                        gap: 2,
-                                        mt: 2
-                                    }}>
-                                        <IconButton 
-                                            onClick={() => handlePageChange(null, 1)} 
-                                            disabled={page === 1}
-                                            sx={{ color: 'white' }}
-                                        >
-                                            <FirstPageIcon />
-                                        </IconButton>
-                                        
-                                        <IconButton 
-                                            onClick={() => handlePageChange(null, page - 1)} 
-                                            disabled={page === 1}
-                                            sx={{ color: 'white' }}
-                                        >
-                                            <NavigateBeforeIcon />
-                                        </IconButton>
-                                        
-                                        <Typography sx={{ color: 'white', mx: 1, minWidth: '60px', textAlign: 'center' }}>
-                                            {page}/{Math.ceil(usageData.length / itemsPerPage)}
-                                        </Typography>
-                                        
-                                        <IconButton 
-                                            onClick={() => handlePageChange(null, page + 1)} 
-                                            disabled={page >= Math.ceil(usageData.length / itemsPerPage)}
-                                            sx={{ color: 'white' }}
-                                        >
-                                            <NavigateNextIcon />
-                                        </IconButton>
-                                        
-                                        <IconButton 
-                                            onClick={() => handlePageChange(null, Math.ceil(usageData.length / itemsPerPage))} 
-                                            disabled={page >= Math.ceil(usageData.length / itemsPerPage)}
-                                            sx={{ color: 'white' }}
-                                        >
-                                            <LastPageIcon />
-                                        </IconButton>
-                                    </Box>
-                                </>
-                            )}
-                        </Box>
+                    <PokemonList
+                        data={getPaginatedData()}
+                        isLoadingFormat={isLoadingFormat}
+                        onPokemonSelect={handlePokemonSelect}
+                        selectedPokemon={selectedPokemon}
+                        page={page}
+                        itemsPerPage={itemsPerPage}
+                        totalItems={usageData.length}
+                        onPageChange={handlePageChange}
+                    />
                     </Grid>
 
                     {/* Details panel */}
                     <Grid item xs={12} md={9}>
-                        <Paper sx={{ 
-                            p: 3,
-                            backgroundColor: '#221FC7',
-                            height: 'calc(100vh - 100px)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            overflow: 'hidden',  // Mantener hidden
-                            '& *': {
-                                // Aplicar globalmente a todos los elementos dentro
-                                scrollbarWidth: 'none',
-                                '&::-webkit-scrollbar': {
-                                    display: 'none'
-                                },
-                                msOverflowStyle: 'none'  // Fixed: kebab-case to camelCase
-                            }
-                        }}>
-                            {isLoadingFormat ? (
-                                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                                    <CircularProgress />
-                                </Box>
-                            ) : isLoadingDetails ? (
-                                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                                    <CircularProgress />
-                                </Box>
-                            ) : selectedPokemon && pokemonDetails ? (
-                                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                    {/* Pokemon header with name, sprite and usage */}
-                                    <Box sx={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center',
-                                        borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
-                                        pb: 2,
-                                        mb: 2
-                                    }}>
-                                        <PokemonSprite pokemon={{ name: selectedPokemon.name }} size={60} />
-                                        <Box sx={{ ml: 2 }}>
-                                            <Typography variant="h5" sx={{ color: 'white' }}>
-                                                {selectedPokemon.name}
-                                            </Typography>
-                                            <Typography variant="subtitle1" sx={{ color: 'white' }}>
-                                                Rank #{selectedPokemon.rank} • {rankingType === 'usage' ? 'Usage' : 'Victories'}: {selectedPokemon.percentage}%
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-
-                                    {/* Category navigation */}
-                                    {renderCategoryNavigation()}
-
-                                    {/* Content area */}
-                                    <Box sx={{ 
-                                        flexGrow: 1,
-                                        overflow: 'auto', // Changed from 'hidden' to 'auto' to allow scrolling
-                                        mt: 1,
-                                    }}>
-                                        {rankingType === 'usage' ? (
-                                            renderCategoryContent()
-                                        ) : (
-                                            // Para victorias:
-                                            categories[currentCategory].key === 'historicalUsage' ? (
-                                                renderPokemonHistoricalUsage()
-                                            ) : (
-                                                isVictoryDataLoading ? (
-                                                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
-                                                        <CircularProgress />
-                                                    </Box>
-                                                ) : victoryData.length === 0 ? (
-                                                    <Typography sx={{ color: 'white', mt: 2 }}>
-                                                        No victory data available for {categories[currentCategory].name}.
-                                                    </Typography>
-                                                ) : (
-                                                    victoryData.map((item, index) => {
-                                                        // Usa la propiedad que corresponda según la categoría
-                                                        const label = item.ability || item.move || item.item || item.tera_type || item.teammate || 'N/A';
-                                                        return (
-                                                            <Paper key={index} sx={{ p: 1, mb: 1, backgroundColor: 'rgba(255,255,255,0.1)' }}>
-                                                                <Typography variant="body2" sx={{ color: 'white' }}>
-                                                                    {label}: {item.win_rate}% ({item.wins}/{item.total_games})
-                                                                </Typography>
-                                                            </Paper>
-                                                        );
-                                                    })
-                                                )
-                                            )
-                                        )}
-                                    </Box>
-
-                                </Box>
-                            ) : (
-                                <Box sx={{ 
-                                    display: 'flex', 
-                                    justifyContent: 'center', 
-                                    alignItems: 'center', 
-                                    height: '100%' 
-                                }}>
-                                    <Typography sx={{ color: 'white' }}>
-                                        Select a Pokémon to see details
-                                    </Typography>
-                                </Box>
-                            )}
-                        </Paper>
+                    <DetailsPane
+                        isLoadingFormat={isLoadingFormat}
+                        isLoadingDetails={isLoadingDetails}
+                        selectedPokemon={selectedPokemon}
+                        pokemonDetails={pokemonDetails}
+                        rankingType={rankingType}
+                        renderCategoryNavigation={renderCategoryNavigation}
+                        renderCategoryContent={renderCategoryContent}
+                        renderPokemonHistoricalUsage={renderPokemonHistoricalUsage}
+                        categories={categories}
+                        currentCategory={currentCategory}
+                        isVictoryDataLoading={isVictoryDataLoading}
+                        victoryData={victoryData}
+                    />
                     </Grid>
                 </Grid>
             )}
