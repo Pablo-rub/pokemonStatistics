@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import useDraggable from '../hooks/useDraggable';
+import TriStateCheckbox from './TriStateCheckBox';
 
 const WhiteCheckbox = styled(Checkbox)(({ theme }) => ({
   color: 'white',
@@ -62,20 +63,19 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
     }
   };
 
-  const handleSideEffectChange = (side, effect) => (e) => {
-    const value = e.target.checked;
+  const handleSideEffectChange = (side, effect, newValue) => {
     setBattleConditions(prev => ({
       ...prev,
       sideEffects: {
         ...prev.sideEffects,
         [side]: {
           ...prev.sideEffects?.[side],
-          [effect]: value
+          [effect]: newValue
         }
       }
     }));
 
-    if (value) {
+    if (newValue) {
       let defaultDuration;
       if (effect === "tailwind") {
         defaultDuration = 4;
@@ -106,8 +106,8 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
     }
   };
 
-  const handleHazardChange = (side, hazard) => (e) => {
-    const value = e.target.checked;
+  const handleHazardChange = (side, hazard) => (newValue) => {
+    const value = newValue;
     setBattleConditions(prev => ({
       ...prev,
       entryHazards: {
@@ -372,7 +372,7 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
           <Grid item xs={12}>
             <Typography variant="subtitle1" sx={{ mb: 1 }}>Side Effects</Typography>
             <Grid container spacing={2}>
-              {/* Lado "Your Side" */}
+              {/* Your Side */}
               <Grid item xs={6}>
                 <Typography variant="body1" sx={{ mb: 1 }}>Your Side</Typography>
                 <FormGroup>
@@ -380,13 +380,14 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
                     <Box key={effect} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                       <FormControlLabel
                         control={
-                          <WhiteCheckbox
-                            checked={battleConditions.sideEffects?.yourSide?.[effect] || false}
-                            onChange={handleSideEffectChange('yourSide', effect)}
-                            name={effect}
+                          <TriStateCheckbox
+                            value={battleConditions.sideEffects?.yourSide?.[effect]}
+                            onChange={(newValue) => handleSideEffectChange('yourSide', effect, newValue)}
+                            sx={{ color: 'white' }}
                           />
                         }
-                        label={effect}
+                        label={effect === "tailwind" ? "Tailwind (Your Side)" : effect}
+                        sx={{ color: 'white' }}
                       />
                       <TextField
                         label="Turns Left"
@@ -400,7 +401,7 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
                   ))}
                 </FormGroup>
               </Grid>
-              {/* Lado "Opponent Side" */}
+              {/* Opponent Side */}
               <Grid item xs={6}>
                 <Typography variant="body1" sx={{ mb: 1 }}>Opponent Side</Typography>
                 <FormGroup>
@@ -408,20 +409,21 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
                     <Box key={effect} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                       <FormControlLabel
                         control={
-                          <WhiteCheckbox
-                            checked={battleConditions.sideEffects?.opponentSide?.[effect] || false}
-                            onChange={handleSideEffectChange('opponentSide', effect)}
-                            name={effect}
+                          <TriStateCheckbox
+                            value={battleConditions.sideEffects?.opponentSide?.[effect]}
+                            onChange={(newValue) => handleSideEffectChange('opponentSide', effect, newValue)}
+                            sx={{ color: 'white' }}
                           />
                         }
                         label={effect}
+                        sx={{ color: 'white' }}
                       />
                       <TextField
                         label="Turns Left"
                         type="number"
                         value={battleConditions.sideEffectsDuration?.opponentSide?.[effect] || 0}
                         onChange={(e) => handleDurationChange('sideEffect', `opponentSide.${effect}`, e.target.value)}
-                        inputProps={{ min: 1, max: 8, step: 1 }}
+                        inputProps={{ min: 1, max: effect === "tailwind" ? 5 : 8, step: 1 }}
                         sx={{ width: '80px' }}
                       />
                     </Box>
@@ -442,13 +444,19 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
                     <Box key={hazard} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                       <FormControlLabel
                         control={
-                          <WhiteCheckbox
-                            checked={battleConditions.entryHazards?.yourSide?.[hazard] || false}
-                            onChange={handleHazardChange('yourSide', hazard)}
+                          <TriStateCheckbox
+                            value={battleConditions.entryHazards?.yourSide?.[hazard] === false 
+                              ? false 
+                              : battleConditions.entryHazards?.yourSide?.[hazard] === true 
+                                ? true 
+                                : null}
+                            onChange={(newValue) => handleHazardChange('yourSide', hazard)(newValue)}
                             name={hazard}
+                            sx={{ color: 'white' }}
                           />
                         }
                         label={hazard}
+                        sx={{ color: 'white' }}
                       />
                       {(hazard === "Spikes" || hazard === "Toxic Spikes") && (
                         <TextField
@@ -476,13 +484,19 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
                     <Box key={hazard} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                       <FormControlLabel
                         control={
-                          <WhiteCheckbox
-                            checked={battleConditions.entryHazards?.opponentSide?.[hazard] || false}
-                            onChange={handleHazardChange('opponentSide', hazard)}
+                          <TriStateCheckbox
+                            value={battleConditions.entryHazards?.opponentSide?.[hazard] === false 
+                              ? false 
+                              : battleConditions.entryHazards?.opponentSide?.[hazard] === true 
+                                ? true 
+                                : null}
+                            onChange={(newValue) => handleHazardChange('opponentSide', hazard)(newValue)}
                             name={hazard}
+                            sx={{ color: 'white' }}
                           />
                         }
                         label={hazard}
+                        sx={{ color: 'white' }}
                       />
                       {(hazard === "Spikes" || hazard === "Toxic Spikes") && (
                         <TextField
