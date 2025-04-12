@@ -796,7 +796,7 @@ app.post('/api/turn-assistant/analyze', async (req, res) => {
       params.oppSpd2  = pokemonData.bottomRight.stats.spd;
       params.oppSpe2  = pokemonData.bottomRight.stats.spe;
       params.oppAcc2  = pokemonData.bottomRight.stats.acc;
-      params.oppEva2  = pokemonData.bottomRight.stats.eva;
+      params.oppEva2 = pokemonData.bottomRight.stats.eva;
       
       console.log("BottomRight stats filter:", JSON.stringify({
         hp: params.oppHP2, atk: params.oppAtk2, def: params.oppDef2,
@@ -2963,3 +2963,336 @@ function formatTimeSince(date) {
   }
   return Math.floor(seconds) + " seconds ago";
 }
+
+// Endpoint para obtener el porcentaje de victorias por Pokémon
+app.get('/api/victories', async (req, res) => {
+  try {
+    // Consulta para obtener el total de partidos en los que participó cada Pokémon
+    const totalQuery = `
+      SELECT pokemon, COUNT(*) AS total_games
+      FROM (
+        SELECT t.name AS pokemon
+        FROM \`pokemon-statistics.pokemon_replays.replays\`,
+        UNNEST(teams.p1) AS t
+        UNION ALL
+        SELECT t.name AS pokemon
+        FROM \`pokemon-statistics.pokemon_replays.replays\`,
+        UNNEST(teams.p2) AS t
+      )
+      GROUP BY pokemon
+    `;
+    
+    // Consulta para obtener cuántas veces ganó cada Pokémon
+    // Si winner es igual al valor de player1 se toman los Pokémon en teams.p1
+    // y si winner es igual a player2, se toman los Pokémon de teams.p2.
+    const winsQuery = `
+      SELECT pokemon, COUNT(*) AS wins
+      FROM (
+        SELECT t.name AS pokemon
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r,
+        UNNEST(teams.p1) AS t
+        WHERE winner = r.player1
+        UNION ALL
+        SELECT t.name AS pokemon
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r,
+        UNNEST(teams.p2) AS t
+        WHERE winner = r.player2
+      )
+      GROUP BY pokemon
+    `;
+    
+    const [totalRows] = await bigQuery.query(totalQuery);
+    const [winsRows] = await bigQuery.query(winsQuery);
+    
+    // Crear un set con todos los Pokémon de totalRows
+    const totalPokemonSet = new Set(totalRows.map(row => row.pokemon));
+    // Filtrar winsRows para incluir solo aquellos que estén en totalRows
+    const filteredWinsRows = winsRows.filter(row => totalPokemonSet.has(row.pokemon));
+    
+    // Creamos un mapa de victorias por Pokémon a partir de los datos filtrados
+    const winsMap = {};
+    filteredWinsRows.forEach(row => {
+      winsMap[row.pokemon] = parseInt(row.wins);
+    });
+    
+    // Para cada Pokémon (según totalRows) calculamos el porcentaje: (victorias / juegos totales) * 100
+    const result = totalRows.map(row => {
+      const total = parseInt(row.total_games);
+      const wins = winsMap[row.pokemon] || 0;
+      const winRate = total > 0 ? ((wins / total) * 100).toFixed(2) : "0.00";
+      return {
+        pokemon: row.pokemon,
+        total_games: total,
+        wins: wins,
+        win_rate: parseFloat(winRate)
+      };
+    });
+    
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching victories data:", error);
+    res.status(500).json({ error: "Error fetching victories data" });
+  }
+});
+
+// Endpoint: Win rate de HABILIDADES de un Pokémon
+app.get('/api/victories/abilities', async (req, res) => {
+  const { pokemon } = req.query;
+  if (!pokemon) return res.status(400).json({ error: "El parámetro 'pokemon' es obligatorio" });
+  try {
+    // Total de partidos en que el Pokémon aparece con cada habilidad
+    const totalQuery = `
+      SELECT ability, SUM(cnt) AS total_games FROM (
+        SELECT LOWER(t.ability) AS ability, COUNT(*) AS cnt
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r, UNNEST(teams.p1) AS t
+        WHERE LOWER(t.name)=LOWER('${pokemon}')
+        GROUP BY ability
+        UNION ALL
+        SELECT LOWER(t.ability) AS ability, COUNT(*) AS cnt
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r, UNNEST(teams.p2) AS t
+        WHERE LOWER(t.name)=LOWER('${pokemon}')
+        GROUP BY ability
+      )
+      GROUP BY ability
+    `;
+    // Victorias: usando r.winner = r.player1 o r.player2 respectivamente
+    const winsQuery = `
+      SELECT ability, SUM(w) AS wins FROM (
+        SELECT LOWER(t.ability) AS ability, COUNT(*) AS w
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r, UNNEST(teams.p1) AS t
+        WHERE LOWER(t.name)=LOWER('${pokemon}') AND r.winner = r.player1
+        GROUP BY ability
+        UNION ALL
+        SELECT LOWER(t.ability) AS ability, COUNT(*) AS w
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r, UNNEST(teams.p2) AS t
+        WHERE LOWER(t.name)=LOWER('${pokemon}') AND r.winner = r.player2
+        GROUP BY ability
+      )
+      GROUP BY ability
+    `;
+    const [totalRows] = await bigQuery.query(totalQuery);
+    const [winsRows] = await bigQuery.query(winsQuery);
+    const winsMap = {};
+    winsRows.forEach(row => { winsMap[row.ability] = parseInt(row.wins); });
+    const result = totalRows.map(row => {
+      const total = parseInt(row.total_games);
+      const wins = winsMap[row.ability] || 0;
+      const winRate = total > 0 ? ((wins / total) * 100).toFixed(2) : "0.00";
+      return { ability: row.ability, total_games: total, wins, win_rate: parseFloat(winRate) };
+    });
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching abilities victories:", error);
+    res.status(500).json({ error: "Error fetching abilities victories" });
+  }
+});
+
+// Endpoint: Win rate de OBJETOS (items)
+app.get('/api/victories/items', async (req, res) => {
+  const { pokemon } = req.query;
+  if (!pokemon) return res.status(400).json({ error: "El parámetro 'pokemon' es obligatorio" });
+  try {
+    const totalQuery = `
+      SELECT item, SUM(cnt) AS total_games FROM (
+        SELECT LOWER(t.item) AS item, COUNT(*) AS cnt
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r, UNNEST(teams.p1) AS t
+        WHERE LOWER(t.name)=LOWER('${pokemon}')
+        GROUP BY item
+        UNION ALL
+        SELECT LOWER(t.item) AS item, COUNT(*) AS cnt
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r, UNNEST(teams.p2) AS t
+        WHERE LOWER(t.name)=LOWER('${pokemon}')
+        GROUP BY item
+      )
+      GROUP BY item
+    `;
+    const winsQuery = `
+      SELECT item, SUM(w) AS wins FROM (
+        SELECT LOWER(t.item) AS item, COUNT(*) AS w
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r, UNNEST(teams.p1) AS t
+        WHERE LOWER(t.name)=LOWER('${pokemon}') AND r.winner = r.player1
+        GROUP BY item
+        UNION ALL
+        SELECT LOWER(t.item) AS item, COUNT(*) AS w
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r, UNNEST(teams.p2) AS t
+        WHERE LOWER(t.name)=LOWER('${pokemon}') AND r.winner = r.player2
+        GROUP BY item
+      )
+      GROUP BY item
+    `;
+    const [totalRows] = await bigQuery.query(totalQuery);
+    const [winsRows] = await bigQuery.query(winsQuery);
+    const winsMap = {};
+    winsRows.forEach(row => { winsMap[row.item] = parseInt(row.wins); });
+    const result = totalRows.map(row => {
+      const total = parseInt(row.total_games);
+      const wins = winsMap[row.item] || 0;
+      const winRate = total > 0 ? ((wins / total) * 100).toFixed(2) : "0.00";
+      return { item: row.item, total_games: total, wins, win_rate: parseFloat(winRate) };
+    });
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching items victories:", error);
+    res.status(500).json({ error: "Error fetching items victories" });
+  }
+});
+
+// Endpoint: Win rate de MOVIMIENTOS (moves)
+app.get('/api/victories/moves', async (req, res) => {
+  const { pokemon } = req.query;
+  if (!pokemon) return res.status(400).json({ error: "El parámetro 'pokemon' es obligatorio" });
+  try {
+    const totalQuery = `
+      SELECT move, SUM(cnt) AS total_games FROM (
+        SELECT LOWER(m) AS move, 1 AS cnt
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r,
+        UNNEST(teams.p1) AS t,
+        UNNEST(t.moves) AS m
+        WHERE LOWER(t.name)=LOWER('${pokemon}')
+        UNION ALL
+        SELECT LOWER(m) AS move, 1 AS cnt
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r,
+        UNNEST(teams.p2) AS t,
+        UNNEST(t.moves) AS m
+        WHERE LOWER(t.name)=LOWER('${pokemon}')
+      )
+      GROUP BY move
+    `;
+    const winsQuery = `
+      SELECT move, SUM(w) AS wins FROM (
+        SELECT LOWER(m) AS move, 1 AS w
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r,
+        UNNEST(teams.p1) AS t,
+        UNNEST(t.moves) AS m
+        WHERE LOWER(t.name)=LOWER('${pokemon}') AND r.winner = r.player1
+        UNION ALL
+        SELECT LOWER(m) AS move, 1 AS w
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r,
+        UNNEST(teams.p2) AS t,
+        UNNEST(t.moves) AS m
+        WHERE LOWER(t.name)=LOWER('${pokemon}') AND r.winner = r.player2
+      )
+      GROUP BY move
+    `;
+    const [totalRows] = await bigQuery.query(totalQuery);
+    const [winsRows] = await bigQuery.query(winsQuery);
+    const winsMap = {};
+    winsRows.forEach(row => { winsMap[row.move] = parseInt(row.wins); });
+    const result = totalRows.map(row => {
+      const total = parseInt(row.total_games);
+      const wins = winsMap[row.move] || 0;
+      const winRate = total > 0 ? ((wins / total) * 100).toFixed(2) : "0.00";
+      return { move: row.move, total_games: total, wins, win_rate: parseFloat(winRate) };
+    });
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching moves victories:", error);
+    res.status(500).json({ error: "Error fetching moves victories" });
+  }
+});
+
+// Endpoint: Win rate de TERA TYPES
+app.get('/api/victories/tera', async (req, res) => {
+  const { pokemon } = req.query;
+  if (!pokemon) return res.status(400).json({ error: "El parámetro 'pokemon' es obligatorio" });
+  try {
+    const totalQuery = `
+      SELECT tera_type, SUM(cnt) AS total_games FROM (
+        SELECT LOWER(t.tera_type) AS tera_type, 1 AS cnt
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r, UNNEST(teams.p1) AS t
+        WHERE LOWER(t.name)=LOWER('${pokemon}')
+        UNION ALL
+        SELECT LOWER(t.tera_type) AS tera_type, 1 AS cnt
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r, UNNEST(teams.p2) AS t
+        WHERE LOWER(t.name)=LOWER('${pokemon}')
+      )
+      GROUP BY tera_type
+    `;
+    const winsQuery = `
+      SELECT tera_type, SUM(w) AS wins FROM (
+        SELECT LOWER(t.tera_type) AS tera_type, 1 AS w
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r, UNNEST(teams.p1) AS t
+        WHERE LOWER(t.name)=LOWER('${pokemon}') AND r.winner = r.player1
+        UNION ALL
+        SELECT LOWER(t.tera_type) AS tera_type, 1 AS w
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r, UNNEST(teams.p2) AS t
+        WHERE LOWER(t.name)=LOWER('${pokemon}') AND r.winner = r.player2
+      )
+      GROUP BY tera_type
+    `;
+    const [totalRows] = await bigQuery.query(totalQuery);
+    const [winsRows] = await bigQuery.query(winsQuery);
+    const winsMap = {};
+    winsRows.forEach(row => { winsMap[row.tera_type] = parseInt(row.wins); });
+    const result = totalRows.map(row => {
+      const total = parseInt(row.total_games);
+      const wins = winsMap[row.tera_type] || 0;
+      const winRate = total > 0 ? ((wins / total) * 100).toFixed(2) : "0.00";
+      return { tera_type: row.tera_type, total_games: total, wins, win_rate: parseFloat(winRate) };
+    });
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching tera types victories:", error);
+    res.status(500).json({ error: "Error fetching tera types victories" });
+  }
+});
+
+// Endpoint: Win rate de TEAMMATES
+app.get('/api/victories/teammates', async (req, res) => {
+  const { pokemon } = req.query;
+  if (!pokemon) return res.status(400).json({ error: "El parámetro 'pokemon' es obligatorio" });
+  try {
+    // TOTAL: Para cada replay donde el Pokemon aparece, se unen los compañeros del mismo equipo (excluyendo él)
+    const totalQuery = `
+      SELECT teammate, SUM(cnt) AS total_games FROM (
+        SELECT LOWER(t2.name) AS teammate, 1 AS cnt
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r,
+          UNNEST(teams.p1) AS t1,
+          UNNEST(teams.p1) AS t2
+        WHERE LOWER(t1.name)=LOWER('${pokemon}') AND LOWER(t2.name) <> LOWER('${pokemon}')
+        UNION ALL
+        SELECT LOWER(t2.name) AS teammate, 1 AS cnt
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r,
+          UNNEST(teams.p2) AS t1,
+          UNNEST(teams.p2) AS t2
+        WHERE LOWER(t1.name)=LOWER('${pokemon}') AND LOWER(t2.name) <> LOWER('${pokemon}')
+      )
+      GROUP BY teammate
+    `;
+    // WINS: Solo se cuentan las partidas ganadas (condición según equipo)
+    const winsQuery = `
+      SELECT teammate, SUM(w) AS wins FROM (
+        SELECT LOWER(t2.name) AS teammate, 1 AS w
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r,
+          UNNEST(teams.p1) AS t1,
+          UNNEST(teams.p1) AS t2
+        WHERE LOWER(t1.name)=LOWER('${pokemon}') 
+          AND LOWER(t2.name) <> LOWER('${pokemon}') 
+          AND r.winner = r.player1
+        UNION ALL
+        SELECT LOWER(t2.name) AS teammate, 1 AS w
+        FROM \`pokemon-statistics.pokemon_replays.replays\` r,
+          UNNEST(teams.p2) AS t1,
+          UNNEST(teams.p2) AS t2
+        WHERE LOWER(t1.name)=LOWER('${pokemon}') 
+          AND LOWER(t2.name) <> LOWER('${pokemon}') 
+          AND r.winner = r.player2
+      )
+      GROUP BY teammate
+    `;
+    const [totalRows] = await bigQuery.query(totalQuery);
+    const [winsRows] = await bigQuery.query(winsQuery);
+    const winsMap = {};
+    winsRows.forEach(row => { winsMap[row.teammate] = parseInt(row.wins); });
+    const result = totalRows.map(row => {
+      const total = parseInt(row.total_games);
+      const wins = winsMap[row.teammate] || 0;
+      const winRate = total > 0 ? ((wins / total) * 100).toFixed(2) : "0.00";
+      return { teammate: row.teammate, total_games: total, wins, win_rate: parseFloat(winRate) };
+    });
+    res.json(result);
+  } catch (error) {
+    console.error("Error fetching teammates victories:", error);
+    res.status(500).json({ error: "Error fetching teammates victories" });
+  }
+});
