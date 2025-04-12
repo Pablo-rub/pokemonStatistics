@@ -1,7 +1,8 @@
 //// filepath: d:\tfg\pokemonStatistics\client\src\components\TriStateCheckbox.jsx
 import React from 'react';
-import { IconButton, Box } from '@mui/material';
-import CheckIcon from '@mui/icons-material/Check';
+import { Checkbox } from '@mui/material';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import DisabledByDefaultIcon from '@mui/icons-material/DisabledByDefault';
 
 const TriStateCheckbox = ({ value, onChange, ...props }) => {
@@ -17,40 +18,16 @@ const TriStateCheckbox = ({ value, onChange, ...props }) => {
     onChange(newValue);
   };
 
-  const commonStyle = {
-    border: '1px solid white',
-    borderRadius: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 24,
-    height: 24,
-    pointerEvents: 'none'
-  };
-
-  let icon;
-  if (value === true) {
-    icon = (
-      <Box sx={commonStyle}>
-        <CheckIcon style={{ color: 'white', fontSize: 16 }} />
-      </Box>
-    );
-  } else if (value === false) {
-    icon = (
-      <Box sx={commonStyle}>
-        <DisabledByDefaultIcon style={{ color: 'white', fontSize: 16 }} />
-      </Box>
-    );
-  } else {
-    icon = (
-      <Box sx={commonStyle} />
-    );
-  }
-
   return (
-    <IconButton onClick={handleClick} {...props}>
-      {icon}
-    </IconButton>
+    <Checkbox
+      checked={value === true}
+      indeterminate={value === false}
+      onClick={handleClick}
+      icon={<CheckBoxOutlineBlankIcon sx={{ color: 'white' }} />}
+      checkedIcon={<CheckBoxIcon sx={{ color: 'white' }} />}
+      indeterminateIcon={<DisabledByDefaultIcon sx={{ color: 'white' }} />}
+      {...props}
+    />
   );
 };
 

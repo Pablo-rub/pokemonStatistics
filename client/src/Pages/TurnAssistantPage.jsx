@@ -41,14 +41,12 @@ import TeamDialog from "../components/TeamDialog";
 //reset no elimina los pokemon activos
 
 //backend:
-//comprobar activos
+//new format replays (not yet, in april should be)
 //tris
-//añadir nones
 //any duration tw, screens
 //check moves miraidon discharge vs miraidon discharge
+//check screens and spikes
 //ver que hacer con el mirror
-
-//new format replays
 
 function TurnAssistantPage() {
   const [selectedPokemon, setSelectedPokemon] = useState({
