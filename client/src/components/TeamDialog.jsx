@@ -9,6 +9,9 @@ import { styled } from '@mui/material/styles';
 import { createFilterOptions } from '@mui/material/Autocomplete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import DisabledByDefaultIcon from '@mui/icons-material/DisabledByDefault';
 import useDraggable from '../hooks/useDraggable';
 import TriStateCheckbox from '../components/TriStateCheckBox';
 
@@ -388,10 +391,16 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                         <Grid item xs={12} sm={6}>
                                             <FormControl fullWidth>
                                                 <Autocomplete
-                                                    options={itemsList}
-                                                    getOptionLabel={(option) => option?.name || ''}
-                                                    value={itemsList.find(item => item.name === pokemonDetails[index].item) || null}
-                                                    onChange={(_, newValue) => updatePokemonDetail(index, 'item', newValue?.name || '')}
+                                                    options={[{ name: "None" }, ...itemsList]}
+                                                    getOptionLabel={(option) => option.name}
+                                                    value={
+                                                        pokemonDetails[index].item
+                                                            ? (pokemonDetails[index].item === "None"
+                                                                ? { name: "None" }
+                                                                : itemsList.find(item => item.name === pokemonDetails[index].item) || null)
+                                                            : null
+                                                    }
+                                                    onChange={(_, newValue) => updatePokemonDetail(index, 'item', newValue ? newValue.name : '')}
                                                     renderInput={(params) => (
                                                         <TextField 
                                                             {...params} 
@@ -412,10 +421,16 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                         <Grid item xs={12} sm={6}>
                                             <FormControl fullWidth>
                                                 <Autocomplete
-                                                    options={abilitiesList}
-                                                    getOptionLabel={(option) => option?.name || ''}
-                                                    value={abilitiesList.find(ability => ability.name === pokemonDetails[index].ability) || null}
-                                                    onChange={(_, newValue) => updatePokemonDetail(index, 'ability', newValue?.name || '')}
+                                                    options={[{ name: "None" }, ...abilitiesList]}
+                                                    getOptionLabel={(option) => option.name}
+                                                    value={
+                                                        pokemonDetails[index].ability
+                                                            ? (pokemonDetails[index].ability === "None"
+                                                                ? { name: "None" }
+                                                                : abilitiesList.find(ability => ability.name === pokemonDetails[index].ability) || null)
+                                                            : null
+                                                    }
+                                                    onChange={(_, newValue) => updatePokemonDetail(index, 'ability', newValue ? newValue.name : '')}
                                                     renderInput={(params) => (
                                                         <TextField 
                                                             {...params} 
@@ -464,10 +479,16 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                             <Grid item xs={12} sm={6}>
                                                 <FormControl fullWidth>
                                                     <Autocomplete
-                                                        options={['none', ...nonVolatileStatusList]}
-                                                        getOptionLabel={(option) => option || ''}
-                                                        value={pokemonDetails[index].nonVolatileStatus || null}
-                                                        onChange={(_, newValue) => updatePokemonDetail(index, 'nonVolatileStatus', newValue || '')}
+                                                        options={[{ name: "None" }, ...nonVolatileStatusList.map(status => ({ name: status }))]}
+                                                        getOptionLabel={(option) => option.name}
+                                                        value={
+                                                            pokemonDetails[index].nonVolatileStatus
+                                                                ? (pokemonDetails[index].nonVolatileStatus === "None"
+                                                                    ? { name: "None" }
+                                                                    : { name: pokemonDetails[index].nonVolatileStatus })
+                                                                : null
+                                                        }
+                                                        onChange={(_, newValue) => updatePokemonDetail(index, 'nonVolatileStatus', newValue ? newValue.name : '')}
                                                         renderInput={(params) => (
                                                             <TextField 
                                                                 {...params} 
@@ -515,6 +536,7 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                                             <TriStateCheckbox
                                                                 value={pokemonDetails[index].teraActive}
                                                                 onChange={(newValue) => updatePokemonDetail(index, 'teraActive', newValue)}
+                                                                sx={{ color: 'white' }}
                                                             />
                                                         }
                                                         label="Tera Active"
