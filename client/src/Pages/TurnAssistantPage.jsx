@@ -29,27 +29,23 @@ import BattleConditionsDialog from '../components/BattleConditionsDialog';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import useDraggable from "../hooks/useDraggable";
+import TeamDialog from "../components/TeamDialog";
 
 //todo
 //iu:
-//boton ir para arriba
 //texto de ayuda
 //texto fecha inicio recoleccion
 //que los select se desplieguen para abajo
 //fix teras in moves text
+//fix clear team
+//reset no elimina los pokemon activos
 
 //backend:
-//spikes
-//toxic spikes
-//stealth rock
-//sticky web
-//teams
-//revealed pokemon
-//stats
-//fainted
+//new format replays (not yet, in april should be)
+//tris
 //any duration tw, screens
 //check moves miraidon discharge vs miraidon discharge
-//life
+//check screens and spikes
 //ver que hacer con el mirror
 
 function TurnAssistantPage() {
@@ -108,6 +104,14 @@ function TurnAssistantPage() {
   // Agrega un estado para reiniciar el componente
   const [resetKey, setResetKey] = useState(0);
 
+  // Agrega estados para los equipos
+  const [yourTeam, setyourTeam] = useState([]);
+  const [opponentTeam, setopponentTeam] = useState([]);
+
+  // Agrega estado para el diálogo de selección de equipo
+  const [yourTeamDialogOpen, setyourTeamDialogOpen] = useState(false);
+  const [teamDialogOpen, setTeamDialogOpen] = useState({ opponent: false });
+
   // Función para resetear todos los campos (sin resetear el formato)
   const handleResetData = () => {
     setSelectedPokemon({
@@ -163,37 +167,160 @@ function TurnAssistantPage() {
   };
 
   const handleAnalyze = async () => {
-    // Ensure all four positions have a Pokémon selected
+    // Comprueba que se hayan seleccionado los 4 Pokémon principales
     const allSelected = 
       selectedPokemon.topLeft && 
       selectedPokemon.topRight && 
       selectedPokemon.bottomLeft && 
       selectedPokemon.bottomRight;
-    
     if (!allSelected) {
       setError("Please select all four Pokémon before analyzing.");
       return;
     }
     
-    // Check for duplicate selections
+    // Comprobación de duplicados en el escenario (ya se hace para cada lado)
     if (selectedPokemon.topLeft.name === selectedPokemon.topRight.name) {
       setError("You cannot use the same Pokémon twice on your team. Please select different Pokémon.");
       return;
     }
-    
     if (selectedPokemon.bottomLeft.name === selectedPokemon.bottomRight.name) {
       setError("Your opponent cannot use the same Pokémon twice. Please select different Pokémon for the opponent.");
       return;
     }
 
+    const validOpponentTeam = opponentTeam.filter(p => p && p.name);
+    if (validOpponentTeam.length === 6) {
+      const normalize = (str) => str.toLowerCase().trim();
+      const opponentTeamNames = validOpponentTeam.map(p => normalize(p.name));
+      if (
+        !opponentTeamNames.includes(normalize(selectedPokemon.bottomLeft.name)) ||
+        !opponentTeamNames.includes(normalize(selectedPokemon.bottomRight.name))
+      ) {
+        setError("Both active Pokémon (bottomLeft and bottomRight) must be part of the opponent's team.");
+        return;
+      }
+    }
+    
+    // Verificación mejorada para equipos completos
+    const validYourTeam = yourTeam.filter(p => p && p.name);
+    if (validYourTeam.length === 6) {
+      // Verificar que topLeft está en el equipo completo
+      const yourPokemon1 = validYourTeam.find(p => p.name === selectedPokemon.topLeft.name);
+      if (!yourPokemon1) {
+        setError(`${selectedPokemon.topLeft.name} must be part of your team.`);
+        return;
+      }
+      
+      // Verificar que topRight está en el equipo completo
+      const yourPokemon2 = validYourTeam.find(p => p.name === selectedPokemon.topRight.name);
+      if (!yourPokemon2) {
+        setError(`${selectedPokemon.topRight.name} must be part of your team.`);
+        return;
+      }
+      
+      // Si el Pokémon en el escenario tiene un item específico, debe coincidir con el del equipo
+      if (selectedPokemon.topLeft.item && yourPokemon1.item && 
+          selectedPokemon.topLeft.item !== yourPokemon1.item) {
+        setError(`Item for ${selectedPokemon.topLeft.name} in scenario (${selectedPokemon.topLeft.item}) doesn't match the one in your team (${yourPokemon1.item}).`);
+        return;
+      }
+      
+      if (selectedPokemon.topRight.item && yourPokemon2.item && 
+          selectedPokemon.topRight.item !== yourPokemon2.item) {
+        setError(`Item for ${selectedPokemon.topRight.name} in scenario (${selectedPokemon.topRight.item}) doesn't match the one in your team (${yourPokemon2.item}).`);
+        return;
+      }
+      
+      // Verificar coincidencia de ability si está establecida en ambos lugares
+      if (selectedPokemon.topLeft.ability && yourPokemon1.ability && 
+          selectedPokemon.topLeft.ability !== yourPokemon1.ability) {
+        setError(`Ability for ${selectedPokemon.topLeft.name} in scenario (${selectedPokemon.topLeft.ability}) doesn't match the one in your team (${yourPokemon1.ability}).`);
+        return;
+      }
+      
+      if (selectedPokemon.topRight.ability && yourPokemon2.ability && 
+          selectedPokemon.topRight.ability !== yourPokemon2.ability) {
+        setError(`Ability for ${selectedPokemon.topRight.name} in scenario (${selectedPokemon.topRight.ability}) doesn't match the one in your team (${yourPokemon2.ability}).`);
+        return;
+      }
+      
+      // Verificar coincidencia de tera type si está establecida en ambos lugares
+      if (selectedPokemon.topLeft.teraType && yourPokemon1.teraType && 
+          selectedPokemon.topLeft.teraType !== yourPokemon1.teraType) {
+        setError(`Tera Type for ${selectedPokemon.topLeft.name} in scenario (${selectedPokemon.topLeft.teraType}) doesn't match the one in your team (${yourPokemon1.teraType}).`);
+        return;
+      }
+      
+      if (selectedPokemon.topRight.teraType && yourPokemon2.teraType && 
+          selectedPokemon.topRight.teraType !== yourPokemon2.teraType) {
+        setError(`Tera Type for ${selectedPokemon.topRight.name} in scenario (${selectedPokemon.topRight.teraType}) doesn't match the one in your team (${yourPokemon2.teraType}).`);
+        return;
+      }
+    }
+    
+    // Realizar la misma verificación para el equipo del oponente
+    if (opponentTeam && opponentTeam.length === 6) {
+      // Verificar que bottomLeft está en el equipo completo
+      const oppPokemon1 = opponentTeam.find(p => p.name === selectedPokemon.bottomLeft.name);
+      if (!oppPokemon1) {
+        setError(`${selectedPokemon.bottomLeft.name} must be part of opponent's team.`);
+        return;
+      }
+      
+      // Verificar que bottomRight está en el equipo completo
+      const oppPokemon2 = opponentTeam.find(p => p.name === selectedPokemon.bottomRight.name);
+      if (!oppPokemon2) {
+        setError(`${selectedPokemon.bottomRight.name} must be part of opponent's team.`);
+        return;
+      }
+      
+      // Verificaciones similares para item, ability y teraType
+      if (selectedPokemon.bottomLeft.item && oppPokemon1.item && 
+          selectedPokemon.bottomLeft.item !== oppPokemon1.item) {
+        setError(`Item for ${selectedPokemon.bottomLeft.name} in scenario (${selectedPokemon.bottomLeft.item}) doesn't match the one in opponent's team (${oppPokemon1.item}).`);
+        return;
+      }
+      
+      if (selectedPokemon.bottomRight.item && oppPokemon2.item && 
+          selectedPokemon.bottomRight.item !== oppPokemon2.item) {
+        setError(`Item for ${selectedPokemon.bottomRight.name} in scenario (${selectedPokemon.bottomRight.item}) doesn't match the one in opponent's team (${oppPokemon2.item}).`);
+        return;
+      }
+      
+      if (selectedPokemon.bottomLeft.ability && oppPokemon1.ability && 
+          selectedPokemon.bottomLeft.ability !== oppPokemon1.ability) {
+        setError(`Ability for ${selectedPokemon.bottomLeft.name} in scenario (${selectedPokemon.bottomLeft.ability}) doesn't match the one in opponent's team (${oppPokemon1.ability}).`);
+        return;
+      }
+      
+      if (selectedPokemon.bottomRight.ability && oppPokemon2.ability && 
+          selectedPokemon.bottomRight.ability !== oppPokemon2.ability) {
+        setError(`Ability for ${selectedPokemon.bottomRight.name} in scenario (${selectedPokemon.bottomRight.ability}) doesn't match the one in opponent's team (${oppPokemon2.ability}).`);
+        return;
+      }
+      
+      if (selectedPokemon.bottomLeft.teraType && oppPokemon1.teraType && 
+          selectedPokemon.bottomLeft.teraType !== oppPokemon1.teraType) {
+        setError(`Tera Type for ${selectedPokemon.bottomLeft.name} in scenario (${selectedPokemon.bottomLeft.teraType}) doesn't match the one in opponent's team (${oppPokemon1.teraType}).`);
+        return;
+      }
+      
+      if (selectedPokemon.bottomRight.teraType && oppPokemon2.teraType && 
+          selectedPokemon.bottomRight.teraType !== oppPokemon2.teraType) {
+        setError(`Tera Type for ${selectedPokemon.bottomRight.name} in scenario (${selectedPokemon.bottomRight.teraType}) doesn't match the one in opponent's team (${oppPokemon2.teraType}).`);
+        return;
+      }
+    }
+    
     setAnalyzing(true);
     setError(null);
     
     try {
-      // Make the API call to the backend
       const response = await axios.post("http://localhost:5000/api/turn-assistant/analyze", {
         pokemonData: selectedPokemon,
-        battleConditions: battleConditions
+        battleConditions: battleConditions,
+        yourTeam: yourTeam || [],
+        opponentTeam: opponentTeam || [],
       });
       
       if (response.data) {
@@ -339,6 +466,14 @@ function TurnAssistantPage() {
     return <Paper {...props} ref={ref} style={{ ...props.style, ...style }} onMouseDown={handleMouseDown} />;
   };
 
+  useEffect(() => {
+    console.log("Updated yourTeam:", yourTeam);
+  }, [yourTeam]);
+
+  useEffect(() => {
+    console.log("Updated opponentTeam:", opponentTeam);
+  }, [opponentTeam]);
+
   return (
     <Box sx={{ padding: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -395,9 +530,16 @@ function TurnAssistantPage() {
       ) : (
         <>
           {/* Solo se usa un BattleField */}
-          <BattleField 
-            key={resetKey}
+          <BattleField
             onPokemonSelect={handlePokemonSelect}
+            onTeamSelectYour={(selectedTeam) => {
+              console.log("Your team selected (from BattleField):", selectedTeam);
+              setyourTeam(selectedTeam);
+            }}
+            onTeamSelectOpponent={(selectedTeam) => {
+              console.log("Opponent team selected (from BattleField):", selectedTeam);
+              setopponentTeam(selectedTeam);
+            }}
             pokemonList={pokemonList}
           />
 
@@ -477,6 +619,27 @@ function TurnAssistantPage() {
               </Button>
             </DialogActions>
           </Dialog>
+
+          {/* Diálogo para seleccionar el equipo */}
+          <TeamDialog
+            open={yourTeamDialogOpen}
+            onClose={() => setyourTeamDialogOpen(false)}
+            onSelectTeam={(selectedTeam) => {
+              console.log("Team selected:", selectedTeam);
+              setyourTeam(selectedTeam);
+            }}
+            pokemonList={pokemonList}
+          />
+
+          <TeamDialog
+            open={teamDialogOpen.opponent}
+            onClose={() => setTeamDialogOpen(prev => ({ ...prev, opponent: false }))}
+            onSelectTeam={(selectedTeam) => {
+              console.log("Opponent team selected:", selectedTeam);
+              setopponentTeam(selectedTeam);
+            }}
+            pokemonList={pokemonList}
+          />
         </>
       )}
       

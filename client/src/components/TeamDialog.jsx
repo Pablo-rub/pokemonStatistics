@@ -9,7 +9,11 @@ import { styled } from '@mui/material/styles';
 import { createFilterOptions } from '@mui/material/Autocomplete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import DisabledByDefaultIcon from '@mui/icons-material/DisabledByDefault';
 import useDraggable from '../hooks/useDraggable';
+import TriStateCheckbox from '../components/TriStateCheckBox';
 
 // Checkbox con estilo blanco
 const WhiteCheckbox = styled(Checkbox)(({ theme }) => ({
@@ -51,16 +55,16 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
         item: '',
         ability: '',
         moves: [],
-        status: '',
+        nonVolatileStatus: '',
         teraType: '',
-        teraActive: false
+        teraActive: null
     }));
     
     // Listas para los selectores
     const [itemsList, setItemsList] = useState([]);
     const [abilitiesList, setAbilitiesList] = useState([]);
     const [movesList, setMovesList] = useState([]);
-    const [statusList, setStatusList] = useState([]);
+    const [nonVolatileStatusList, setnonVolatileStatusList] = useState([]);
     
     // Obtener las listas al montar el componente
     useEffect(() => {
@@ -82,18 +86,18 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
             .then(data => setMovesList(data))
             .catch(err => console.error("Error fetching moves:", err));
         
-        // Status
+        // nonVolatileStatus
         fetch(process.env.PUBLIC_URL + '/nonvolatile.txt')
             .then(res => res.text())
             .then(text => {
-                const statuses = text
+                const nonVolatileStatuses = text
                     .trim()
                     .split('\n')
                     .map(s => s.trim())
                     .filter(Boolean);
-                setStatusList(statuses);
+                setnonVolatileStatusList(nonVolatileStatuses);
             })
-            .catch(err => console.error("Error fetching non-volatile statuses:", err));
+            .catch(err => console.error("Error fetching non-volatile nonVolatileStatuses:", err));
     }, []);
 
     useEffect(() => {
@@ -101,39 +105,76 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
     }, [pokemonList]);
 
     const handleChange = (index, newValue) => {
+        //console.log("Changing team at index", index, "to value:", newValue);
         const newTeam = [...team];
+        
+        // Verifica explícitamente el formato del valor y asegúrate de que tenga name
+        if (newValue) {
+            // Si es un string, conviértelo a objeto
+            if (typeof newValue === 'string') {
+                newValue = { name: newValue };
+            } 
+            // Si ya es un objeto pero no tiene name o name está vacío, asegúrate de arreglarlo
+            else if (typeof newValue === 'object') {
+                if (!newValue.name || newValue.name === '') {
+                    console.warn("Selected pokemon doesn't have a name property:", newValue);
+                    // Si hay alguna propiedad que podría ser el nombre, úsala
+                    if (newValue.label) {
+                        newValue.name = newValue.label;
+                    } else if (newValue.value) {
+                        newValue.name = newValue.value;
+                    } else if (newValue.toString) {
+                        newValue.name = newValue.toString();
+                    } else {
+                        // Si todo falla, usa un placeholder
+                        newValue.name = `Pokemon-${index}`;
+                    }
+                }
+            }
+        }
+        
         newTeam[index] = newValue;
         setTeam(newTeam);
         setError('');
     };
 
-    const handleSearchChange = (index, newSearch) => {
+    const handleSearchChange = (index, newInputValue) => {
+        // Actualiza el término de búsqueda para este slot
         const newSearchTerms = [...searchTerms];
-        newSearchTerms[index] = newSearch;
+        newSearchTerms[index] = newInputValue;
         setSearchTerms(newSearchTerms);
     };
 
-    const handleSubmit = () => {
-        if (team.every(p => p)) {
-            // Incluir información de revealed, fainted y detalles adicionales
-            const teamWithMetadata = team.map((pokemon, index) => ({
+    const handleSelectTeam = () => {
+        const teamWithDetails = team.map((pokemon, index) => {
+            if (!pokemon) return null;
+            const heldItem = (pokemonDetails[index].item || '').replace(/\s/g, '');
+            const ability = (pokemonDetails[index].ability || '').replace(/\s/g, '');
+            const moves = pokemonDetails[index].moves.map(move => move.replace(/\s/g, ''));
+            const nonVolatileStatus = pokemonDetails[index].nonVolatileStatus || '';
+            //console.log("Pokemon details:", pokemonDetails[index].nonVolatileStatus);
+
+            return {
                 ...pokemon,
-                revealed: revealed[index] || false,
-                fainted: fainted[index] || false,
-                item: pokemonDetails[index].item || null,
-                ability: pokemonDetails[index].ability || null,
-                moves: pokemonDetails[index].moves || [],
-                status: pokemonDetails[index].status || null,
-                teraType: pokemonDetails[index].teraType || null,
-                teraActive: pokemonDetails[index].teraActive || false
-            }));
-            
-            onSelectTeam(teamWithMetadata);
-            onClose();
-            setError('');
-        } else {
-            setError('Please select all Pokémon for the team.');
+                item: heldItem,
+                ability: ability,
+                moves: moves,
+                non_volatile_status: nonVolatileStatus,
+                tera_type: pokemonDetails[index].teraType,
+                tera_active: pokemonDetails[index].teraActive,
+                revealed: revealed[index] !== undefined ? revealed[index] : false,
+                fainted: fainted[index] !== undefined ? fainted[index] : false
+            };
+        });
+
+        if (teamWithDetails.some(member => !member)) {
+            setError('El equipo debe estar completo.');
+            return;
         }
+        if (typeof onSelectTeam === 'function') {
+            onSelectTeam(teamWithDetails);
+        }
+        onClose();
     };
 
     // Toggle expanded details for a Pokemon
@@ -184,8 +225,13 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
     };
 
     const filterOptions = createFilterOptions({
-        matchFrom: 'start',
-        stringify: (option) => (option && option.name ? option.name : ''),
+        matchFrom: 'any', // Cambia 'start' a 'any' para buscar en cualquier parte del nombre
+        stringify: (option) => {
+            if (!option) return '';
+            return typeof option === 'string' ? option : (option.name || '');
+        },
+        ignoreCase: true, // Asegura que la búsqueda ignore mayúsculas/minúsculas
+        trim: true // Elimina espacios innecesarios
     });
     
     const teraTypes = [
@@ -196,7 +242,9 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
 
     // Añade esta función de reseteo después de handleSubmit
     const handleClearData = () => {
-        setTeam(Array(6).fill(null));
+        // Crear un equipo vacío, que indique que no hay ningún Pokémon seleccionado
+        const clearedTeam = Array(6).fill(null);
+        setTeam(clearedTeam);
         setSearchTerms(Array(6).fill(''));
         setRevealed({});
         setFainted({});
@@ -205,11 +253,17 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
             item: '',
             ability: '',
             moves: [],
-            status: '',
+            nonVolatileStatus: '',
             teraType: '',
-            teraActive: false
+            teraActive: false,
+            revealed: false,
+            fainted: false
         }));
         setError('');
+        // Notificar al componente padre que el equipo se ha limpiado
+        if (typeof onSelectTeam === 'function') {
+            onSelectTeam(clearedTeam);
+        }
     };
 
     return (
@@ -262,15 +316,20 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                 {/* Selector existente para el Pokémon */}
                                 <Autocomplete
                                     options={localPokemonList}
-                                    getOptionLabel={(option) => (option && option.name ? option.name : (typeof option === 'string' ? option : ''))}
+                                    getOptionLabel={(option) => {
+                                        // Asegúrate de que devuelva siempre un string válido
+                                        if (!option) return '';
+                                        return typeof option === 'object' && option.name ? option.name : String(option);
+                                    }}
                                     filterOptions={filterOptions}
-                                    isOptionEqualToValue={(option, value) =>
-                                        option && value ? 
-                                            (option.name === value.name || 
-                                             option === value || 
-                                             option.name === value || 
-                                             option === value.name) : false
-                                    }
+                                    // Simplifica la función de comparación para que sea más precisa
+                                    isOptionEqualToValue={(option, value) => {
+                                        if (!option || !value) return false;
+                                        if (typeof option === 'object' && typeof value === 'object') {
+                                            return option.name === value.name;
+                                        }
+                                        return option === value;
+                                    }}
                                     loading={loading}
                                     value={team[index]}
                                     onChange={(event, newValue) => handleChange(index, newValue)}
@@ -332,10 +391,16 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                         <Grid item xs={12} sm={6}>
                                             <FormControl fullWidth>
                                                 <Autocomplete
-                                                    options={itemsList}
-                                                    getOptionLabel={(option) => option?.name || ''}
-                                                    value={itemsList.find(item => item.name === pokemonDetails[index].item) || null}
-                                                    onChange={(_, newValue) => updatePokemonDetail(index, 'item', newValue?.name || '')}
+                                                    options={[{ name: "None" }, ...itemsList]}
+                                                    getOptionLabel={(option) => option.name}
+                                                    value={
+                                                        pokemonDetails[index].item
+                                                            ? (pokemonDetails[index].item === "None"
+                                                                ? { name: "None" }
+                                                                : itemsList.find(item => item.name === pokemonDetails[index].item) || null)
+                                                            : null
+                                                    }
+                                                    onChange={(_, newValue) => updatePokemonDetail(index, 'item', newValue ? newValue.name : '')}
                                                     renderInput={(params) => (
                                                         <TextField 
                                                             {...params} 
@@ -356,10 +421,16 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                         <Grid item xs={12} sm={6}>
                                             <FormControl fullWidth>
                                                 <Autocomplete
-                                                    options={abilitiesList}
-                                                    getOptionLabel={(option) => option?.name || ''}
-                                                    value={abilitiesList.find(ability => ability.name === pokemonDetails[index].ability) || null}
-                                                    onChange={(_, newValue) => updatePokemonDetail(index, 'ability', newValue?.name || '')}
+                                                    options={[{ name: "None" }, ...abilitiesList]}
+                                                    getOptionLabel={(option) => option.name}
+                                                    value={
+                                                        pokemonDetails[index].ability
+                                                            ? (pokemonDetails[index].ability === "None"
+                                                                ? { name: "None" }
+                                                                : abilitiesList.find(ability => ability.name === pokemonDetails[index].ability) || null)
+                                                            : null
+                                                    }
+                                                    onChange={(_, newValue) => updatePokemonDetail(index, 'ability', newValue ? newValue.name : '')}
                                                     renderInput={(params) => (
                                                         <TextField 
                                                             {...params} 
@@ -403,29 +474,37 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                             </FormControl>
                                         </Grid>
                                         
-                                        {/* Status */}
-                                        <Grid item xs={12} sm={6}>
-                                            <FormControl fullWidth>
-                                                <Autocomplete
-                                                    options={statusList}
-                                                    getOptionLabel={(option) => option || ''}
-                                                    value={pokemonDetails[index].status || null}
-                                                    onChange={(_, newValue) => updatePokemonDetail(index, 'status', newValue || '')}
-                                                    renderInput={(params) => (
-                                                        <TextField 
-                                                            {...params} 
-                                                            label="Non-Volatile Status" 
-                                                            variant="outlined"
-                                                            InputLabelProps={{ style: { color: 'white' } }}
-                                                        />
-                                                    )}
-                                                    sx={{
-                                                        '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
-                                                        '& .MuiSvgIcon-root': { color: 'white' }
-                                                    }}
-                                                />
-                                            </FormControl>
-                                        </Grid>
+                                        {/* nonVolatileStatus */}
+                                        {revealed[index] && !fainted[index] && (
+                                            <Grid item xs={12} sm={6}>
+                                                <FormControl fullWidth>
+                                                    <Autocomplete
+                                                        options={[{ name: "None" }, ...nonVolatileStatusList.map(status => ({ name: status }))]}
+                                                        getOptionLabel={(option) => option.name}
+                                                        value={
+                                                            pokemonDetails[index].nonVolatileStatus
+                                                                ? (pokemonDetails[index].nonVolatileStatus === "None"
+                                                                    ? { name: "None" }
+                                                                    : { name: pokemonDetails[index].nonVolatileStatus })
+                                                                : null
+                                                        }
+                                                        onChange={(_, newValue) => updatePokemonDetail(index, 'nonVolatileStatus', newValue ? newValue.name : '')}
+                                                        renderInput={(params) => (
+                                                            <TextField 
+                                                                {...params} 
+                                                                label="Non‑Volatile Status" 
+                                                                variant="outlined"
+                                                                InputLabelProps={{ style: { color: 'white' } }}
+                                                            />
+                                                        )}
+                                                        sx={{
+                                                            '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
+                                                            '& .MuiSvgIcon-root': { color: 'white' }
+                                                        }}
+                                                    />
+                                                </FormControl>
+                                            </Grid>
+                                        )}
                                         
                                         {/* Tera Type y Tera Active */}
                                         <Grid item xs={12} sm={6}>
@@ -450,13 +529,14 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                                         }}
                                                     />
                                                 </FormControl>
-                                                {/* Solo mostrar Tera Active si hay un tipo Tera seleccionado */}
-                                                {pokemonDetails[index].teraType && (
+                                                {/* Tera Active */}
+                                                {pokemonDetails[index].teraType && !fainted[index] && revealed[index] && (
                                                     <FormControlLabel
                                                         control={
-                                                            <WhiteCheckbox
-                                                                checked={pokemonDetails[index].teraActive || false}
-                                                                onChange={(e) => updatePokemonDetail(index, 'teraActive', e.target.checked)}
+                                                            <TriStateCheckbox
+                                                                value={pokemonDetails[index].teraActive}
+                                                                onChange={(newValue) => updatePokemonDetail(index, 'teraActive', newValue)}
+                                                                sx={{ color: 'white' }}
                                                             />
                                                         }
                                                         label="Tera Active"
@@ -484,7 +564,7 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                 <Button onClick={onClose} variant="contained" color="error">
                     Cancel
                 </Button>
-                <Button onClick={handleSubmit} variant="contained" color="success" disabled={!team.every(p => p)}>
+                <Button onClick={handleSelectTeam} variant="contained" color="success" disabled={!team.every(p => p)}>
                     Select Team
                 </Button>
             </DialogActions>

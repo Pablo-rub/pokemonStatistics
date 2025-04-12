@@ -2,9 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, TextField, Autocomplete, Box, IconButton,
-  Typography, FormControl, Grid, FormControlLabel, Checkbox
+  Typography, FormControl, Grid, FormControlLabel, Checkbox,
+  Collapse
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import DisabledByDefaultIcon from '@mui/icons-material/DisabledByDefault';
 import useDraggable from '../hooks/useDraggable';
 import MovesSelect from './MovesSelect';
 import VolatileStatusesSelect from './VolatileStatusesSelect';
@@ -29,7 +34,9 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
     eva: 0,
   });
   const [selectedTeraType, setSelectedTeraType] = useState('');
-  const [teraActive, setTeraActive] = useState(false);
+  const [teraActive, setTeraActive] = useState(null);
+  const [statsExpanded, setStatsExpanded] = useState(false);
+  const [filterStats, setFilterStats] = useState(false);
   
   const [itemsList, setItemsList] = useState([]);
   const [abilitiesList, setAbilitiesList] = useState([]);
@@ -99,6 +106,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
         ability: selectedAbility || null,
         moves: selectedMoves.length > 0 ? selectedMoves : [],
         stats: statChanges,
+        filterStats,
         nonVolatileStatus: selectedNonVolatileStatus || null,
         volatileStatuses: selectedVolatileStatuses || [],
         teraType: selectedTeraType,
@@ -126,10 +134,20 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
       eva: 0,
     });
     setSelectedTeraType('');
-    setTeraActive(false);
+    setTeraActive(null);
   };
 
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+  const handleTeraActiveChange = () => {
+    if (teraActive === null) {
+      setTeraActive(true);
+    } else if (teraActive === true) {
+      setTeraActive(false);
+    } else {
+      setTeraActive(null);
+    }
+  };
 
   const teraTypes = [
     'Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice', 
@@ -193,12 +211,23 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                 <>
                   <FormControl fullWidth sx={{ mt: 2 }}>
                     <Autocomplete
-                      options={itemsList}
+                      options={[{ name: "None" }, ...itemsList]}
                       getOptionLabel={(option) => option.name}
-                      value={itemsList.find(item => item.name === selectedItem) || null}
-                      onChange={(e, newValue) => setSelectedItem(newValue ? newValue.name : '')}
+                      value={
+                        selectedItem === "None"
+                          ? { name: "None" }
+                          : itemsList.find(item => item.name === selectedItem) || null
+                      }
+                      onChange={(e, newValue) =>
+                        setSelectedItem(newValue ? newValue.name : '')
+                      }
                       renderInput={(params) => (
-                        <TextField {...params} label="Held Item" variant="outlined" InputLabelProps={{ style: { color: 'white' } }} />
+                        <TextField
+                          {...params}
+                          label="Held Item"
+                          variant="outlined"
+                          InputLabelProps={{ style: { color: 'white' } }}
+                        />
                       )}
                       sx={{
                         '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
@@ -209,14 +238,24 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                   </FormControl>
                   <FormControl fullWidth sx={{ mt: 2 }}>
                     <Autocomplete
-                      options={abilitiesList}
+                      options={[{ name: "None" }, ...abilitiesList]}
                       getOptionLabel={(option) => option.name}
-                      value={abilitiesList.find(ability => ability.name === selectedAbility) || null}
+                      value={
+                        selectedAbility
+                          ? (selectedAbility === "None"
+                                ? { name: "None" }
+                                : abilitiesList.find(ability => ability.name === selectedAbility) || null)
+                          : null
+                      }
                       onChange={(e, newValue) => setSelectedAbility(newValue ? newValue.name : '')}
                       renderInput={(params) => (
-                        <TextField {...params} label="Ability" variant="outlined" InputLabelProps={{ style: { color: 'white' } }} />
+                        <TextField
+                          {...params}
+                          label="Ability"
+                          variant="outlined"
+                          InputLabelProps={{ style: { color: 'white' } }}
+                        />
                       )}
-                      // Se elimina el mt interno para que solo se use el del FormControl
                       sx={{
                         '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
                         '& .MuiSvgIcon-root': { color: 'white' }
@@ -224,9 +263,10 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                     />
                   </FormControl>
 
+                  {/* Non Volatile Statuses */}
                   <FormControl fullWidth sx={{ mt: 2 }}>
                     <Autocomplete
-                      options={["Burn", "Freeze", "Paralysis", "Poison", "Badly poisoned", "Sleep"]}
+                      options={["None", "Burn", "Freeze", "Paralysis", "Poison", "Badly poisoned", "Sleep"]}
                       getOptionLabel={(option) => option}
                       value={selectedNonVolatileStatus}
                       onChange={(e, newValue) => setSelectedNonVolatileStatus(newValue || '')}
@@ -237,6 +277,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                     />
                   </FormControl>
 
+                  {/* Volatile Statuses */}
                   <FormControl fullWidth sx={{ mt: 2 }}>
                     <VolatileStatusesSelect
                       options={volatileStatuses}
@@ -274,13 +315,15 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                     {selectedTeraType && (
                       <FormControlLabel
                         control={
-                          <Checkbox 
-                            checked={teraActive}
-                            onChange={(e) => setTeraActive(e.target.checked)}
-                            sx={{ 
-                              color: 'white',
-                              '&.Mui-checked': { color: '#24CC9F' }
-                            }}
+                          <Checkbox
+                            // Si teraActive === true se muestra el tick (checked), y si es false se utiliza indeterminate para mostrar la X;
+                            // En estado null se muestra el icono sin marcar.
+                            checked={teraActive === true}
+                            indeterminate={teraActive === false}
+                            onClick={handleTeraActiveChange}
+                            icon={<CheckBoxOutlineBlankIcon sx={{ color: 'white' }} />}
+                            checkedIcon={<CheckBoxIcon sx={{ color: 'white' }} />}
+                            indeterminateIcon={<DisabledByDefaultIcon sx={{ color: 'white' }} />}
                           />
                         }
                         label="Tera Active"
@@ -289,149 +332,192 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                     )}
                   </Box>
 
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="h6" color="white" sx={{ mb: 1 }}>Stats</Typography>
-                    <Grid container spacing={2}>
-                      <Grid item xs={6}>
-                        <TextField
-                          type="number"
-                          label="HP"
-                          value={statChanges.hp}
-                          onChange={(e) =>
-                            setStatChanges(prev => ({ ...prev, hp: Number(e.target.value) }))
-                          }
-                          onBlur={(e) => {
-                            const newValue = Number(e.target.value);
-                            setStatChanges(prev => ({ ...prev, hp: clamp(newValue, 0, 100) }));
-                          }}
-                          variant="outlined"
-                          fullWidth
-                          InputLabelProps={{ style: { color: 'white' } }}
-                          inputProps={{ min: 0, max: 100, step: 1, style: { color: 'white' } }}
-                        />
-                        <TextField
-                          type="number"
-                          label="ATK"
-                          value={statChanges.atk}
-                          onChange={(e) =>
-                            setStatChanges(prev => ({ ...prev, atk: Number(e.target.value) }))
-                          }
-                          onBlur={(e) => {
-                            const newValue = Number(e.target.value);
-                            setStatChanges(prev => ({ ...prev, atk: clamp(newValue, -6, 6) }));
-                          }}
-                          variant="outlined"
-                          fullWidth
-                          InputLabelProps={{ style: { color: 'white' } }}
-                          inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
-                          sx={{ mt: 1 }}
-                        />
-                        <TextField
-                          type="number"
-                          label="DEF"
-                          value={statChanges.def}
-                          onChange={(e) =>
-                            setStatChanges(prev => ({ ...prev, def: Number(e.target.value) }))
-                          }
-                          onBlur={(e) => {
-                            const newValue = Number(e.target.value);
-                            setStatChanges(prev => ({ ...prev, def: clamp(newValue, -6, 6) }));
-                          }}
-                          variant="outlined"
-                          fullWidth
-                          InputLabelProps={{ style: { color: 'white' } }}
-                          inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
-                          sx={{ mt: 1 }}
-                        />
-                        <TextField
-                          type="number"
-                          label="ACC"
-                          value={statChanges.acc}
-                          onChange={(e) =>
-                            setStatChanges(prev => ({ ...prev, acc: Number(e.target.value) }))
-                          }
-                          onBlur={(e) => {
-                            const newValue = Number(e.target.value);
-                            setStatChanges(prev => ({ ...prev, acc: clamp(newValue, -6, 6) }));
-                          }}
-                          variant="outlined"
-                          fullWidth
-                          InputLabelProps={{ style: { color: 'white' } }}
-                          inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
-                          sx={{ mt: 1 }}
-                        />
-                      </Grid>
-                      <Grid item xs={6}>
-                        <TextField
-                          type="number"
-                          label="SPA"
-                          value={statChanges.spa}
-                          onChange={(e) =>
-                            setStatChanges(prev => ({ ...prev, spa: Number(e.target.value) }))
-                          }
-                          onBlur={(e) => {
-                            const newValue = Number(e.target.value);
-                            setStatChanges(prev => ({ ...prev, spa: clamp(newValue, -6, 6) }));
-                          }}
-                          variant="outlined"
-                          fullWidth
-                          InputLabelProps={{ style: { color: 'white' } }}
-                          inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
-                        />
-                        <TextField
-                          type="number"
-                          label="SPD"
-                          value={statChanges.spd}
-                          onChange={(e) =>
-                            setStatChanges(prev => ({ ...prev, spd: Number(e.target.value) }))
-                          }
-                          onBlur={(e) => {
-                            const newValue = Number(e.target.value);
-                            setStatChanges(prev => ({ ...prev, spd: clamp(newValue, -6, 6) }));
-                          }}
-                          variant="outlined"
-                          fullWidth
-                          InputLabelProps={{ style: { color: 'white' } }}
-                          inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
-                          sx={{ mt: 1 }}
-                        />
-                        <TextField
-                          type="number"
-                          label="SPE"
-                          value={statChanges.spe}
-                          onChange={(e) =>
-                            setStatChanges(prev => ({ ...prev, spe: Number(e.target.value) }))
-                          }
-                          onBlur={(e) => {
-                            const newValue = Number(e.target.value);
-                            setStatChanges(prev => ({ ...prev, spe: clamp(newValue, -6, 6) }));
-                          }}
-                          variant="outlined"
-                          fullWidth
-                          InputLabelProps={{ style: { color: 'white' } }}
-                          inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
-                          sx={{ mt: 1 }}
-                        />
-                        <TextField
-                          type="number"
-                          label="EVA"
-                          value={statChanges.eva}
-                          onChange={(e) =>
-                            setStatChanges(prev => ({ ...prev, eva: Number(e.target.value) }))
-                          }
-                          onBlur={(e) => {
-                            const newValue = Number(e.target.value);
-                            setStatChanges(prev => ({ ...prev, eva: clamp(newValue, -6, 6) }));
-                          }}
-                          variant="outlined"
-                          fullWidth
-                          InputLabelProps={{ style: { color: 'white' } }}
-                          inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
-                          sx={{ mt: 1 }}
-                        />
-                      </Grid>
-                    </Grid>
+                  <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => setStatsExpanded(!statsExpanded)}>
+                    <Typography variant="h6" color="white" sx={{ flexGrow: 1 }}>
+                      Stats
+                    </Typography>
+                    <IconButton sx={{ color: 'white', transform: statsExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                      <ExpandMoreIcon />
+                    </IconButton>
                   </Box>
+                  <Collapse in={statsExpanded} timeout="auto" unmountOnExit>
+                    <Box
+                      sx={{
+                        mt: 1,
+                        p: 2,
+                        backgroundColor: '#221FC7', // Fondo azul oscuro
+                        border: '2px solid #ffffff', // Borde azul
+                        borderRadius: 2
+                      }}
+                    >
+                      <FormControlLabel
+                        control={
+                          <Checkbox 
+                            checked={filterStats}
+                            onChange={(e) => setFilterStats(e.target.checked)}
+                            sx={{ 
+                              color: 'white',
+                              '&.Mui-checked': { color: '#ffffff' }
+                            }}
+                          />
+                        }
+                        label="Filter by stats"
+                        sx={{ color: 'white', mb: 2 }}
+                      />
+                      <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                          <TextField
+                            type="number"
+                            label="HP"
+                            value={statChanges.hp}
+                            onChange={(e) =>
+                              setStatChanges(prev => ({ ...prev, hp: Number(e.target.value) }))
+                            }
+                            onBlur={(e) => {
+                              const newValue = Number(e.target.value);
+                              setStatChanges(prev => ({ ...prev, hp: clamp(newValue, 0, 100) }));
+                            }}
+                            variant="outlined"
+                            fullWidth
+                            InputLabelProps={{ style: { color: 'white' } }}
+                            inputProps={{ min: 0, max: 100, step: 1, style: { color: 'white' } }}
+                            sx={{
+                              backgroundColor: '#221FC7',
+                              borderRadius: 1
+                            }}
+                          />
+                          <TextField
+                            type="number"
+                            label="ATK"
+                            value={statChanges.atk}
+                            onChange={(e) =>
+                              setStatChanges(prev => ({ ...prev, atk: Number(e.target.value) }))
+                            }
+                            onBlur={(e) => {
+                              const newValue = Number(e.target.value);
+                              setStatChanges(prev => ({ ...prev, atk: clamp(newValue, -6, 6) }));
+                            }}
+                            variant="outlined"
+                            fullWidth
+                            InputLabelProps={{ style: { color: 'white' } }}
+                            inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
+                            sx={{
+                              mt: 1,
+                              backgroundColor: '#221FC7',
+                              borderRadius: 1
+                            }}
+                          />
+                          <TextField
+                            type="number"
+                            label="DEF"
+                            value={statChanges.def}
+                            onChange={(e) =>
+                              setStatChanges(prev => ({ ...prev, def: Number(e.target.value) }))
+                            }
+                            onBlur={(e) => {
+                              const newValue = Number(e.target.value);
+                              setStatChanges(prev => ({ ...prev, def: clamp(newValue, -6, 6) }));
+                            }}
+                            variant="outlined"
+                            fullWidth
+                            InputLabelProps={{ style: { color: 'white' } }}
+                            inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
+                            sx={{ mt: 1, backgroundColor: '#221FC7', borderRadius: 1 }}
+                          />
+                          <TextField
+                            type="number"
+                            label="ACC"
+                            value={statChanges.acc}
+                            onChange={(e) =>
+                              setStatChanges(prev => ({ ...prev, acc: Number(e.target.value) }))
+                            }
+                            onBlur={(e) => {
+                              const newValue = Number(e.target.value);
+                              setStatChanges(prev => ({ ...prev, acc: clamp(newValue, -6, 6) }));
+                            }}
+                            variant="outlined"
+                            fullWidth
+                            InputLabelProps={{ style: { color: 'white' } }}
+                            inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
+                            sx={{ mt: 1, backgroundColor: '#221FC7', borderRadius: 1 }}
+                          />
+                        </Grid>
+                        <Grid item xs={6}>
+                          <TextField
+                            type="number"
+                            label="SPA"
+                            value={statChanges.spa}
+                            onChange={(e) =>
+                              setStatChanges(prev => ({ ...prev, spa: Number(e.target.value) }))
+                            }
+                            onBlur={(e) => {
+                              const newValue = Number(e.target.value);
+                              setStatChanges(prev => ({ ...prev, spa: clamp(newValue, -6, 6) }));
+                            }}
+                            variant="outlined"
+                            fullWidth
+                            InputLabelProps={{ style: { color: 'white' } }}
+                            inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
+                            sx={{
+                              backgroundColor: '#221FC7',
+                              borderRadius: 1
+                            }}
+                          />
+                          <TextField
+                            type="number"
+                            label="SPD"
+                            value={statChanges.spd}
+                            onChange={(e) =>
+                              setStatChanges(prev => ({ ...prev, spd: Number(e.target.value) }))
+                            }
+                            onBlur={(e) => {
+                              const newValue = Number(e.target.value);
+                              setStatChanges(prev => ({ ...prev, spd: clamp(newValue, -6, 6) }));
+                            }}
+                            variant="outlined"
+                            fullWidth
+                            InputLabelProps={{ style: { color: 'white' } }}
+                            inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
+                            sx={{ mt: 1, backgroundColor: '#221FC7', borderRadius: 1 }}
+                          />
+                          <TextField
+                            type="number"
+                            label="SPE"
+                            value={statChanges.spe}
+                            onChange={(e) =>
+                              setStatChanges(prev => ({ ...prev, spe: Number(e.target.value) }))
+                            }
+                            onBlur={(e) => {
+                              const newValue = Number(e.target.value);
+                              setStatChanges(prev => ({ ...prev, spe: clamp(newValue, -6, 6) }));
+                            }}
+                            variant="outlined"
+                            fullWidth
+                            InputLabelProps={{ style: { color: 'white' } }}
+                            inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
+                            sx={{ mt: 1, backgroundColor: '#221FC7', borderRadius: 1 }}
+                          />
+                          <TextField
+                            type="number"
+                            label="EVA"
+                            value={statChanges.eva}
+                            onChange={(e) =>
+                              setStatChanges(prev => ({ ...prev, eva: Number(e.target.value) }))
+                            }
+                            onBlur={(e) => {
+                              const newValue = Number(e.target.value);
+                              setStatChanges(prev => ({ ...prev, eva: clamp(newValue, -6, 6) }));
+                            }}
+                            variant="outlined"
+                            fullWidth
+                            InputLabelProps={{ style: { color: 'white' } }}
+                            inputProps={{ min: -6, max: 6, step: 1, style: { color: 'white' } }}
+                            sx={{ mt: 1, backgroundColor: '#221FC7', borderRadius: 1 }}
+                          />
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  </Collapse>
                 </>
               )}
             </>
