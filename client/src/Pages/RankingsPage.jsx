@@ -17,7 +17,10 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import RemoveIcon from '@mui/icons-material/Remove';
 
 //todo
-//rankings de victoria
+// que se muestren los mismos pokemon
+// ranking generales de tera, items, abilities, moves
+// ranking de mejores equipos
+// ranking de mejores sets de un pokemon
 
 const PokemonUsage = () => {
     const [formats, setFormats] = useState([]);
@@ -108,48 +111,69 @@ const PokemonUsage = () => {
         setSelectedPokemon(null);
         setPokemonDetails(null);
         try {
-            // Obtener los meses disponibles (de la misma forma que ya haces)
-            const monthsResponse = await axios.get('http://localhost:5000/api/months');
-            const months = monthsResponse.data.sort((a, b) => b.localeCompare(a));
-            const historicalDataObj = {};
-            let foundData = false;
-            let consecutiveFailures = 0;
-            const MAX_CONSECUTIVE_FAILURES = 3;
-            const MAX_MONTHS = 12;
-            let monthsWithData = 0;
-            
-            for (const month of months) {
-                if (monthsWithData >= MAX_MONTHS) break;
-                try {
-                    // Nota: se envía rankingType en los parámetros
-                    const response = await axios.get('http://localhost:5000/api/rankings', {
-                        params: { month, format: selectedFormat, rankingType } 
-                    });
-                    if (response.data && response.data.data && Object.keys(response.data.data).length > 0) {
-                        historicalDataObj[month] = response.data;
-                        foundData = true;
-                        consecutiveFailures = 0;
-                        monthsWithData++;
-                    } else {
+            if (rankingType === 'usage') {
+                // Lógica actual: consulta a /api/rankings
+                const monthsResponse = await axios.get('http://localhost:5000/api/months');
+                const months = monthsResponse.data.sort((a, b) => b.localeCompare(a));
+                const historicalDataObj = {};
+                let foundData = false;
+                let consecutiveFailures = 0;
+                const MAX_CONSECUTIVE_FAILURES = 3;
+                const MAX_MONTHS = 12;
+                let monthsWithData = 0;
+                for (const month of months) {
+                    if (monthsWithData >= MAX_MONTHS) break;
+                    try {
+                        const response = await axios.get('http://localhost:5000/api/rankings', {
+                            params: { month, format: selectedFormat }
+                        });
+                        if (response.data && response.data.data && Object.keys(response.data.data).length > 0) {
+                            historicalDataObj[month] = response.data;
+                            foundData = true;
+                            consecutiveFailures = 0;
+                            monthsWithData++;
+                        } else {
+                            consecutiveFailures++;
+                        }
+                    } catch (fetchError) {
                         consecutiveFailures++;
+                        console.error(`Error fetching data for ${month}:`, fetchError);
                     }
-                } catch (fetchError) {
-                    consecutiveFailures++;
-                    console.error(`Error fetching data for ${month}:`, fetchError);
+                    if (foundData && consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) break;
                 }
-                if (foundData && consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) break;
-            }
-            setHistoricalData(historicalDataObj);
-            const latestMonth = Object.keys(historicalDataObj).sort((a, b) => b.localeCompare(a))[0];
-            if (historicalDataObj[latestMonth]) {
-                parseData(historicalDataObj[latestMonth]);
-                setError(null);
+                setHistoricalData(historicalDataObj);
+                const latestMonth = Object.keys(historicalDataObj).sort((a, b) => b.localeCompare(a))[0];
+                if (historicalDataObj[latestMonth]) {
+                    // Se llama a la función encargada de parsear los datos de uso
+                    parseData(historicalDataObj[latestMonth]);
+                    setError(null);
+                } else {
+                    setUsageData([]);
+                    setError(`No data available for format: ${selectedFormat}`);
+                }
             } else {
-                setUsageData([]);
-                setError(`No data available for format: ${selectedFormat}`);
+                // rankingType === 'victories'
+                // Llamamos al endpoint /api/victories (se le puede enviar el formato si la API lo admite)
+                const response = await axios.get('http://localhost:5000/api/victories', {
+                    params: { format: selectedFormat }
+                });
+                const data = response.data;
+                // Ordenamos los datos en forma descendente según win_rate
+                data.sort((a, b) => b.win_rate - a.win_rate);
+                // Asignamos un rank secuencial y formateamos los datos
+                let rank = 1;
+                const parsedData = data.map(item => ({
+                    rank: rank++,
+                    name: item.pokemon,
+                    percentage: parseFloat(item.win_rate),
+                    wins: item.wins,
+                    total_games: item.total_games
+                }));
+                setUsageData(parsedData);
+                setError(null);
             }
         } catch (error) {
-            console.error("Error fetching historical data:", error);
+            console.error("Error loading ranking data:", error);
             setError(`Error loading data: ${error.message}`);
             setUsageData([]);
         } finally {
