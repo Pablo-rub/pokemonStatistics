@@ -17,9 +17,12 @@ import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import AssistantIcon from '@mui/icons-material/Assistant';
 import LoginIcon from '@mui/icons-material/Login';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import ForumIcon from '@mui/icons-material/Forum'; // Añadir icono de foro
+import ForumIcon from '@mui/icons-material/Forum';
 import { useAuth } from '../contexts/AuthContext';
 import LoginDialog from './LoginDialog';
+
+//todo
+//ajustar ancho de sidebar
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -29,8 +32,16 @@ const Sidebar = () => {
   const [isSignUp, setIsSignUp] = useState(false);
 
   // Widths for mini vs. expanded
-  const miniWidth = '60px';
-  const expandedWidth = '16.6667vw';
+  const collapsedWidth = '60px';
+  
+  // Modificación para asegurar una anchura mínima de 200px cuando está expandida
+  const expandedWidth = {
+    xs: 'max(200px, 16.667vw)',
+    sm: 'max(200px, 16.667vw)',
+    md: 'max(200px, 16.667vw)',
+    lg: 'max(200px, 16.667vw)',
+    xl: 'max(200px, 16.667vw)',
+  };
 
   const handleAuth = async (isSignUp = false) => {
     if (currentUser) {
@@ -66,7 +77,7 @@ const Sidebar = () => {
             height: '100vh',
             zIndex: 1300,
             overflowX: 'hidden',
-            width: isExpanded ? expandedWidth : miniWidth,
+            width: isExpanded ? expandedWidth : collapsedWidth,
             transition: 'width 0.3s',
           },
         }}
@@ -147,7 +158,7 @@ const Sidebar = () => {
       />
 
       <Box sx={{
-        marginLeft: isExpanded ? expandedWidth : miniWidth,
+        marginLeft: isExpanded ? expandedWidth : collapsedWidth,
         transition: 'margin-left 0.3s',
         flexGrow: 1,
       }} />

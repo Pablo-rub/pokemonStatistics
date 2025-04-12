@@ -1,22 +1,36 @@
 import React, { useState, useEffect } from "react";
-import { Paper, Typography, Box, Checkbox } from "@mui/material";
+import { Paper, Typography, Box, Checkbox, Grid, useTheme, useMediaQuery } from "@mui/material";
 import FavoriteBorder from '@mui/icons-material/FavoriteBorder';
 import Favorite from '@mui/icons-material/Favorite';
 import PokemonSprite from "./PokemonSprite";
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
-// todo
-// fix date
-
 const ReplayCard = ({ game }) => {
   const { currentUser } = useAuth();
   const [isSaved, setIsSaved] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
   const [message, setMessage] = useState('');
+  const theme = useTheme();
+  const isXsScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMdScreen = useMediaQuery(theme.breakpoints.between('md', 'lg'));
+  const isLgScreen = useMediaQuery(theme.breakpoints.up('lg'));
+
+  const spriteSize = {
+    xs: 60,
+    sm: 70,
+    md: 80,
+    lg: 90
+  };
+
+  const getSpriteSizeForScreen = () => {
+    if (isLgScreen) return spriteSize.lg;
+    if (isMdScreen) return spriteSize.md;
+    if (isXsScreen) return spriteSize.xs;
+    return spriteSize.sm;
+  };
 
   useEffect(() => {
-    // Check if replay is saved for current user
     const checkSavedStatus = async () => {
       if (!currentUser) return;
       try {
@@ -55,14 +69,12 @@ const ReplayCard = ({ game }) => {
 
   const formatDate = (timestamp) => {
     try {
-      // Handle if timestamp is an object with a value property
       const dateStr = typeof timestamp === 'object' && timestamp.value 
         ? timestamp.value 
         : timestamp;
 
       const date = new Date(dateStr);
       
-      // Check if date is valid
       if (isNaN(date.getTime())) {
         console.error("Invalid date:", timestamp);
         return "Unknown";
@@ -90,85 +102,219 @@ const ReplayCard = ({ game }) => {
         }
       }}
       variant="replay"
+      sx={{
+        border: '1px solid rgba(255, 255, 255, 0.12)',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          boxShadow: 3,
+          borderColor: 'rgba(255, 255, 255, 0.3)',
+          transform: 'translateY(-2px)',
+        }
+      }}
     >
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: 2
-      }}>
-        {/* Left side - Player names and rating */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Typography variant="subtitle1" color="textSecondary">
-            Players: {game.player1} vs {game.player2}
-          </Typography>
-          <Typography variant="subtitle1" color="textSecondary">
-            Rating: {game.rating ? game.rating : "Unknown"}
-          </Typography><Typography variant="subtitle1" color="textSecondary">
-            Date: {game.date ? formatDate(game.date) : "Unknown"}
-          </Typography>
-        </Box>
-
-        {/* Middle - Pokemon sprites */}
-        <Box sx={{ 
+      <Grid
+        container
+        spacing={2}
+        sx={{
           display: 'flex',
-          gap: 4,
-          flex: 1,
-          justifyContent: 'center'
-        }}>
-          {/* Player 1 Pokemon */}
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {game.teams?.p1?.map((pokemon, index) => (
-              <PokemonSprite key={`p1-${index}`} pokemon={pokemon} />
-            ))}
-          </Box>
+          alignItems: 'center',
+          padding: { 
+            xs: '0.5rem 1rem', 
+            sm: '0.75rem 2rem', 
+            md: '1rem 3rem' 
+          },
+          borderRadius: 2,
+          minHeight: { 
+            xs: '130px', 
+            sm: '120px', 
+            md: '110px', 
+            lg: '100px' 
+          },
+        }}
+      >
+        <Grid item xs={12} sm={12} md={3} lg={3} 
+          sx={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            justifyContent: 'center'
+          }}
+        >
+          <Typography 
+            variant={isXsScreen ? "h6" : "subtitle1"} 
+            color="textSecondary" 
+            textAlign="center" 
+            sx={{ 
+              width: '100%', 
+              mb: 0.5,
+              fontSize: {
+                xs: '1.1rem',
+                sm: '1.15rem', 
+                md: '1.2rem', 
+                lg: '1.25rem'
+              }
+            }}
+          >
+            {game.player1} vs {game.player2}
+          </Typography>
+          
+          <Typography 
+            variant="subtitle2" 
+            color="textSecondary" 
+            textAlign="center" 
+            sx={{ 
+              width: '100%', 
+              mb: 0.5,
+              fontSize: {
+                xs: '0.9rem',
+                sm: '0.95rem',
+                md: '1rem',
+                lg: '1.05rem'
+              }
+            }}
+          >
+            Rating: {game.rating ? game.rating : "Unknown"}
+          </Typography>
+          
+          <Typography 
+            variant="subtitle2" 
+            color="textSecondary" 
+            textAlign="center" 
+            sx={{ 
+              width: '100%',
+              fontSize: {
+                xs: '0.9rem',
+                sm: '0.95rem',
+                md: '1rem',
+                lg: '1.05rem'
+              }
+            }}
+          >
+            {game.date ? formatDate(game.date) : "Unknown"}
+          </Typography>
+        </Grid>
 
-          {/* Player 2 Pokemon */}
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {game.teams?.p2?.map((pokemon, index) => (
-              <PokemonSprite key={`p2-${index}`} pokemon={pokemon} />
-            ))}
-          </Box>
-        </Box>
+        <Grid item xs={12} sm={12} md={8} lg={8}>
+          <Box sx={{ 
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: { xs: 2, sm: 3, md: 5, lg: 6 },
+            width: '100%'
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              gap: { xs: 1, sm: 1.5, md: 2 },
+              mb: { xs: 1, sm: 0 }
+            }}>
+              {game.teams?.p1?.map((pokemon, index) => (
+                <Box 
+                  key={`p1-${index}`} 
+                  sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'center',
+                    transform: { 
+                      xs: 'scale(1.1)', 
+                      sm: 'scale(1.15)', 
+                      md: 'scale(1.2)', 
+                      lg: 'scale(1.25)' 
+                    }
+                  }}
+                >
+                  <PokemonSprite 
+                    pokemon={pokemon} 
+                    size={getSpriteSizeForScreen()}
+                  />
+                </Box>
+              ))}
+            </Box>
 
-        {/* Right side - Heart checkbox */}
-        {currentUser && (
-          <Box sx={{ position: 'relative' }}>
-            <Checkbox 
-              icon={<FavoriteBorder />} 
-              checkedIcon={<Favorite />}
-              checked={isSaved}
-              onChange={handleSaveToggle}
-              className="MuiCheckbox-root"
-              sx={{
-                color: '#000000',
-                '&.Mui-checked': {
-                  color: '#000000',
-                },
-              }}
-            />
-            {showMessage && (
-              <Typography
+            <Box sx={{ 
+              display: 'flex', 
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              gap: { xs: 1, sm: 1.5, md: 2 }
+            }}>
+              {game.teams?.p2?.map((pokemon, index) => (
+                <Box 
+                  key={`p2-${index}`} 
+                  sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'center',
+                    transform: { 
+                      xs: 'scale(1.1)', 
+                      sm: 'scale(1.15)', 
+                      md: 'scale(1.2)', 
+                      lg: 'scale(1.25)' 
+                    }
+                  }}
+                >
+                  <PokemonSprite 
+                    pokemon={pokemon} 
+                    size={getSpriteSizeForScreen()}
+                  />
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        </Grid>
+
+        <Grid item xs={12} sm={12} md={1} lg={1} 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: { xs: 'center', md: 'flex-end' },
+            alignItems: 'center'
+          }}
+        >
+          {currentUser && (
+            <Box sx={{ position: 'relative' }}>
+              <Checkbox 
+                icon={<FavoriteBorder sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />} 
+                checkedIcon={<Favorite sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />}
+                checked={isSaved}
+                onChange={handleSaveToggle}
+                className="MuiCheckbox-root"
                 sx={{
-                  position: 'absolute',
-                  top: -20,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                  color: 'white',
-                  padding: '4px 8px',
-                  borderRadius: 1,
-                  fontSize: '0.75rem',
-                  whiteSpace: 'nowrap',
-                  zIndex: 1,
+                  color: '#000000',
+                  '&.Mui-checked': {
+                    color: '#000000',
+                  },
+                  transition: 'transform 0.2s ease, color 0.2s ease',
+                  '&:hover': {
+                    transform: 'scale(1.2)',
+                    color: '#ff6d75',
+                  },
+                  '&.Mui-checked:hover': {
+                    color: '#ff6d75',
+                  }
                 }}
-              >
-                {message}
-              </Typography>
-            )}
-          </Box>
-        )}
-      </Box>
+              />
+              {showMessage && (
+                <Typography
+                  sx={{
+                    position: 'absolute',
+                    top: -20,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    color: 'white',
+                    padding: '4px 8px',
+                    borderRadius: 1,
+                    fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem' },
+                    whiteSpace: 'nowrap',
+                    zIndex: 1,
+                  }}
+                >
+                  {message}
+                </Typography>
+              )}
+            </Box>
+          )}
+        </Grid>
+      </Grid>
     </Paper>
   );
 };
