@@ -1,14 +1,22 @@
 import React from "react";
+import { Box, Typography } from "@mui/material";
 
 //todo
 //texto bienvenida explicativo
 
 function HomePage() {
     return (
-        <div>
-            <h1>Home Page</h1>
-            <p>Welcome to Pokemon Statistics</p>
-        </div>
+        <Box
+            sx={{
+                display: "flex",
+                justifyContent: "center"
+            }}
+        >
+            <Typography variant="h4" textAlign="center">
+                Welcome to the Pokémon Rankings App
+            </Typography>
+        </Box>
+
     );
 }
 
