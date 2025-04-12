@@ -21,6 +21,9 @@ import RemoveIcon from '@mui/icons-material/Remove';
 // ranking generales de tera, items, abilities, moves
 // ranking de mejores equipos
 // ranking de mejores sets de un pokemon
+// quitar de victoria historical usege por historical winrate
+// eliminar pokemon duplicados raros
+// filtrar victorias por mes
 
 const PokemonUsage = () => {
     const [formats, setFormats] = useState([]);
@@ -37,6 +40,18 @@ const PokemonUsage = () => {
     const itemsPerPage = 6;
     const [currentCategory, setCurrentCategory] = useState(0);
     const [rankingType, setRankingType] = useState('usage');
+    const [victoryData, setVictoryData] = useState([]);
+    const [isVictoryDataLoading, setIsVictoryDataLoading] = useState(false);
+
+    // Mapeo de endpoints para cada categoría (excepto historicalUsage)
+    const victoryEndpoints = {
+        abilities: '/api/victories/abilities',
+        moves: '/api/victories/moves',
+        items: '/api/victories/items',
+        // Si tienes endpoint para spreads, agregar aquí; de lo contrario, omitirlo
+        teraTypes: '/api/victories/tera',
+        teammates: '/api/victories/teammates'
+    };
 
     // Updated categories array with Historical Usage as the first category
     const categories = [
@@ -104,6 +119,38 @@ const PokemonUsage = () => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [rankingType]);
+
+    useEffect(() => {
+        const fetchVictoryData = async () => {
+            // Solo se obtiene si está en modo "victories", la categoría no es Historical Usage
+            // y se tiene un Pokémon seleccionado
+            if (rankingType !== 'victories' || 
+                categories[currentCategory].key === 'historicalUsage' ||
+                !selectedPokemon) {
+                return;
+            }
+            setIsVictoryDataLoading(true);
+            try {
+                const categoryKey = categories[currentCategory].key;
+                // Si la categoría no tiene endpoint (por ejemplo, spreads no implementado), se limpia el array
+                if (!victoryEndpoints[categoryKey]) {
+                    setVictoryData([]);
+                } else {
+                    const response = await axios.get(`http://localhost:5000${victoryEndpoints[categoryKey]}`, {
+                        params: { pokemon: selectedPokemon.name }
+                    });
+                    setVictoryData(response.data);
+                }
+            } catch (error) {
+                console.error(`Error fetching victory data for ${categories[currentCategory].name}:`, error);
+                setVictoryData([]);
+            } finally {
+                setIsVictoryDataLoading(false);
+            }
+        };
+
+        fetchVictoryData();
+    }, [rankingType, currentCategory, selectedPokemon]);
 
     const handleFormatChange = async (selectedFormat) => {
         setFormat(selectedFormat);
@@ -1124,7 +1171,36 @@ const fetchPokemonDetails = async (pokemonName) => {
                                         overflow: 'auto', // Changed from 'hidden' to 'auto' to allow scrolling
                                         mt: 1,
                                     }}>
-                                        {renderCategoryContent()}
+                                        {rankingType === 'usage' ? (
+                                            renderCategoryContent()
+                                        ) : (
+                                            // Para victorias:
+                                            categories[currentCategory].key === 'historicalUsage' ? (
+                                                renderPokemonHistoricalUsage()
+                                            ) : (
+                                                isVictoryDataLoading ? (
+                                                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                                                        <CircularProgress />
+                                                    </Box>
+                                                ) : victoryData.length === 0 ? (
+                                                    <Typography sx={{ color: 'white', mt: 2 }}>
+                                                        No victory data available for {categories[currentCategory].name}.
+                                                    </Typography>
+                                                ) : (
+                                                    victoryData.map((item, index) => {
+                                                        // Usa la propiedad que corresponda según la categoría
+                                                        const label = item.ability || item.move || item.item || item.tera_type || item.teammate || 'N/A';
+                                                        return (
+                                                            <Paper key={index} sx={{ p: 1, mb: 1, backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                                                                <Typography variant="body2" sx={{ color: 'white' }}>
+                                                                    {label}: {item.win_rate}% ({item.wins}/{item.total_games})
+                                                                </Typography>
+                                                            </Paper>
+                                                        );
+                                                    })
+                                                )
+                                            )
+                                        )}
                                     </Box>
 
                                 </Box>
