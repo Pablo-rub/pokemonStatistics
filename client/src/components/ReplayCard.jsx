@@ -142,7 +142,7 @@ const ReplayCard = ({ game }) => {
         >
           <Typography 
             variant={isXsScreen ? "h6" : "subtitle1"} 
-            color="textSecondary" 
+            color="white" 
             textAlign="center" 
             sx={{ 
               width: '100%', 
@@ -160,7 +160,7 @@ const ReplayCard = ({ game }) => {
           
           <Typography 
             variant="subtitle2" 
-            color="textSecondary" 
+            color="white" 
             textAlign="center" 
             sx={{ 
               width: '100%', 
@@ -178,7 +178,7 @@ const ReplayCard = ({ game }) => {
           
           <Typography 
             variant="subtitle2" 
-            color="textSecondary" 
+            color="white" 
             textAlign="center" 
             sx={{ 
               width: '100%',
@@ -272,15 +272,15 @@ const ReplayCard = ({ game }) => {
           {currentUser && (
             <Box sx={{ position: 'relative' }}>
               <Checkbox 
-                icon={<FavoriteBorder sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />} 
-                checkedIcon={<Favorite sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />}
+                icon={<FavoriteBorder sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 }, color: "white" }} />} 
+                checkedIcon={<Favorite sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 }, color: "white" }} />}
                 checked={isSaved}
                 onChange={handleSaveToggle}
                 className="MuiCheckbox-root"
                 sx={{
-                  color: '#000000',
+                  color: 'white',
                   '&.Mui-checked': {
-                    color: '#000000',
+                    color: 'white',
                   },
                   transition: 'transform 0.2s ease, color 0.2s ease',
                   '&:hover': {
