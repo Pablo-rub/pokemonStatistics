@@ -53,7 +53,6 @@ const PokemonUsage = () => {
         teammates: '/api/victories/teammates'
     };
 
-    // Updated categories array with Historical Usage as the first category
     const categories = [
         { name: "Historical Usage", key: "historicalUsage" },
         { name: "Abilities", key: "abilities" },
@@ -64,12 +63,24 @@ const PokemonUsage = () => {
         { name: "Teammates", key: "teammates" }
     ];
 
+    // Para el modo 'victories', define títulos ajustados
+    const victoryCategoryTitles = [
+        { name: "Historical Winrate", key: "historicalWinrate" },
+        { name: "Abilities", key: "abilities" },
+        { name: "Moves", key: "moves" },
+        { name: "Items", key: "items" },
+        { name: "Tera Types", key: "teraTypes" },
+        { name: "Teammates", key: "teammates" }
+    ];
+
     const handlePrevCategory = () => {
-        setCurrentCategory(prev => (prev > 0 ? prev - 1 : categories.length - 1));
+        const navCategories = rankingType === 'usage' ? categories : victoryCategoryTitles;
+        setCurrentCategory(prev => (prev > 0 ? prev - 1 : navCategories.length - 1));
     };
 
     const handleNextCategory = () => {
-        setCurrentCategory(prev => (prev < categories.length - 1 ? prev + 1 : 0));
+        const navCategories = rankingType === 'usage' ? categories : victoryCategoryTitles;
+        setCurrentCategory(prev => (prev < navCategories.length - 1 ? prev + 1 : 0));
     };
 
     useEffect(() => {
@@ -122,27 +133,24 @@ const PokemonUsage = () => {
 
     useEffect(() => {
         const fetchVictoryData = async () => {
-            // Solo se obtiene si está en modo "victories", la categoría no es Historical Usage
-            // y se tiene un Pokémon seleccionado
-            if (rankingType !== 'victories' || 
-                categories[currentCategory].key === 'historicalUsage' ||
-                !selectedPokemon) {
-                return;
-            }
+            // Solo se obtiene si está en "victories" y se ha seleccionado un Pokémon
+            if (rankingType !== 'victories' || !selectedPokemon) return;
+            // Usa la clave de victoria según el array de categorías de victoria
+            const currentVictoryCategory = victoryCategoryTitles[currentCategory].key;
+            // Para la categoría histórica, muestra el gráfico histórico (no hace fetch)
+            if (currentVictoryCategory === 'historicalWinrate') return;
             setIsVictoryDataLoading(true);
             try {
-                const categoryKey = categories[currentCategory].key;
-                // Si la categoría no tiene endpoint (por ejemplo, spreads no implementado), se limpia el array
-                if (!victoryEndpoints[categoryKey]) {
+                if (!victoryEndpoints[currentVictoryCategory]) {
                     setVictoryData([]);
                 } else {
-                    const response = await axios.get(`http://localhost:5000${victoryEndpoints[categoryKey]}`, {
+                    const response = await axios.get(`http://localhost:5000${victoryEndpoints[currentVictoryCategory]}`, {
                         params: { pokemon: selectedPokemon.name }
                     });
                     setVictoryData(response.data);
                 }
             } catch (error) {
-                console.error(`Error fetching victory data for ${categories[currentCategory].name}:`, error);
+                console.error(`Error fetching victory data for ${currentVictoryCategory}:`, error);
                 setVictoryData([]);
             } finally {
                 setIsVictoryDataLoading(false);
@@ -200,14 +208,13 @@ const PokemonUsage = () => {
                 }
             } else {
                 // rankingType === 'victories'
-                // Llamamos al endpoint /api/victories (se le puede enviar el formato si la API lo admite)
+                // Llamamos al endpoint /api/victories, pero NO actualizamos usageData,
+                // para mantener la misma lista de Pokémon que en el modo usage.
                 const response = await axios.get('http://localhost:5000/api/victories', {
                     params: { format: selectedFormat }
                 });
                 const data = response.data;
-                // Ordenamos los datos en forma descendente según win_rate
                 data.sort((a, b) => b.win_rate - a.win_rate);
-                // Asignamos un rank secuencial y formateamos los datos
                 let rank = 1;
                 const parsedData = data.map(item => ({
                     rank: rank++,
@@ -216,7 +223,7 @@ const PokemonUsage = () => {
                     wins: item.wins,
                     total_games: item.total_games
                 }));
-                setUsageData(parsedData);
+                // NO actualizamos usageData, de modo que la lista de Pokémon sigue siendo la de usage.
                 setError(null);
             }
         } catch (error) {
@@ -362,13 +369,8 @@ const fetchPokemonDetails = async (pokemonName) => {
 
     // Add this function to render category navigation
     const renderCategoryNavigation = () => {
-        // Si estamos en ranking de usage, se muestran todas las categorías;
-        // en caso contrario (por ejemplo, ranking de victorias) se excluye 'historicalUsage'.
-        const navCategories =
-            rankingType === 'usage'
-                ? categories
-                : categories.filter(category => category.key !== 'historicalUsage');
-
+        // Usa el mapeo correspondiente según el modo
+        const navCategories = rankingType === 'usage' ? categories : victoryCategoryTitles;
         return (
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                 <IconButton onClick={handlePrevCategory} sx={{ color: 'white' }}>
@@ -623,13 +625,15 @@ const fetchPokemonDetails = async (pokemonName) => {
 
     // Modified renderCategoryContent to handle the historical usage category differently
     const renderCategoryContent = () => {
-        const category = categories[currentCategory];
-        
-        // Handle historical usage differently
-        if (category.key === 'historicalUsage') {
+        const category = rankingType === 'usage'
+            ? categories[currentCategory]
+            : victoryCategoryTitles[currentCategory];
+
+        // Para la categoría histórica (usage en modo usage o winrate en victorias)
+        if (category.key === 'historicalUsage' || category.key === 'historicalWinrate') {
             return renderPokemonHistoricalUsage();
         }
-        
+
         if (!selectedPokemon || !pokemonDetails) {
             return (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -639,12 +643,10 @@ const fetchPokemonDetails = async (pokemonName) => {
                 </Box>
             );
         }
-        
+
         console.log(`Rendering ${category.key} data:`, pokemonDetails[category.key]);
-        
-        // Get data for the current category
+
         const categoryData = pokemonDetails[category.key];
-        
         if (!categoryData || categoryData.length === 0) {
             return (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -654,7 +656,7 @@ const fetchPokemonDetails = async (pokemonName) => {
                 </Box>
             );
         }
-        
+
         // Get colors for different categories
         const categoryColor = category.key === 'abilities' ? '#24CC9F' : 
                            category.key === 'moves' ? '#FF6384' : 
@@ -1044,6 +1046,7 @@ const fetchPokemonDetails = async (pokemonName) => {
                         itemsPerPage={itemsPerPage}
                         totalItems={usageData.length}
                         onPageChange={handlePageChange}
+                        showUsagePercentage={rankingType !== 'victories'}
                     />
                     </Grid>
 

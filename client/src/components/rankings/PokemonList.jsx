@@ -15,6 +15,7 @@ const PokemonList = ({
   itemsPerPage,
   totalItems,
   onPageChange,
+  showUsagePercentage,
 }) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -34,19 +35,26 @@ const PokemonList = ({
                 display: 'flex',
                 alignItems: 'center',
                 backgroundColor:
-                  selectedPokemon?.name === pokemon.name ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  selectedPokemon?.name === pokemon.name ? 'rgba(255, 255, 255, 0.2)' : '#221FC7',
                 '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  backgroundColor:
+                    selectedPokemon?.name === pokemon.name ? 'rgba(255, 255, 255, 0.2)' : '#1f24a0',
                 },
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
                 <PokemonSprite pokemon={{ name: pokemon.name }} />
                 <Box sx={{ flexGrow: 1 }}>
-                  <Typography>{pokemon.name}</Typography>
-                  <Typography variant="caption">{pokemon.percentage}%</Typography>
+                  <Typography sx={{ color: 'white' }}>{pokemon.name}</Typography>
+                  {showUsagePercentage && (
+                    <Typography variant="caption" sx={{ color: 'white' }}>
+                      {pokemon.percentage}%
+                    </Typography>
+                  )}
                 </Box>
-                <Typography variant="caption">#{pokemon.rank}</Typography>
+                <Typography variant="caption" sx={{ color: 'white' }}>
+                  #{pokemon.rank}
+                </Typography>
               </Box>
             </Paper>
           ))}
