@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Select, MenuItem, FormControl, InputLabel,
-  Grid, Paper, CircularProgress, IconButton, Button
+  Grid, CircularProgress, IconButton, Button
 } from '@mui/material';
-import PokemonSprite from '../components/PokemonSprite';
 import axios from 'axios';
-import { 
-    XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, Legend, CartesianGrid
-} from 'recharts';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
@@ -15,15 +11,12 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import RemoveIcon from '@mui/icons-material/Remove';
 import PokemonList from '../components/rankings/PokemonList';
 import DetailsPane from '../components/rankings/DetailsPane';
+import MultiLineChart from '../components/rankings/MultiLineChart';
 
 //todo
-// que se muestren los mismos pokemon
 // ranking generales de tera, items, abilities, moves
 // ranking de mejores equipos
 // ranking de mejores sets de un pokemon
-// quitar de victoria historical usege por historical winrate
-// eliminar pokemon duplicados raros
-// filtrar victorias por mes
 
 const PokemonUsage = () => {
     const [formats, setFormats] = useState([]);
@@ -48,7 +41,6 @@ const PokemonUsage = () => {
         abilities: '/api/victories/abilities',
         moves: '/api/victories/moves',
         items: '/api/victories/items',
-        // Si tienes endpoint para spreads, agregar aquí; de lo contrario, omitirlo
         teraTypes: '/api/victories/tera',
         teammates: '/api/victories/teammates'
     };
@@ -390,124 +382,23 @@ const fetchPokemonDetails = async (pokemonName) => {
     const prepareCategoryHistoricalData = (pokemonName, categoryKey) => {
         if (!historicalData || !pokemonName || !categoryKey) return { chartData: [], elements: [] };
 
-        // Get all unique elements across all months
         const allElements = new Set();
-        // Get sorted months (chronological order)
         const months = Object.keys(historicalData).sort();
-        let formattedMonths = [];
-        
-        // First, collect all months and format them for display
-        months.forEach(month => {
-            // Format the month for display
+        const formattedMonths = months.map(month => {
             const [year, monthNum] = month.split('-');
             const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-                              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            const formattedMonth = `${monthNames[parseInt(monthNum) - 1]} ${year}`;
-            
-            formattedMonths.push({
+                                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            return {
                 rawMonth: month,
-                formattedMonth,
-                originalMonth: month // Keep for sorting
-            });
-        });
-        
-        // Then find all elements used across all months
-        months.forEach(month => {
-            if (historicalData[month] && historicalData[month].data) {
-                let pokemonData = historicalData[month].data[pokemonName];
-                
-                // Case-insensitive search if needed
-                if (!pokemonData) {
-                    const pokemonNameLower = pokemonName.toLowerCase();
-                    for (const key in historicalData[month].data) {
-                        if (key.toLowerCase() === pokemonNameLower) {
-                            pokemonData = historicalData[month].data[key];
-                            break;
-                        }
-                    }
-                }
-                
-                if (pokemonData) {
-                    // Map category key to the actual property in the data
-                    let categoryData;
-                    switch(categoryKey) {
-                        case 'abilities': categoryData = pokemonData.Abilities; break;
-                        case 'moves': categoryData = pokemonData.Moves; break;
-                        case 'items': categoryData = pokemonData.Items; break;
-                        case 'spreads': categoryData = pokemonData.Spreads; break;
-                        case 'teraTypes': categoryData = pokemonData["Tera Types"]; break;
-                        case 'teammates': categoryData = pokemonData.Teammates; break;
-                        default: categoryData = null;
-                    }
-                    
-                    // Add all elements to our set
-                    if (categoryData) {
-                        Object.keys(categoryData).forEach(element => {
-                            // Skip "Other" for the chart to avoid clutter
-                            if (element.toLowerCase() !== 'other') {
-                                allElements.add(element);
-                            }
-                        });
-                    }
-                }
-            }
-        });
-        
-        // Find top elements based on most recent month
-        let sortedElements = [];
-        const latestMonth = months.sort((a, b) => b.localeCompare(a))[0]; // Get latest month
-        
-        if (historicalData[latestMonth] && historicalData[latestMonth].data) {
-            let pokemonData = historicalData[latestMonth].data[pokemonName];
-            
-            // Case-insensitive search if needed
-            if (!pokemonData) {
-                const pokemonNameLower = pokemonName.toLowerCase();
-                for (const key in historicalData[latestMonth].data) {
-                    if (key.toLowerCase() === pokemonNameLower) {
-                        pokemonData = historicalData[latestMonth].data[key];
-                        break;
-                    }
-                }
-            }
-            
-            if (pokemonData) {
-                // Map category key to the actual property in the data
-                let categoryData;
-                switch(categoryKey) {
-                    case 'abilities': categoryData = pokemonData.Abilities; break;
-                    case 'moves': categoryData = pokemonData.Moves; break;
-                    case 'items': categoryData = pokemonData.Items; break;
-                    case 'spreads': categoryData = pokemonData.Spreads; break;
-                    case 'teraTypes': categoryData = pokemonData["Tera Types"]; break;
-                    case 'teammates': categoryData = pokemonData.Teammates; break;
-                    default: categoryData = null;
-                }
-                
-                if (categoryData) {
-                    sortedElements = Object.entries(categoryData)
-                        .filter(([name]) => name.toLowerCase() !== 'other')
-                        .sort((a, b) => b[1] - a[1])
-                        .map(([name]) => name);
-                }
-            }
-        }
-        
-        // Change this line to show 10 elements for teammates category
-        const maxElements = categoryKey === 'teammates' ? 10 : 5;
-        const topElements = sortedElements.slice(0, maxElements);
-        
-        // For each formatted month, create an entry with data for all top elements
-        const combinedChartData = formattedMonths.map(({ rawMonth, formattedMonth, originalMonth }) => {
-            const monthData = { 
-                month: formattedMonth, 
-                originalMonth: originalMonth // Add this for proper sorting
+                formattedMonth: `${monthNames[parseInt(monthNum) - 1]} ${year}`
             };
-            
+        });
+
+        const combinedChartData = formattedMonths.map(({ rawMonth, formattedMonth }) => {
+            const monthData = { month: formattedMonth };
+
             if (historicalData[rawMonth] && historicalData[rawMonth].data) {
                 let pokemonData = historicalData[rawMonth].data[pokemonName];
-                
-                // Case-insensitive search if needed
                 if (!pokemonData) {
                     const pokemonNameLower = pokemonName.toLowerCase();
                     for (const key in historicalData[rawMonth].data) {
@@ -517,11 +408,9 @@ const fetchPokemonDetails = async (pokemonName) => {
                         }
                     }
                 }
-                
                 if (pokemonData) {
-                    // Map category key to the actual property in the data
                     let categoryData;
-                    switch(categoryKey) {
+                    switch (categoryKey) {
                         case 'abilities': categoryData = pokemonData.Abilities; break;
                         case 'moves': categoryData = pokemonData.Moves; break;
                         case 'items': categoryData = pokemonData.Items; break;
@@ -530,23 +419,31 @@ const fetchPokemonDetails = async (pokemonName) => {
                         case 'teammates': categoryData = pokemonData.Teammates; break;
                         default: categoryData = null;
                     }
-                    
-                    // Add data for each element to the month data
                     if (categoryData) {
-                        topElements.forEach(element => {
-                            monthData[element] = categoryData[element] || 0;
+                        // Usamos un objeto temporal para acumular sumas y contar repeticiones
+                        const aggregation = {};
+                        Object.entries(categoryData).forEach(([element, usage]) => {
+                            if (aggregation[element]) {
+                                aggregation[element].sum += usage;
+                                aggregation[element].count++;
+                            } else {
+                                aggregation[element] = { sum: usage, count: 1 };
+                            }
+                        });
+                        // Calcular el promedio y asignar en monthData
+                        Object.entries(aggregation).forEach(([element, { sum, count }]) => {
+                            monthData[element] = sum / count;
+                            allElements.add(element);
                         });
                     }
                 }
             }
-            
             return monthData;
         });
 
         return {
-            // Sort by original month for correct chronological display
-            chartData: combinedChartData.sort((a, b) => a.originalMonth.localeCompare(b.originalMonth)),
-            elements: topElements
+            chartData: combinedChartData,
+            elements: Array.from(allElements)
         };
     };
 
@@ -677,57 +574,11 @@ const fetchPokemonDetails = async (pokemonName) => {
                 
                 {/* Combined chart for top elements in this category */}
                 {combinedChartData.length > 1 && topElements.length > 0 && (
-                    <Box sx={{ mt: 3, mb: 4, height: 300 }}>
+                    <Box sx={{ mt: 3, mb: 4 }}>
                         <Typography variant="subtitle1" sx={{ color: 'white', mb: 1 }}>
                             Top {topElements.length} {category.name} Usage Trends
                         </Typography>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart
-                                data={combinedChartData}
-                                margin={{ top: 5, right: 30, left: 5, bottom: 30 }}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                                <XAxis 
-                                    dataKey="month" 
-                                    tick={{ fill: 'white', fontSize: 10 }}
-                                    angle={-45}
-                                    textAnchor="end"
-                                    height={60}
-                                />
-                                <YAxis 
-                                    tick={{ fill: 'white', fontSize: 10 }}
-                                    tickFormatter={(value) => `${value}%`}
-                                />
-                                <Tooltip 
-                                    contentStyle={{ 
-                                        backgroundColor: '#221FC7',
-                                        borderColor: '#1A1896',
-                                        color: 'white',
-                                        fontSize: 12
-                                    }}
-                                    formatter={(value, name, props) => [
-                                        `${parseFloat(value).toFixed(2)}%`, 
-                                        name
-                                    ]}
-                                    labelFormatter={(label) => label}
-                                    itemSorter={(item) => -item.value}
-                                    labelStyle={{ color: 'white' }}
-                                />
-                                <Legend wrapperStyle={{ color: 'white' }} />
-                                {topElements.map((element, index) => (
-                                    <Line 
-                                        key={element}
-                                        type="monotone" 
-                                        dataKey={element} 
-                                        name={element} 
-                                        stroke={generateColor(index, topElements.length)}
-                                        strokeWidth={2}
-                                        dot={{ r: 3 }}
-                                        activeDot={{ r: 5 }}
-                                    />
-                                ))}
-                            </LineChart>
-                        </ResponsiveContainer>
+                        <MultiLineChart chartData={combinedChartData} elements={topElements} />
                     </Box>
                 )}
                 
@@ -838,52 +689,11 @@ const fetchPokemonDetails = async (pokemonName) => {
                     {selectedPokemon.name} Historical Usage
                 </Typography>
                 <Box sx={{ height: 400 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart
-                            data={chartData}
-                            margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
-                        >
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                            <XAxis 
-                                dataKey="month" 
-                                tick={{ fill: 'white' }}
-                                angle={-45}
-                                textAnchor="end"
-                                height={60}
-                            />
-                            <YAxis 
-                                label={{ 
-                                    value: 'Usage %', 
-                                    angle: -90, 
-                                    position: 'insideLeft',
-                                    fill: 'white' 
-                                }}
-                                tick={{ fill: 'white' }}
-                            />
-                            <Tooltip 
-                                contentStyle={{ 
-                                    backgroundColor: '#221FC7',
-                                    borderColor: '#1A1896',
-                                    color: 'white'
-                                }}
-                                formatter={(value) => [`${parseFloat(value).toFixed(2)}%`, selectedPokemon.name]}
-                                itemSorter={(item) => -item.value} // Sort items by value in descending order
-                                labelStyle={{ color: 'white' }}
-                            />
-                            <Legend />
-                            <Line 
-                                type="monotone" 
-                                dataKey="usage" 
-                                name="Uso %" 
-                                stroke="#24CC9F" 
-                                strokeWidth={2}
-                                dot={{ fill: '#24CC9F', r: 4 }}
-                                activeDot={{ r: 8 }}
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
+                    {/* Usamos MultiLineChart pasándole "usage" como única serie */}
+                    <MultiLineChart chartData={chartData} elements={["usage"]} />
                 </Box>
                 
+                {/* También se muestran tarjetas individuales resumen */}
                 <Box sx={{ mt: 4 }}>
                     <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
                         Usage Trends
@@ -894,12 +704,15 @@ const fetchPokemonDetails = async (pokemonName) => {
                         gap: 2
                     }}>
                         {chartData.slice(-5).reverse().map((dataPoint, index) => (
-                            <Box key={index} sx={{ 
-                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                p: 2,
-                                borderRadius: 1,
-                                textAlign: 'center'
-                            }}>
+                            <Box 
+                                key={index} 
+                                sx={{ 
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    p: 2,
+                                    borderRadius: 1,
+                                    textAlign: 'center'
+                                }}
+                            >
                                 <Typography variant="subtitle2" sx={{ color: 'white' }}>
                                     {dataPoint.month}
                                 </Typography>
