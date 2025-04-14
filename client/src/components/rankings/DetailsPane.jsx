@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Paper, Typography, CircularProgress } from '@mui/material';
 import PokemonSprite from '../PokemonSprite';
+import MultiLineChart from './MultiLineChart';
 
 const DetailsPane = ({
   isLoadingFormat,
@@ -15,6 +16,8 @@ const DetailsPane = ({
   currentCategory,
   isVictoryDataLoading,
   victoryData,
+  prepareVictoryTimelineData,
+  getUniqueElements,
 }) => {
   return (
     <Paper
@@ -101,26 +104,70 @@ const DetailsPane = ({
                 No victory data available for {categories[currentCategory].name}.
               </Typography>
             ) : (
-              victoryData.map((item, index) => {
-                // Select the appropriate property based on category
-                const label =
-                  item.ability ||
-                  item.move ||
-                  item.item ||
-                  item.tera_type ||
-                  item.teammate ||
-                  'N/A';
-                return (
-                  <Paper
-                    key={index}
-                    sx={{ p: 1, mb: 1, backgroundColor: 'rgba(255,255,255,0.1)' }}
-                  >
-                    <Typography variant="body2" sx={{ color: 'white' }}>
-                      {label}: {item.win_rate}% ({item.wins}/{item.total_games})
+              <Box sx={{ height: '100%', overflow: 'auto', pr: 1 }}>
+                <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                  {categories[currentCategory].name} Win Rates ({victoryData.length})
+                </Typography>
+                
+                {/* Agregar el MultiLineChart para datos de victoria */}
+                {victoryData.length > 0 && (
+                  <Box sx={{ height: 350, mb: 4 }}>
+                    <Typography variant="subtitle1" sx={{ color: 'white', mb: 1 }}>
+                      Win Rate Trends
                     </Typography>
-                  </Paper>
-                );
-              })
+                    <MultiLineChart 
+                      chartData={prepareVictoryTimelineData(victoryData)} 
+                      elements={getUniqueElements(victoryData)}
+                    />
+                  </Box>
+                )}
+                
+                {/* Lista de elementos con sus tasas de victoria */}
+                {victoryData.map((item, index) => {
+                  // Select the appropriate property based on category
+                  const label =
+                    item.ability ||
+                    item.move ||
+                    item.item ||
+                    item.tera_type ||
+                    item.teammate ||
+                    'N/A';
+                  
+                  // Format the month from "YYYY-MM" to a more readable format
+                  const formattedDate = item.month 
+                    ? (() => {
+                        const [year, monthNum] = item.month.split('-');
+                        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                          'July', 'August', 'September', 'October', 'November', 'December'];
+                        const monthName = monthNames[parseInt(monthNum) - 1];
+                        return `${monthName} ${year}`;
+                      })()
+                    : '';
+                    
+                  return (
+                    <Paper
+                      key={index}
+                      sx={{ p: 1, mb: 1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+                    >
+                      <Typography variant="body2" sx={{ color: 'white' }}>
+                        {label}: {item.win_rate}% ({item.wins}/{item.total_games})
+                      </Typography>
+                      {formattedDate && (
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            display: 'block', 
+                            color: 'rgba(255,255,255,0.7)',
+                            mt: 0.5 
+                          }}
+                        >
+                          {formattedDate}
+                        </Typography>
+                      )}
+                    </Paper>
+                  );
+                })}
+              </Box>
             )}
           </Box>
         </Box>

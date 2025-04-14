@@ -17,6 +17,8 @@ import MultiLineChart from '../components/rankings/MultiLineChart';
 // ranking generales de tera, items, abilities, moves
 // ranking de mejores equipos
 // ranking de mejores sets de un pokemon
+// chart teammates
+// historical winrate
 
 const PokemonUsage = () => {
     const [formats, setFormats] = useState([]);
@@ -207,15 +209,6 @@ const PokemonUsage = () => {
                 });
                 const data = response.data;
                 data.sort((a, b) => b.win_rate - a.win_rate);
-                let rank = 1;
-                const parsedData = data.map(item => ({
-                    rank: rank++,
-                    name: item.pokemon,
-                    percentage: parseFloat(item.win_rate),
-                    wins: item.wins,
-                    total_games: item.total_games
-                }));
-                // NO actualizamos usageData, de modo que la lista de Pokémon sigue siendo la de usage.
                 setError(null);
             }
         } catch (error) {
@@ -447,6 +440,87 @@ const fetchPokemonDetails = async (pokemonName) => {
         };
     };
 
+    // Función para preparar la data histórica para categorías de victories (no la histórica global)
+    const prepareCategoryVictoryHistoricalData = (pokemonName, categoryKey) => {
+        if (!historicalData || !pokemonName || !categoryKey) return { chartData: [], elements: [] };
+
+        const allElements = new Set();
+        const months = Object.keys(historicalData).sort();
+        const formattedMonths = months.map(month => {
+            const [year, monthNum] = month.split('-');
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            return {
+                rawMonth: month,
+                formattedMonth: `${monthNames[parseInt(monthNum) - 1]} ${year}`
+            };
+        });
+
+        const combinedChartData = formattedMonths.map(({ rawMonth, formattedMonth }) => {
+            const monthData = { month: formattedMonth };
+
+            if (historicalData[rawMonth] && historicalData[rawMonth].data) {
+                let pokemonData = historicalData[rawMonth].data[pokemonName];
+                if (!pokemonData) {
+                    const pokemonNameLower = pokemonName.toLowerCase();
+                    for (const key in historicalData[rawMonth].data) {
+                        if (key.toLowerCase() === pokemonNameLower) {
+                            pokemonData = historicalData[rawMonth].data[key];
+                            break;
+                        }
+                    }
+                }
+                if (pokemonData) {
+                    let categoryData;
+                    switch (categoryKey) {
+                        case 'abilities': 
+                            categoryData = pokemonData.Abilities; 
+                            break;
+                        case 'moves': 
+                            categoryData = pokemonData.Moves; 
+                            break;
+                        case 'items': 
+                            categoryData = pokemonData.Items; 
+                            break;
+                        case 'spreads': 
+                            categoryData = pokemonData.Spreads; 
+                            break;
+                        case 'teraTypes': 
+                            categoryData = pokemonData["Tera Types"]; 
+                            break;
+                        case 'teammates': 
+                            categoryData = pokemonData.Teammates; 
+                            break;
+                        default: 
+                            categoryData = null;
+                    }
+                    if (categoryData) {
+                        // Acumular valores para evitar duplicados.
+                        const aggregation = {};
+                        Object.entries(categoryData).forEach(([element, victories]) => {
+                            if (aggregation[element]) {
+                                aggregation[element].sum += victories;
+                                aggregation[element].count++;
+                            } else {
+                                aggregation[element] = { sum: victories, count: 1 };
+                            }
+                        });
+                        Object.entries(aggregation).forEach(([element, { sum, count }]) => {
+                            monthData[element] = sum / count;
+                            allElements.add(element);
+                        });
+                    }
+                }
+            }
+            return monthData;
+        });
+
+        return {
+            chartData: combinedChartData,
+            elements: Array.from(allElements)
+        };
+    };
+
     // Calculate month-over-month change for each element with improved calculation
     const calculateMonthlyChange = (pokemonName, categoryKey, itemName) => {
         if (!historicalData || !pokemonName) return null;
@@ -526,11 +600,13 @@ const fetchPokemonDetails = async (pokemonName) => {
             ? categories[currentCategory]
             : victoryCategoryTitles[currentCategory];
 
-        // Para la categoría histórica (usage en modo usage o winrate en victorias)
+        // Para la categoría histórica: usage en uso o winrate en victorias
         if (category.key === 'historicalUsage' || category.key === 'historicalWinrate') {
-            return renderPokemonHistoricalUsage();
+            return rankingType === 'usage'
+                ? renderPokemonHistoricalUsage()
+                : renderPokemonHistoricalVictory();
         }
-
+        
         if (!selectedPokemon || !pokemonDetails) {
             return (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -542,7 +618,6 @@ const fetchPokemonDetails = async (pokemonName) => {
         }
 
         console.log(`Rendering ${category.key} data:`, pokemonDetails[category.key]);
-
         const categoryData = pokemonDetails[category.key];
         if (!categoryData || categoryData.length === 0) {
             return (
@@ -554,18 +629,30 @@ const fetchPokemonDetails = async (pokemonName) => {
             );
         }
 
-        // Get colors for different categories
-        const categoryColor = category.key === 'abilities' ? '#24CC9F' : 
-                           category.key === 'moves' ? '#FF6384' : 
-                           category.key === 'items' ? '#36A2EB' :
-                           category.key === 'spreads' ? '#FFCE56' :
-                           category.key === 'teraTypes' ? '#9966FF' : '#FF9F40';
+        // Para las categorías de victories (no históricas), preparamos la data y la mostramos en el gráfico
+        let chartData = [];
+        let elements = [];
 
-        // Get historical data for combined chart
-        const { chartData: combinedChartData, elements: topElements } = 
-            prepareCategoryHistoricalData(selectedPokemon.name, category.key);
-        
-        // Set overflow to 'auto' to make content scrollable
+        if (rankingType === 'victories' && currentCategory > 0) {
+            // Para visualizaciones específicas de victory (abilities, moves, etc.),
+            // usamos los datos que vienen directamente del backend
+            if (!isVictoryDataLoading && victoryData && victoryData.length > 0) {
+                const processedData = prepareVictoryDataForChart(victoryData);
+                chartData = processedData.chartData;
+                elements = processedData.elements;
+            }
+        } else {
+            // Para datos históricos generales o categorías de uso,
+            // seguimos usando la preparación histórica existente
+            const { chartData: combinedChartData, elements: topElements } = 
+                rankingType === 'victories'
+                    ? prepareCategoryVictoryHistoricalData(selectedPokemon.name, category.key)
+                    : prepareCategoryHistoricalData(selectedPokemon.name, category.key);
+            
+            chartData = combinedChartData;
+            elements = topElements;
+        }
+
         return (
             <Box sx={{ height: '100%', overflow: 'auto', pr: 1 }}>
                 <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
@@ -573,24 +660,21 @@ const fetchPokemonDetails = async (pokemonName) => {
                 </Typography>
                 
                 {/* Combined chart for top elements in this category */}
-                {combinedChartData.length > 1 && topElements.length > 0 && (
+                {chartData.length > 1 && elements.length > 0 && (
                     <Box sx={{ mt: 3, mb: 4 }}>
                         <Typography variant="subtitle1" sx={{ color: 'white', mb: 1 }}>
-                            Top {topElements.length} {category.name} Usage Trends
+                            Top {elements.length} {category.name} 
+                            {rankingType === 'usage' ? ' Usage Trends' : ' Winrate Trends'}
                         </Typography>
-                        <MultiLineChart chartData={combinedChartData} elements={topElements} />
+                        <MultiLineChart chartData={chartData} elements={elements} />
                     </Box>
                 )}
                 
-                {/* Individual item listings with bar charts */}
+                {/* Resto de la visualización individual con indicadores de cambio (barra, etc.) */}
                 {categoryData.map((item, index) => {
-                    // Get the item name/value based on the category
                     const itemName = category.key === 'teraTypes' ? item.type : 
-                                   category.key === 'teammates' ? item.name : 
-                                   category.key === 'spreads' ? item.value :
-                                   item.name;
-                                   
-                    // Get month-over-month change
+                                     category.key === 'teammates' ? item.name : 
+                                     category.key === 'spreads' ? item.value : item.name;
                     const monthlyChange = calculateMonthlyChange(
                         selectedPokemon.name, 
                         category.key, 
@@ -613,8 +697,6 @@ const fetchPokemonDetails = async (pokemonName) => {
                                     <Typography variant="body2" sx={{ color: 'white' }}>
                                         {parseFloat(item.percentage).toFixed(2)}%
                                     </Typography>
-                                    
-                                    {/* Monthly change indicator */}
                                     {monthlyChange && (
                                         <Typography 
                                             variant="caption" 
@@ -648,7 +730,7 @@ const fetchPokemonDetails = async (pokemonName) => {
                                 <Box sx={{ 
                                     width: `${Math.min(item.percentage, 100)}%`, 
                                     height: '100%',
-                                    backgroundColor: categoryColor,
+                                    backgroundColor: '#FF6384',
                                     borderRadius: '4px'
                                 }} />
                             </Box>
@@ -771,17 +853,239 @@ const fetchPokemonDetails = async (pokemonName) => {
         return chartData.sort((a, b) => a.originalMonth.localeCompare(b.originalMonth));
     };
 
-    // Helper function to generate colors for multi-line chart
-    const generateColor = (index, total) => {
-        const baseColors = ['#24CC9F', '#FF6384', '#36A2EB', '#FFCE56', '#9966FF', '#FF9F40', '#4BC0C0', '#F49AC2'];
+    // Función para preparar la data histórica para victorias (winrate)
+    const prepareHistoricalVictoryChartData = (pokemonName) => {
+        if (!historicalData || !pokemonName) return [];
+        const chartData = [];
+        // Obtener meses en orden cronológico
+        const months = Object.keys(historicalData).sort();
         
-        if (index < baseColors.length) {
-            return baseColors[index];
+        months.forEach(month => {
+            if (historicalData[month] && historicalData[month].data) {
+                // Buscar el Pokémon (exacto o case-insensitive)
+                let pokemonData = historicalData[month].data[pokemonName];
+                if (!pokemonData) {
+                    const pokemonNameLower = pokemonName.toLowerCase();
+                    for (const key in historicalData[month].data) {
+                        if (key.toLowerCase() === pokemonNameLower) {
+                            pokemonData = historicalData[month].data[key];
+                            break;
+                        }
+                    }
+                }
+                
+                if (pokemonData) {
+                    // Formatear el mes para presentación (p.ej., "2023-01" a "Jan 2023")
+                    const [year, monthNum] = month.split('-');
+                    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const formattedMonth = `${monthNames[parseInt(monthNum) - 1]} ${year}`;
+                    // Usamos la propiedad "victories" (o winrate) si existe o 0 en caso contrario
+                    const winrate = pokemonData.victories || 0;
+                    chartData.push({
+                        month: formattedMonth,
+                        winrate,
+                        originalMonth: month
+                    });
+                }
+            }
+        });
+        // Ordenar en forma cronológica usando el valor original
+        return chartData.sort((a, b) => a.originalMonth.localeCompare(b.originalMonth));
+    };
+
+    // Función para renderizar el multilinechart para victorias
+    const renderPokemonHistoricalVictory = () => {
+        if (!selectedPokemon) {
+            return (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                    <Typography sx={{ color: 'white' }}>
+                        Select a Pokémon
+                    </Typography>
+                </Box>
+            );
         }
         
-        // Generate colors dynamically if we have more elements than base colors
-        const hue = (index / total) * 360;
-        return `hsl(${hue}, 80%, 65%)`;
+        const chartData = prepareHistoricalVictoryChartData(selectedPokemon.name);
+        if (chartData.length <= 1) {
+            return (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                    <Typography sx={{ color: 'white' }}>
+                        No historical winrate data available for {selectedPokemon.name}
+                    </Typography>
+                </Box>
+            );
+        }
+        
+        return (
+            <Box sx={{ height: '100%', overflow: 'auto', pr: 1 }}>
+                <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                    {selectedPokemon.name} Historical Winrate
+                </Typography>
+                <Box sx={{ height: 400 }}>
+                    {/* Usamos MultiLineChart pasándole "winrate" como única serie */}
+                    <MultiLineChart chartData={chartData} elements={["winrate"]} />
+                </Box>
+                
+                {/* Tarjetas resumen para winrate */}
+                <Box sx={{ mt: 4 }}>
+                    <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                        Winrate Trends
+                    </Typography>
+                    <Box sx={{ 
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                        gap: 2
+                    }}>
+                        {chartData.slice(-5).reverse().map((dataPoint, index) => (
+                            <Box 
+                                key={index} 
+                                sx={{ 
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    p: 2,
+                                    borderRadius: 1,
+                                    textAlign: 'center'
+                                }}
+                            >
+                                <Typography variant="subtitle2" sx={{ color: 'white' }}>
+                                    {dataPoint.month}
+                                </Typography>
+                                <Typography variant="h5" sx={{ color: '#24CC9F', mt: 1 }}>
+                                    {parseFloat(dataPoint.winrate).toFixed(2)}%
+                                </Typography>
+                            </Box>
+                        ))}
+                    </Box>
+                </Box>
+            </Box>
+        );
+    };
+
+    // Función para procesar los datos de victorias que vienen del backend
+    const prepareVictoryDataForChart = (victoryData) => {
+        if (!victoryData || victoryData.length === 0) return { chartData: [], elements: [] };
+        
+        // Agrupar los datos por mes
+        const monthlyData = {};
+        const allElements = new Set();
+        
+        victoryData.forEach(item => {
+            const month = item.month || 'Unknown';
+            const element = item.name || item.type || item.value || 'Unknown';
+            const winRate = item.win_rate || 0;
+            
+            if (!monthlyData[month]) {
+                monthlyData[month] = { month };
+            }
+            
+            // Evitamos duplicados en el mismo mes
+            monthlyData[month][element] = winRate;
+            allElements.add(element);
+        });
+        
+        // Convertir a array y ordenar cronológicamente
+        const chartData = Object.values(monthlyData).sort((a, b) => {
+            return new Date(a.month) - new Date(b.month);
+        });
+        
+        // Formatear los meses para mejor visualización
+        const formattedChartData = chartData.map(item => {
+            try {
+                const dateObj = new Date(item.month);
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                const formattedMonth = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+                return { ...item, month: formattedMonth };
+            } catch (e) {
+                return item; // En caso de error, mantener el formato original
+            }
+        });
+        
+        return {
+            chartData: formattedChartData,
+            elements: Array.from(allElements)
+        };
+    };
+
+    // Esta función prepara los datos de victoria para mostrarlos en un gráfico de líneas múltiples
+    const prepareVictoryTimelineData = (victoryData) => {
+        // Agrupa los datos por mes
+        const groupedByMonth = {};
+        
+        victoryData.forEach(item => {
+            const month = item.month;
+            const elementName = 
+            item.ability || 
+            item.move || 
+            item.item || 
+            item.tera_type || 
+            item.teammate || 
+            'N/A';
+            
+            if (!groupedByMonth[month]) {
+            groupedByMonth[month] = {};
+            }
+            
+            groupedByMonth[month][elementName] = item.win_rate;
+        });
+        
+        // Convierte los datos agrupados a un formato adecuado para MultiLineChart
+        const chartData = [];
+        
+        Object.keys(groupedByMonth).sort().forEach(month => {
+            const [year, monthNum] = month.split('-');
+            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const formattedMonth = `${monthNames[parseInt(monthNum) - 1]} ${year}`;
+            
+            const dataPoint = {
+            month: formattedMonth,
+            ...groupedByMonth[month]
+            };
+            
+            chartData.push(dataPoint);
+        });
+        
+        return chartData;
+    };
+
+    // Esta función obtiene los elementos únicos de los datos de victoria
+    // Limitando a los 10 con mayor tasa de victoria
+    const getUniqueElements = (victoryData) => {
+        // Crear un mapa para rastrear la tasa de victoria promedio de cada elemento
+        const elementWinRates = {};
+        const elementCounts = {};
+        
+        // Calcular la tasa de victoria promedio para cada elemento
+        victoryData.forEach(item => {
+            const elementName = 
+            item.ability || 
+            item.move || 
+            item.item || 
+            item.tera_type || 
+            item.teammate || 
+            'N/A';
+            
+            if (!elementWinRates[elementName]) {
+            elementWinRates[elementName] = 0;
+            elementCounts[elementName] = 0;
+            }
+            
+            elementWinRates[elementName] += item.win_rate;
+            elementCounts[elementName]++;
+        });
+        
+        // Calcular el promedio
+        Object.keys(elementWinRates).forEach(key => {
+            elementWinRates[key] = elementWinRates[key] / elementCounts[key];
+        });
+        
+        // Ordenar por tasa de victoria y obtener los 10 primeros
+        const topElements = Object.entries(elementWinRates)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(entry => entry[0]);
+        
+        return topElements;
     };
 
     return (
@@ -878,6 +1182,8 @@ const fetchPokemonDetails = async (pokemonName) => {
                         currentCategory={currentCategory}
                         isVictoryDataLoading={isVictoryDataLoading}
                         victoryData={victoryData}
+                        prepareVictoryTimelineData={prepareVictoryTimelineData} // Añade estas dos props
+                        getUniqueElements={getUniqueElements}
                     />
                     </Grid>
                 </Grid>
