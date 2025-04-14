@@ -8,6 +8,47 @@ const generateColor = (index, total) => {
     return `hsl(${hue}, 80%, 65%)`;
 };
 
+// Componente personalizado para el tooltip que ordena los elementos por valor descendente
+const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+        // Ordenar los elementos por valor descendente
+        const sortedPayload = [...payload].sort((a, b) => b.value - a.value);
+        
+        return (
+            <div style={{ 
+                backgroundColor: '#221FC7', 
+                border: '1px solid #1A1896', 
+                borderRadius: 5, 
+                padding: 10,
+                boxShadow: '0 3px 10px rgba(0,0,0,0.2)'
+            }}>
+                <p style={{ margin: 0, color: 'white', fontWeight: 'bold', marginBottom: 5 }}>{label}</p>
+                {sortedPayload.map((entry, index) => (
+                    <div key={`item-${index}`} style={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        margin: '3px 0'
+                    }}>
+                        <span style={{ 
+                            display: 'inline-block', 
+                            width: 10, 
+                            height: 10, 
+                            backgroundColor: entry.color,
+                            marginRight: 6,
+                            borderRadius: '50%'
+                        }}></span>
+                        <span style={{ color: 'white' }}>
+                            {entry.name}: {entry.value?.toFixed(2) || 'N/A'}%
+                        </span>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+    
+    return null;
+};
+
 const MultiLineChart = ({ chartData, elements }) => {
     return (
         <div style={{ width: '100%', height: 300 }}>
@@ -25,10 +66,8 @@ const MultiLineChart = ({ chartData, elements }) => {
                         tick={{ fill: 'white', fontSize: 10 }} 
                         tickFormatter={(value) => `${value}%`}
                     />
-                    <Tooltip 
-                        contentStyle={{ backgroundColor: '#221FC7', borderColor: '#1A1896', color: 'white', fontSize: 12 }}
-                        labelStyle={{ color: 'white' }}
-                    />
+                    {/* Reemplazar el Tooltip existente con nuestro componente personalizado */}
+                    <Tooltip content={<CustomTooltip />} />
                     <Legend wrapperStyle={{ color: 'white' }} />
                     {elements.map((element, index) => (
                         <Line
