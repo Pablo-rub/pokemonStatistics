@@ -12,6 +12,7 @@ const DetailsPane = ({
   renderCategoryNavigation,
   renderCategoryContent,
   renderPokemonHistoricalUsage,
+  renderPokemonHistoricalVictory,
   categories,
   currentCategory,
   isVictoryDataLoading,
@@ -85,89 +86,97 @@ const DetailsPane = ({
             }}
           >
             {rankingType === 'usage' ? (
-              renderCategoryContent && renderCategoryContent()
-            ) : categories[currentCategory].key === 'historicalUsage' ? (
-              renderPokemonHistoricalUsage && renderPokemonHistoricalUsage()
-            ) : isVictoryDataLoading ? (
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  height: '100%', // Cambiar minHeight a height para ocupar todo el espacio
-                }}
-              >
-                <CircularProgress sx={{ color: 'white' }} size={50} /> {/* Aumentar tamaño y especificar color */}
-              </Box>
-            ) : victoryData && victoryData.length === 0 ? (
-              <Typography sx={{ color: 'white', mt: 2 }}>
-                No victory data available for {categories[currentCategory].name}.
-              </Typography>
+              // For usage ranking
+              categories[currentCategory].key === 'historicalUsage' ? (
+                renderPokemonHistoricalUsage && renderPokemonHistoricalUsage()
+              ) : (
+                renderCategoryContent && renderCategoryContent()
+              )
             ) : (
-              <Box sx={{ height: '100%', overflow: 'auto', pr: 1 }}>
-                <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
-                  {categories[currentCategory].name} Win Rates ({victoryData.length})
+              // For victories ranking
+              categories[currentCategory].key === 'historicalUsage' || categories[currentCategory].key === 'historicalWinrate' ? (
+                renderPokemonHistoricalVictory && renderPokemonHistoricalVictory()
+              ) : isVictoryDataLoading ? (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    height: '100%',
+                  }}
+                >
+                  <CircularProgress sx={{ color: 'white' }} size={50} />
+                </Box>
+              ) : victoryData && victoryData.length === 0 ? (
+                <Typography sx={{ color: 'white', mt: 2 }}>
+                  No victory data available for {categories[currentCategory].name}.
                 </Typography>
-                
-                {/* Agregar el MultiLineChart para datos de victoria */}
-                {victoryData.length > 0 && (
-                  <Box sx={{ height: 350, mb: 4 }}>
-                    <Typography variant="subtitle1" sx={{ color: 'white', mb: 1 }}>
-                      Win Rate Trends
-                    </Typography>
-                    <MultiLineChart 
-                      chartData={prepareVictoryTimelineData(victoryData)} 
-                      elements={getUniqueElements(victoryData)}
-                    />
-                  </Box>
-                )}
-                
-                {/* Lista de elementos con sus tasas de victoria */}
-                {victoryData.map((item, index) => {
-                  // Select the appropriate property based on category
-                  const label =
-                    item.ability ||
-                    item.move ||
-                    item.item ||
-                    item.tera_type ||
-                    item.teammate ||
-                    'N/A';
+              ) : (
+                <Box sx={{ height: '100%', overflow: 'auto', pr: 1 }}>
+                  <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                    {categories[currentCategory].name} Win Rates ({victoryData.length})
+                  </Typography>
                   
-                  // Format the month from "YYYY-MM" to a more readable format
-                  const formattedDate = item.month 
-                    ? (() => {
-                        const [year, monthNum] = item.month.split('-');
-                        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                                          'July', 'August', 'September', 'October', 'November', 'December'];
-                        const monthName = monthNames[parseInt(monthNum) - 1];
-                        return `${monthName} ${year}`;
-                      })()
-                    : '';
-                    
-                  return (
-                    <Paper
-                      key={index}
-                      sx={{ p: 1, mb: 1, backgroundColor: 'rgba(255,255,255,0.1)' }}
-                    >
-                      <Typography variant="body2" sx={{ color: 'white' }}>
-                        {label}: {item.win_rate}% ({item.wins}/{item.total_games})
+                  {/* Agregar el MultiLineChart para datos de victoria */}
+                  {victoryData.length > 0 && (
+                    <Box sx={{ height: 350, mb: 4 }}>
+                      <Typography variant="subtitle1" sx={{ color: 'white', mb: 1 }}>
+                        Win Rate Trends
                       </Typography>
-                      {formattedDate && (
-                        <Typography 
-                          variant="caption" 
-                          sx={{ 
-                            display: 'block', 
-                            color: 'rgba(255,255,255,0.7)',
-                            mt: 0.5 
-                          }}
-                        >
-                          {formattedDate}
+                      <MultiLineChart 
+                        chartData={prepareVictoryTimelineData(victoryData)} 
+                        elements={getUniqueElements(victoryData)}
+                      />
+                    </Box>
+                  )}
+                  
+                  {/* Lista de elementos con sus tasas de victoria */}
+                  {victoryData.map((item, index) => {
+                    // Select the appropriate property based on category
+                    const label =
+                      item.ability ||
+                      item.move ||
+                      item.item ||
+                      item.tera_type ||
+                      item.teammate ||
+                      'N/A';
+                    
+                    // Format the month from "YYYY-MM" to a more readable format
+                    const formattedDate = item.month 
+                      ? (() => {
+                          const [year, monthNum] = item.month.split('-');
+                          const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                            'July', 'August', 'September', 'October', 'November', 'December'];
+                          const monthName = monthNames[parseInt(monthNum) - 1];
+                          return `${monthName} ${year}`;
+                        })()
+                      : '';
+                      
+                    return (
+                      <Paper
+                        key={index}
+                        sx={{ p: 1, mb: 1, backgroundColor: 'rgba(255,255,255,0.1)' }}
+                      >
+                        <Typography variant="body2" sx={{ color: 'white' }}>
+                          {label}: {item.win_rate}% ({item.wins}/{item.total_games})
                         </Typography>
-                      )}
-                    </Paper>
-                  );
-                })}
-              </Box>
+                        {formattedDate && (
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              display: 'block', 
+                              color: 'rgba(255,255,255,0.7)',
+                              mt: 0.5 
+                            }}
+                          >
+                            {formattedDate}
+                          </Typography>
+                        )}
+                      </Paper>
+                    );
+                  })}
+                </Box>
+              )
             )}
           </Box>
         </Box>
