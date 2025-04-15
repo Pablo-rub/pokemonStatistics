@@ -590,6 +590,40 @@ const fetchPokemonDetails = async (pokemonName) => {
         };
     };
 
+    // Add this function to calculate month-over-month change for victory data
+    const calculateVictoryMonthlyChange = (data, label) => {
+        if (!data || data.length < 2) return null;
+        
+        // Group data by month
+        const dataByMonth = {};
+        data.forEach(item => {
+            const key = item.ability || item.move || item.item || item.tera_type || item.teammate || 'N/A';
+            if (key === label) {
+                dataByMonth[item.month] = item.win_rate;
+            }
+        });
+        
+        // Get months in chronological order
+        const months = Object.keys(dataByMonth).sort();
+        if (months.length < 2) return null;
+        
+        // Get current and previous month values
+        const currentMonth = months[months.length - 1];
+        const previousMonth = months[months.length - 2];
+        
+        const currentValue = dataByMonth[currentMonth];
+        const previousValue = dataByMonth[previousMonth];
+        
+        // Calculate change
+        const change = currentValue - previousValue;
+        
+        return {
+            change: change.toFixed(2),
+            isPositive: change > 0,
+            isNeutral: change === 0
+        };
+    };
+
     // Modified renderCategoryContent to handle the historical usage category differently
     const renderCategoryContent = () => {
         const category = rankingType === 'usage'
@@ -671,11 +705,9 @@ const fetchPokemonDetails = async (pokemonName) => {
                     const itemName = category.key === 'teraTypes' ? item.type : 
                                      category.key === 'teammates' ? item.name : 
                                      category.key === 'spreads' ? item.value : item.name;
-                    const monthlyChange = calculateMonthlyChange(
-                        selectedPokemon.name, 
-                        category.key, 
-                        itemName
-                    );
+                    const monthlyChange = rankingType === 'victories'
+                        ? calculateVictoryMonthlyChange(victoryData, itemName)
+                        : calculateMonthlyChange(selectedPokemon.name, category.key, itemName);
                     
                     return (
                         <Box key={index} sx={{ mb: 2.5 }}>
@@ -1172,6 +1204,7 @@ const fetchPokemonDetails = async (pokemonName) => {
                         victoryData={victoryData}
                         prepareVictoryTimelineData={prepareVictoryTimelineData}
                         getUniqueElements={getUniqueElements}
+                        calculateVictoryMonthlyChange={calculateVictoryMonthlyChange}
                     />
                     </Grid>
                 </Grid>
