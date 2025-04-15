@@ -33,7 +33,7 @@ const DetailsPane = ({
           '&::-webkit-scrollbar': {
             display: 'none',
           },
-          msOverflowStyle: 'none', // Fixed: kebab-case to camelCase
+          msOverflowStyle: 'none',
         },
       }}
     >
@@ -94,10 +94,10 @@ const DetailsPane = ({
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center',
-                  minHeight: 200,
+                  height: '100%', // Cambiar minHeight a height para ocupar todo el espacio
                 }}
               >
-                <CircularProgress />
+                <CircularProgress sx={{ color: 'white' }} size={50} /> {/* Aumentar tamaño y especificar color */}
               </Box>
             ) : victoryData && victoryData.length === 0 ? (
               <Typography sx={{ color: 'white', mt: 2 }}>
