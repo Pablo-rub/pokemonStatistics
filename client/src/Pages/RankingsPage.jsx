@@ -768,13 +768,12 @@ const fetchPokemonDetails = async (pokemonName) => {
         return (
             <Box sx={{ height: '100%', overflow: 'auto', pr: 1 }}>
                 <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
-                    {selectedPokemon.name} Historical Usage
+                    {selectedPokemon.name} Historical {rankingType === 'victories' ? 'Winrate' : 'Usage'}
                 </Typography>
                 <Box sx={{ height: 400 }}>
                     {/* Usamos MultiLineChart pasándole "usage" como única serie */}
-                    <MultiLineChart chartData={chartData} elements={["usage"]} />
+                    <MultiLineChart chartData={chartData} elements={[rankingType === 'victories' ? 'Winrate' : 'Usage']} />
                 </Box>
-                
                 {/* También se muestran tarjetas individuales resumen */}
                 <Box sx={{ mt: 4 }}>
                     <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
@@ -812,101 +811,130 @@ const fetchPokemonDetails = async (pokemonName) => {
     // Add this function to prepare historical data for charts
     const prepareHistoricalChartData = (pokemonName) => {
         if (!historicalData || !pokemonName) return [];
-        
-        const chartData = [];
-        // Get months sorted in chronological order
+
         const months = Object.keys(historicalData).sort();
-        
-        months.forEach(month => {
+        const chartData = [];
+
+        months.forEach((month) => {
             if (historicalData[month] && historicalData[month].data) {
-                // Try to find the Pokemon with exact or case-insensitive match
-                let pokemonData = historicalData[month].data[pokemonName];
-                
-                // If not found with exact match, try case-insensitive search
-                if (!pokemonData) {
-                    const pokemonNameLower = pokemonName.toLowerCase();
+                // Buscar los datos del Pokémon (exacto o case-insensitive)
+                let dataForPokemon = historicalData[month].data[pokemonName];
+                if (!dataForPokemon) {
+                    const lowerName = pokemonName.toLowerCase();
                     for (const key in historicalData[month].data) {
-                        if (key.toLowerCase() === pokemonNameLower) {
-                            pokemonData = historicalData[month].data[key];
+                        if (key.toLowerCase() === lowerName) {
+                            dataForPokemon = historicalData[month].data[key];
                             break;
                         }
                     }
                 }
-                
-                if (pokemonData) {
-                    // Format the month for display (e.g., "2023-01" to "Jan 2023")
-                    const [year, monthNum] = month.split('-');
-                    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-                                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                    const formattedMonth = `${monthNames[parseInt(monthNum) - 1]} ${year}`;
-                    
+                if (dataForPokemon) {
+                    // Formatear el mes para presentación (ej. "2023-01" a "Jan 2023")
+                    const dateObj = new Date(month);
+                    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const formattedMonth = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+
                     chartData.push({
                         month: formattedMonth,
-                        originalMonth: month, // Keep original for proper sorting
-                        usage: pokemonData.usage || 0
+                        Usage: dataForPokemon.usage || 0, // Usamos el porcentaje de uso
+                        originalMonth: month
                     });
                 }
             }
         });
-        
-        // Sort the data by original month strings for correct chronological order
+
+        // Ordenar cronológicamente usando el valor original del mes
         return chartData.sort((a, b) => a.originalMonth.localeCompare(b.originalMonth));
     };
 
     // Función para preparar la data histórica para victorias (winrate)
     const prepareHistoricalVictoryChartData = (pokemonName) => {
         if (!historicalData || !pokemonName) return [];
-        const chartData = [];
-        // Obtener meses en orden cronológico
+      
         const months = Object.keys(historicalData).sort();
-        
-        months.forEach(month => {
-            if (historicalData[month] && historicalData[month].data) {
-                // Buscar el Pokémon (exacto o case-insensitive)
-                let pokemonData = historicalData[month].data[pokemonName];
-                if (!pokemonData) {
-                    const pokemonNameLower = pokemonName.toLowerCase();
-                    for (const key in historicalData[month].data) {
-                        if (key.toLowerCase() === pokemonNameLower) {
-                            pokemonData = historicalData[month].data[key];
-                            break;
-                        }
-                    }
-                }
+        const chartData = [];
+      
+        months.forEach((month) => {
+          if (historicalData[month] && historicalData[month].data) {
+            let dataForPokemon = null;
+            
+            // Si los datos vienen como array (from backend)
+            if (Array.isArray(historicalData[month].data)) {
+              dataForPokemon = historicalData[month].data.find(item => 
+                item.pokemon && item.pokemon.toLowerCase() === pokemonName.toLowerCase()
+              );
+              
+              if (dataForPokemon) {
+                const dateObj = new Date(month);
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                const formattedMonth = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
                 
-                if (pokemonData) {
-                    // Formatear el mes para presentación (p.ej., "2023-01" a "Jan 2023")
-                    const [year, monthNum] = month.split('-');
-                    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-                                        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                    const formattedMonth = `${monthNames[parseInt(monthNum) - 1]} ${year}`;
-                    // Usamos la propiedad "victories" (o winrate) si existe o 0 en caso contrario
-                    const winrate = pokemonData.victories || 0;
-                    chartData.push({
-                        month: formattedMonth,
-                        winrate,
-                        originalMonth: month
-                    });
+                // Usa win_rate de la estructura que viene de la base de datos
+                chartData.push({
+                  month: formattedMonth,
+                  Winrate: dataForPokemon.win_rate ? parseFloat(dataForPokemon.win_rate) : 0,
+                  originalMonth: month,
+                  // Agrega información adicional para mostrar en los tooltips
+                  wins: dataForPokemon.wins || 0,
+                  total_games: dataForPokemon.total_games || 0
+                });
+              }
+            } 
+            // Si los datos vienen como objeto (posiblemente cached)
+            else {
+              dataForPokemon = historicalData[month].data[pokemonName];
+              if (!dataForPokemon) {
+                // Buscar insensible a mayúsculas/minúsculas
+                const lowerName = pokemonName.toLowerCase();
+                for (const key in historicalData[month].data) {
+                  if (key.toLowerCase() === lowerName) {
+                    dataForPokemon = historicalData[month].data[key];
+                    break;
+                  }
                 }
+              }
+              
+              if (dataForPokemon) {
+                const dateObj = new Date(month);
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                const formattedMonth = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+                
+                // Verifica todas las posibles propiedades donde podría estar el winrate
+                const winrateValue = 
+                  dataForPokemon.win_rate !== undefined ? dataForPokemon.win_rate :
+                  dataForPokemon.winrate !== undefined ? dataForPokemon.winrate : 
+                  dataForPokemon.Winrate !== undefined ? dataForPokemon.Winrate : 0;
+                  
+                chartData.push({
+                  month: formattedMonth,
+                  Winrate: parseFloat(winrateValue) || 0,
+                  originalMonth: month,
+                  wins: dataForPokemon.wins || 0,
+                  total_games: dataForPokemon.total_games || 0
+                });
+              }
             }
+          }
         });
-        // Ordenar en forma cronológica usando el valor original
+        
+        // Ordenar cronológicamente
         return chartData.sort((a, b) => a.originalMonth.localeCompare(b.originalMonth));
-    };
-
-    // Función para renderizar el multilinechart para victorias
+      };
+      
+    // Ejemplo de renderizado para el histórico de victorias
     const renderPokemonHistoricalVictory = () => {
         if (!selectedPokemon) {
             return (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                     <Typography sx={{ color: 'white' }}>
-                        Select a Pokémon
+                        Select a Pokémon to see historical winrate
                     </Typography>
                 </Box>
             );
         }
         
         const chartData = prepareHistoricalVictoryChartData(selectedPokemon.name);
+        
         if (chartData.length <= 1) {
             return (
                 <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -919,17 +947,16 @@ const fetchPokemonDetails = async (pokemonName) => {
         
         return (
             <Box sx={{ height: '100%', overflow: 'auto', pr: 1 }}>
-                <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                <Typography variant="h6" sx={{ color: 'white', mb: 2, textAlign: 'center' }}>
                     {selectedPokemon.name} Historical Winrate
                 </Typography>
                 <Box sx={{ height: 400 }}>
-                    {/* Usamos MultiLineChart pasándole "winrate" como única serie */}
-                    <MultiLineChart chartData={chartData} elements={["winrate"]} />
+                    {/* Se pasa "Winrate" como única serie al gráfico */}
+                    <MultiLineChart chartData={chartData} elements={["Winrate"]} />
                 </Box>
-                
-                {/* Tarjetas resumen para winrate */}
+                {/* Tarjetas resumen: se muestran las últimas tendencias */}
                 <Box sx={{ mt: 4 }}>
-                    <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                    <Typography variant="h6" sx={{ color: 'white', mb: 2, textAlign: 'center' }}>
                         Winrate Trends
                     </Typography>
                     <Box sx={{ 
@@ -951,7 +978,7 @@ const fetchPokemonDetails = async (pokemonName) => {
                                     {dataPoint.month}
                                 </Typography>
                                 <Typography variant="h5" sx={{ color: '#24CC9F', mt: 1 }}>
-                                    {parseFloat(dataPoint.winrate).toFixed(2)}%
+                                    {parseFloat(dataPoint.Winrate).toFixed(2)}%
                                 </Typography>
                             </Box>
                         ))}
