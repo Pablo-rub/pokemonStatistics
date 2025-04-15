@@ -40,6 +40,7 @@ const PokemonUsage = () => {
 
     // Mapeo de endpoints para cada categoría (excepto historicalUsage)
     const victoryEndpoints = {
+        historicalWinrate: '/api/victories',
         abilities: '/api/victories/abilities',
         moves: '/api/victories/moves',
         items: '/api/victories/items',
@@ -127,22 +128,17 @@ const PokemonUsage = () => {
 
     useEffect(() => {
         const fetchVictoryData = async () => {
-            // Solo se obtiene si está en "victories" y se ha seleccionado un Pokémon
             if (rankingType !== 'victories' || !selectedPokemon) return;
-            // Usa la clave de victoria según el array de categorías de victoria
             const currentVictoryCategory = victoryCategoryTitles[currentCategory].key;
-            // Para la categoría histórica, muestra el gráfico histórico (no hace fetch)
-            if (currentVictoryCategory === 'historicalWinrate') return;
             setIsVictoryDataLoading(true);
             try {
-                if (!victoryEndpoints[currentVictoryCategory]) {
-                    setVictoryData([]);
-                } else {
-                    const response = await axios.get(`http://localhost:5000${victoryEndpoints[currentVictoryCategory]}`, {
-                        params: { pokemon: selectedPokemon.name }
-                    });
-                    setVictoryData(response.data);
-                }
+                const endpoint = victoryEndpoints[currentVictoryCategory];
+                console.log(`Fetching victory data for ${currentVictoryCategory}...`);
+                const response = await axios.get(`http://localhost:5000${endpoint}`, {
+                    params: { pokemon: selectedPokemon.name }
+                });
+                console.log("Victory data response:", response.data);
+                setVictoryData(response.data);
             } catch (error) {
                 console.error(`Error fetching victory data for ${currentVictoryCategory}:`, error);
                 setVictoryData([]);
@@ -849,77 +845,41 @@ const fetchPokemonDetails = async (pokemonName) => {
 
     // Función para preparar la data histórica para victorias (winrate)
     const prepareHistoricalVictoryChartData = (pokemonName) => {
-        if (!historicalData || !pokemonName) return [];
-      
-        const months = Object.keys(historicalData).sort();
-        const chartData = [];
-      
-        months.forEach((month) => {
-          if (historicalData[month] && historicalData[month].data) {
-            let dataForPokemon = null;
-            
-            // Si los datos vienen como array (from backend)
-            if (Array.isArray(historicalData[month].data)) {
-              dataForPokemon = historicalData[month].data.find(item => 
-                item.pokemon && item.pokemon.toLowerCase() === pokemonName.toLowerCase()
-              );
-              
-              if (dataForPokemon) {
-                const dateObj = new Date(month);
-                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                const formattedMonth = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
-                
-                // Usa win_rate de la estructura que viene de la base de datos
-                chartData.push({
-                  month: formattedMonth,
-                  Winrate: dataForPokemon.win_rate ? parseFloat(dataForPokemon.win_rate) : 0,
-                  originalMonth: month,
-                  // Agrega información adicional para mostrar en los tooltips
-                  wins: dataForPokemon.wins || 0,
-                  total_games: dataForPokemon.total_games || 0
-                });
-              }
-            } 
-            // Si los datos vienen como objeto (posiblemente cached)
-            else {
-              dataForPokemon = historicalData[month].data[pokemonName];
-              if (!dataForPokemon) {
-                // Buscar insensible a mayúsculas/minúsculas
-                const lowerName = pokemonName.toLowerCase();
-                for (const key in historicalData[month].data) {
-                  if (key.toLowerCase() === lowerName) {
-                    dataForPokemon = historicalData[month].data[key];
-                    break;
-                  }
-                }
-              }
-              
-              if (dataForPokemon) {
-                const dateObj = new Date(month);
-                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                const formattedMonth = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
-                
-                // Verifica todas las posibles propiedades donde podría estar el winrate
-                const winrateValue = 
-                  dataForPokemon.win_rate !== undefined ? dataForPokemon.win_rate :
-                  dataForPokemon.winrate !== undefined ? dataForPokemon.winrate : 
-                  dataForPokemon.Winrate !== undefined ? dataForPokemon.Winrate : 0;
-                  
-                chartData.push({
-                  month: formattedMonth,
-                  Winrate: parseFloat(winrateValue) || 0,
-                  originalMonth: month,
-                  wins: dataForPokemon.wins || 0,
-                  total_games: dataForPokemon.total_games || 0
-                });
-              }
-            }
-          }
-        });
+        console.log("Preparing historical victory data for:", pokemonName);
+        console.log("Victory data:", victoryData);
         
-        // Ordenar cronológicamente
-        return chartData.sort((a, b) => a.originalMonth.localeCompare(b.originalMonth));
-      };
+        if (!victoryData || victoryData.length === 0) {
+            return [];
+        }
+        
+        // Filter victory data for this specific Pokémon
+        const filteredData = victoryData.filter(
+            entry => entry.pokemon && entry.pokemon.toLowerCase() === pokemonName.toLowerCase()
+        );
+        
+        console.log("Filtered victory data:", filteredData);
+        
+        if (filteredData.length === 0) {
+            return [];
+        }
+        
+        // Sort by month chronologically
+        filteredData.sort((a, b) => new Date(a.month) - new Date(b.month));
+        
+        // Format the data for the chart
+        return filteredData.map(entry => {
+            // Format month from "YYYY-MM" to "Mon YYYY"
+            const [year, monthNum] = entry.month.split('-');
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const formattedMonth = `${monthNames[parseInt(monthNum) - 1]} ${year}`;
+            
+            return {
+                month: formattedMonth,
+                Winrate: entry.win_rate
+            };
+        });
+    };
       
     // Ejemplo de renderizado para el histórico de victorias
     const renderPokemonHistoricalVictory = () => {
@@ -1205,11 +1165,12 @@ const fetchPokemonDetails = async (pokemonName) => {
                         renderCategoryNavigation={renderCategoryNavigation}
                         renderCategoryContent={renderCategoryContent}
                         renderPokemonHistoricalUsage={renderPokemonHistoricalUsage}
-                        categories={categories}
+                        renderPokemonHistoricalVictory={renderPokemonHistoricalVictory}
+                        categories={rankingType === 'usage' ? categories : victoryCategoryTitles}
                         currentCategory={currentCategory}
                         isVictoryDataLoading={isVictoryDataLoading}
                         victoryData={victoryData}
-                        prepareVictoryTimelineData={prepareVictoryTimelineData} // Añade estas dos props
+                        prepareVictoryTimelineData={prepareVictoryTimelineData}
                         getUniqueElements={getUniqueElements}
                     />
                     </Grid>
