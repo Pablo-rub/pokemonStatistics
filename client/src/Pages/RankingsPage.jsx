@@ -802,36 +802,6 @@ const fetchPokemonDetails = async (pokemonName) => {
                     {/* Usamos MultiLineChart pasándole "usage" como única serie */}
                     <MultiLineChart chartData={chartData} elements={[rankingType === 'victories' ? 'Winrate' : 'Usage']} />
                 </Box>
-                {/* También se muestran tarjetas individuales resumen */}
-                <Box sx={{ mt: 4 }}>
-                    <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
-                        Usage Trends
-                    </Typography>
-                    <Box sx={{ 
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                        gap: 2
-                    }}>
-                        {chartData.slice(-5).reverse().map((dataPoint, index) => (
-                            <Box 
-                                key={index} 
-                                sx={{ 
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                    p: 2,
-                                    borderRadius: 1,
-                                    textAlign: 'center'
-                                }}
-                            >
-                                <Typography variant="subtitle2" sx={{ color: 'white' }}>
-                                    {dataPoint.month}
-                                </Typography>
-                                <Typography variant="h5" sx={{ color: '#24CC9F', mt: 1 }}>
-                                    {parseFloat(dataPoint.usage).toFixed(2)}%
-                                </Typography>
-                            </Box>
-                        ))}
-                    </Box>
-                </Box>
             </Box>
         );
     };
@@ -945,36 +915,6 @@ const fetchPokemonDetails = async (pokemonName) => {
                 <Box sx={{ height: 400 }}>
                     {/* Se pasa "Winrate" como única serie al gráfico */}
                     <MultiLineChart chartData={chartData} elements={["Winrate"]} />
-                </Box>
-                {/* Tarjetas resumen: se muestran las últimas tendencias */}
-                <Box sx={{ mt: 4 }}>
-                    <Typography variant="h6" sx={{ color: 'white', mb: 2, textAlign: 'center' }}>
-                        Winrate Trends
-                    </Typography>
-                    <Box sx={{ 
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                        gap: 2
-                    }}>
-                        {chartData.slice(-5).reverse().map((dataPoint, index) => (
-                            <Box 
-                                key={index} 
-                                sx={{ 
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                    p: 2,
-                                    borderRadius: 1,
-                                    textAlign: 'center'
-                                }}
-                            >
-                                <Typography variant="subtitle2" sx={{ color: 'white' }}>
-                                    {dataPoint.month}
-                                </Typography>
-                                <Typography variant="h5" sx={{ color: '#24CC9F', mt: 1 }}>
-                                    {parseFloat(dataPoint.Winrate).toFixed(2)}%
-                                </Typography>
-                            </Box>
-                        ))}
-                    </Box>
                 </Box>
             </Box>
         );
