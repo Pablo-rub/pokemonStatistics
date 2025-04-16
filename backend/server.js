@@ -3411,3 +3411,109 @@ app.get('/api/victories/teammates', async (req, res) => {
     res.status(500).json({ error: "Error fetching teammates victories" });
   }
 });
+
+// Endpoint: Team usage statistics grouped by month
+app.get('/api/teams/usage', async (req, res) => {
+  try {
+    const query = `
+      WITH team_stats AS (
+        SELECT 
+          FORMAT_TIMESTAMP('%Y-%m', date) AS month,
+          ARRAY_TO_STRING(
+            ARRAY(
+              SELECT LOWER(p.name)
+              FROM UNNEST(teams.p1) AS p
+              ORDER BY LOWER(p.name)
+            ), ';') AS team,
+          COUNT(*) AS total_games,
+          SUM(CASE WHEN winner = player1 THEN 1 ELSE 0 END) AS wins
+        FROM \`pokemon-statistics.pokemon_replays.replays\`
+        GROUP BY month, team
+        UNION ALL
+        SELECT 
+          FORMAT_TIMESTAMP('%Y-%m', date) AS month,
+          ARRAY_TO_STRING(
+            ARRAY(
+              SELECT LOWER(p.name)
+              FROM UNNEST(teams.p2) AS p
+              ORDER BY LOWER(p.name)
+            ), ';') AS team,
+          COUNT(*) AS total_games,
+          SUM(CASE WHEN winner = player2 THEN 1 ELSE 0 END) AS wins
+        FROM \`pokemon-statistics.pokemon_replays.replays\`
+        GROUP BY month, team
+      )
+      SELECT 
+        month,
+        team,
+        SUM(total_games) AS total_games,
+        SUM(wins) AS wins,
+        ROUND(SUM(wins)/SUM(total_games)*100, 2) AS win_rate
+      FROM team_stats
+      GROUP BY month, team
+      ORDER BY month DESC, win_rate DESC
+    `;
+    const [rows] = await bigQuery.query(query);
+    res.json(rows);
+  } catch (error) {
+    console.error("Error fetching team usage statistics:", error);
+    res.status(500).json({ error: "Error fetching team usage statistics" });
+  }
+});
+
+// Endpoint: Lead usage statistics grouped by month
+app.get('/api/leads/usage', async (req, res) => {
+  try {
+    const query = `
+      WITH lead_stats AS (
+        -- Lado 1: Extraer los 2 primeros Pokémon del equipo p1
+        SELECT 
+          FORMAT_TIMESTAMP('%Y-%m', date) AS month,
+          ARRAY_TO_STRING(
+            ARRAY(
+              SELECT LOWER(p.name)
+              FROM UNNEST(teams.p1) AS p WITH OFFSET pos
+              WHERE pos < 2
+              ORDER BY LOWER(p.name)
+            ), ';') AS lead,
+          COUNT(*) AS total_games,
+          SUM(CASE WHEN winner = player1 THEN 1 ELSE 0 END) AS wins
+        FROM \`pokemon-statistics.pokemon_replays.replays\`
+        WHERE ARRAY_LENGTH(teams.p1) >= 2
+        GROUP BY month, lead
+
+        UNION ALL
+
+        -- Lado 2: Extraer los 2 primeros Pokémon del equipo p2
+        SELECT 
+          FORMAT_TIMESTAMP('%Y-%m', date) AS month,
+          ARRAY_TO_STRING(
+            ARRAY(
+              SELECT LOWER(p.name)
+              FROM UNNEST(teams.p2) AS p WITH OFFSET pos
+              WHERE pos < 2
+              ORDER BY LOWER(p.name)
+            ), ';') AS lead,
+          COUNT(*) AS total_games,
+          SUM(CASE WHEN winner = player2 THEN 1 ELSE 0 END) AS wins
+        FROM \`pokemon-statistics.pokemon_replays.replays\`
+        WHERE ARRAY_LENGTH(teams.p2) >= 2
+        GROUP BY month, lead
+      )
+      SELECT 
+        month,
+        lead,
+        SUM(total_games) AS total_games,
+        SUM(wins) AS wins,
+        ROUND(SUM(wins)/SUM(total_games)*100, 2) AS win_rate
+      FROM lead_stats
+      GROUP BY month, lead
+      ORDER BY month DESC, win_rate DESC
+    `;
+    const [rows] = await bigQuery.query(query);
+    res.json(rows);
+  } catch (error) {
+    console.error("Error fetching leads usage statistics:", error);
+    res.status(500).json({ error: "Error fetching leads usage statistics" });
+  }
+});
