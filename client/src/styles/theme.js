@@ -317,6 +317,18 @@ const theme = createTheme({
         }
       }
     },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: {
+          backgroundColor: 'background.paper',
+          paddingLeft: '4px',
+          paddingRight: '4px',
+          '&.Mui-focused': {
+            color: 'white', // O el color que prefieras
+          },
+        },
+      },
+    },
     Typography: {
       color: '#ffffff', // Añade esto para asegurar que todo el texto sea blanco
       '& .MuiDivider-root': {
