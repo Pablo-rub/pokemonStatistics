@@ -9,7 +9,8 @@ import ProfilePage from "./Pages/ProfilePage.jsx";
 import FinishSignIn from "./Pages/FinishSignIn.jsx";
 import SavedGamesPage from "./Pages/SavedGamesPage.jsx";
 import ForumPage from "./Pages/ForumPage.jsx";
-import ForumTopicPage from "./Pages/ForumTopicPage.jsx"; // Importar la nueva página
+import ForumTopicPage from "./Pages/ForumTopicPage.jsx";
+import ContactPage from './Pages/ContactPage';
 
 function App() {
   return (
@@ -23,7 +24,8 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/finishSignIn" element={<FinishSignIn />} />
         <Route path="/forum" element={<ForumPage />} />
-        <Route path="/forum/:topicId" element={<ForumTopicPage />} /> {/* Añadir ruta para temas específicos */}
+        <Route path="/forum/:topicId" element={<ForumTopicPage />} />
+        <Route path="/contact" element={<ContactPage />} />
       </Route>
     </Routes>
   );
