@@ -3329,83 +3329,82 @@ app.get('/api/victories/tera', async (req, res) => {
   }
 });
 
-// Endpoint: Win rate de TEAMMATES de un Pokémon, agrupado por mes
+// Endpoint: Win rate de TEAMMATES de un Pokémon
 app.get('/api/victories/teammates', async (req, res) => {
   const { pokemon } = req.query;
   if (!pokemon) return res.status(400).json({ error: "El parámetro 'pokemon' es obligatorio" });
   try {
-    // TOTAL: Para cada replay donde el Pokémon aparece, se unen los compañeros del mismo equipo (excluyendo él)
+    // Consulta TOTAL: agrupa por teammate en todos los partidos donde el Pokémon aparece
     const totalQuery = `
-      SELECT month, teammate, SUM(cnt) AS total_games FROM (
-        SELECT FORMAT_TIMESTAMP('%Y-%m', r.date) AS month,
-               LOWER(t2.name) AS teammate,
-               1 AS cnt
+      SELECT teammate, SUM(total_games) AS total_games FROM (
+        SELECT LOWER(t2.name) AS teammate, COUNT(*) AS total_games
         FROM \`pokemon-statistics.pokemon_replays.replays\` r,
              UNNEST(teams.p1) AS t1,
              UNNEST(teams.p1) AS t2
-        WHERE LOWER(t1.name)=LOWER('${pokemon}') AND LOWER(t2.name) <> LOWER('${pokemon}')
-        GROUP BY month, teammate
+        WHERE LOWER(t1.name) = LOWER('${pokemon}') 
+          AND LOWER(t2.name) <> LOWER('${pokemon}')
+        GROUP BY teammate
         UNION ALL
-        SELECT FORMAT_TIMESTAMP('%Y-%m', r.date) AS month,
-               LOWER(t2.name) AS teammate,
-               1 AS cnt
+        SELECT LOWER(t2.name) AS teammate, COUNT(*) AS total_games
         FROM \`pokemon-statistics.pokemon_replays.replays\` r,
              UNNEST(teams.p2) AS t1,
              UNNEST(teams.p2) AS t2
-        WHERE LOWER(t1.name)=LOWER('${pokemon}') AND LOWER(t2.name) <> LOWER('${pokemon}')
-        GROUP BY month, teammate
+        WHERE LOWER(t1.name) = LOWER('${pokemon}') 
+          AND LOWER(t2.name) <> LOWER('${pokemon}')
+        GROUP BY teammate
       )
-      GROUP BY month, teammate
-      ORDER BY month DESC
+      GROUP BY teammate
+      ORDER BY teammate
     `;
-    // WINS:
+    
+    // Consulta WINS: agrupa globalmente las victorias por teammate
     const winsQuery = `
-      SELECT month, teammate, SUM(w) AS wins FROM (
-        SELECT FORMAT_TIMESTAMP('%Y-%m', r.date) AS month,
-               LOWER(t2.name) AS teammate,
-               1 AS w
+      SELECT teammate, SUM(wins) AS wins FROM (
+        SELECT LOWER(t2.name) AS teammate, COUNT(*) AS wins
         FROM \`pokemon-statistics.pokemon_replays.replays\` r,
              UNNEST(teams.p1) AS t1,
              UNNEST(teams.p1) AS t2
-        WHERE LOWER(t1.name)=LOWER('${pokemon}') 
-          AND LOWER(t2.name) <> LOWER('${pokemon}') 
+        WHERE LOWER(t1.name) = LOWER('${pokemon}') 
+          AND LOWER(t2.name) <> LOWER('${pokemon}')
           AND r.winner = r.player1
-        GROUP BY month, teammate
+        GROUP BY teammate
         UNION ALL
-        SELECT FORMAT_TIMESTAMP('%Y-%m', r.date) AS month,
-               LOWER(t2.name) AS teammate,
-               1 AS w
+        SELECT LOWER(t2.name) AS teammate, COUNT(*) AS wins
         FROM \`pokemon-statistics.pokemon_replays.replays\` r,
              UNNEST(teams.p2) AS t1,
              UNNEST(teams.p2) AS t2
-        WHERE LOWER(t1.name)=LOWER('${pokemon}') 
-          AND LOWER(t2.name) <> LOWER('${pokemon}') 
+        WHERE LOWER(t1.name) = LOWER('${pokemon}') 
+          AND LOWER(t2.name) <> LOWER('${pokemon}')
           AND r.winner = r.player2
-        GROUP BY month, teammate
+        GROUP BY teammate
       )
-      GROUP BY month, teammate
-      ORDER BY month DESC
+      GROUP BY teammate
+      ORDER BY teammate
     `;
+    
     const [totalRows] = await bigQuery.query(totalQuery);
     const [winsRows] = await bigQuery.query(winsQuery);
+    
+    // Crear un diccionario de victorias por teammate
     const winsMap = {};
     winsRows.forEach(row => {
-      const key = `${row.month}_${row.teammate}`;
-      winsMap[key] = parseInt(row.wins);
+      winsMap[row.teammate] = parseInt(row.wins);
     });
+    
+    // Mapear y calcular win_rate para cada teammate
     const result = totalRows.map(row => {
       const total = parseInt(row.total_games);
-      const key = `${row.month}_${row.teammate}`;
-      const wins = winsMap[key] || 0;
+      const teammate = row.teammate;
+      const wins = winsMap[teammate] || 0;
       const winRate = total > 0 ? ((wins / total) * 100).toFixed(2) : "0.00";
       return {
-        month: row.month,
-        teammate: row.teammate,
+        teammate,
         total_games: total,
         wins: wins,
         win_rate: parseFloat(winRate)
       };
     });
+    
     res.json(result);
   } catch (error) {
     console.error("Error fetching teammates victories:", error);
