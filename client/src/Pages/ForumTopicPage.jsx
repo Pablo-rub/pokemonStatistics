@@ -10,7 +10,9 @@ import {
   List,
   ListItem,
   IconButton,
-  Alert
+  Alert,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -32,6 +34,8 @@ const ForumTopicPage = () => {
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const messagesEndRef = useRef(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   // Fetch topic details and messages
   useEffect(() => {
@@ -108,7 +112,7 @@ const ForumTopicPage = () => {
 
   return (
     <Box sx={{ 
-      p: 3, 
+      p: { xs: 1, sm: 2, md: 3 }, 
       maxWidth: '1200px', 
       mx: 'auto',
       backgroundColor: '#221FC7',
@@ -126,11 +130,15 @@ const ForumTopicPage = () => {
       }}>
         <IconButton 
           onClick={() => navigate('/forum')}
+          aria-label="Back to forum"
           sx={{ color: 'white' }}
         >
           <ArrowBackIcon />
         </IconButton>
-        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+        <Typography variant="h4" component="h1" sx={{ 
+          fontWeight: 'bold',
+          fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }
+        }}>
           {topic?.title || 'Forum Topic'}
         </Typography>
       </Box>
@@ -142,7 +150,7 @@ const ForumTopicPage = () => {
           Loading topic details...
         </Typography>
       ) : error ? (
-        <Alert severity="error">{error}</Alert>
+        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
       ) : (
         <>
           <Box 
@@ -152,8 +160,11 @@ const ForumTopicPage = () => {
               overflow: 'auto',
               bgcolor: 'rgba(0, 0, 0, 0.2)',
               borderRadius: 1,
-              p: 2
+              p: { xs: 1, sm: 2 }
             }}
+            role="log"
+            aria-label="Forum messages"
+            aria-live="polite"
           >
             <List sx={{ width: '100%' }}>
               {messages.map((message) => {
@@ -179,12 +190,16 @@ const ForumTopicPage = () => {
                       flexDirection: isMine ? 'row-reverse' : 'row',
                       alignItems: 'flex-start',
                       gap: 1,
-                      maxWidth: '70%'
+                      maxWidth: { xs: '90%', sm: '80%', md: '70%' } // Mayor ancho en móviles
                     }}>
                       <Avatar 
                         src={message.userAvatar} 
-                        alt={message.userName}
-                        sx={{ width: 36, height: 36 }}
+                        alt={`${message.userName}'s avatar`}
+                        sx={{ 
+                          width: { xs: 32, sm: 36 }, 
+                          height: { xs: 32, sm: 36 },
+                          display: { xs: isMine ? 'none' : 'block', sm: 'block' } // Ocultar avatar propio en móvil
+                        }}
                       />
                       <Box sx={{ 
                         maxWidth: 'calc(100% - 50px)'
@@ -200,32 +215,47 @@ const ForumTopicPage = () => {
                         }}>
                           <Typography 
                             variant="body2" 
-                            sx={{ fontWeight: 'bold', color: '#24CC9F' }}
+                            sx={{ 
+                              fontWeight: 'bold', 
+                              color: '#24CC9F', // Verde para mejor accesibilidad
+                              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                            }}
                           >
                             {message.userName}
                           </Typography>
                           <Typography 
                             variant="caption" 
-                            sx={{ color: 'rgba(255, 255, 255, 0.6)', ml: isMine ? 0 : 2, mr: isMine ? 2 : 0 }}
+                            sx={{ 
+                              color: 'rgba(255, 255, 255, 0.7)', // Mejor contraste
+                              ml: isMine ? 0 : 2, 
+                              mr: isMine ? 2 : 0,
+                              fontSize: { xs: '0.65rem', sm: '0.7rem' }
+                            }}
                           >
                             {formatTimestamp(message.timestamp)}
                           </Typography>
                         </Box>
 
                         <Box sx={{ 
-                          backgroundColor: isMine ? '#24CC9F' : 'rgba(255, 255, 255, 0.1)',
-                          color: isMine ? 'black' : 'white',
-                          padding: '8px 16px',
+                          backgroundColor: isMine ? '#24CC9F' : 'rgba(255, 255, 255, 0.15)', // Mejor contraste
+                          color: isMine ? '#000000' : '#ffffff',
+                          padding: { xs: '6px 12px', sm: '8px 16px' },
                           borderRadius: isMine 
                             ? '18px 18px 4px 18px' 
                             : '18px 18px 18px 4px',
                           wordBreak: 'break-word',
                           boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
                           "&:hover": {
-                            backgroundColor: isMine ? '#24CC9F' : 'rgba(255, 255, 255, 0.1)'
+                            backgroundColor: isMine ? '#24CC9F' : 'rgba(255, 255, 255, 0.15)'
                           }
                         }}>
-                          <Typography variant="body1">
+                          <Typography 
+                            variant="body1"
+                            sx={{ 
+                              fontSize: { xs: '0.875rem', sm: '1rem' },
+                              lineHeight: 1.5
+                            }}
+                          >
                             {message.content}
                           </Typography>
                         </Box>
@@ -243,13 +273,14 @@ const ForumTopicPage = () => {
             <Paper
               component="form"
               sx={{
-                p: 1,
+                p: { xs: 1, sm: 1.5 },
                 display: 'flex',
                 alignItems: 'center',
                 bgcolor: 'rgba(255, 255, 255, 0.1)',
                 borderRadius: 2
               }}
               onSubmit={handleSendMessage}
+              elevation={2}
             >
               <TextField
                 fullWidth
@@ -259,13 +290,14 @@ const ForumTopicPage = () => {
                 variant="standard"
                 multiline
                 maxRows={4}
+                aria-label="Message content"
                 InputProps={{
                   disableUnderline: true,
                   sx: { 
                     color: 'white',
                     p: 1,
                     '&::placeholder': {
-                      color: 'rgba(255, 255, 255, 0.5)'
+                      color: 'rgba(255, 255, 255, 0.7)' // Mejor contraste
                     }
                   }
                 }}
@@ -275,6 +307,7 @@ const ForumTopicPage = () => {
                 color="primary"
                 onClick={handleSendMessage}
                 disabled={sendingMessage || !newMessage.trim()}
+                aria-label="Send message"
                 sx={{ 
                   ml: 1,
                   bgcolor: '#24CC9F',
@@ -287,39 +320,50 @@ const ForumTopicPage = () => {
                     color: 'rgba(0, 0, 0, 0.5)'
                   },
                   minWidth: 'unset',
-                  width: 40,
-                  height: 40,
+                  width: { xs: 36, sm: 40 },
+                  height: { xs: 36, sm: 40 },
                   borderRadius: '50%'
                 }}
               >
-                <SendIcon />
+                <SendIcon fontSize={isMobile ? "small" : "medium"} />
               </Button>
             </Paper>
           ) : (
             <Paper
               sx={{
-                p: 2,
+                p: { xs: 1.5, sm: 2 },
                 display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
                 alignItems: 'center',
-                justifyContent: 'space-between',
+                justifyContent: { xs: 'center', sm: 'space-between' },
                 bgcolor: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: 2
+                borderRadius: 2,
+                gap: { xs: 1.5, sm: 2 }
               }}
+              elevation={2}
             >
-              <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  textAlign: { xs: 'center', sm: 'left' },
+                  fontSize: { xs: '0.875rem', sm: '1rem' }
+                }}
+              >
                 You need to sign in to participate in this discussion
               </Typography>
               <Button
                 variant="contained"
                 startIcon={<LoginIcon />}
                 onClick={() => setLoginDialogOpen(true)}
+                aria-label="Sign in to participate"
                 sx={{ 
-                  ml: 2,
                   bgcolor: '#24CC9F',
                   color: 'black',
                   '&:hover': {
                     bgcolor: '#1bab85'
-                  }
+                  },
+                  minWidth: { xs: '100%', sm: 'auto' }
                 }}
               >
                 Sign In

@@ -10,6 +10,8 @@ import {
   MenuItem,
   TextField,
   Button,
+  Grid,
+  InputLabel,
 } from "@mui/material";
 import ReplayCard from "../components/ReplayCard";
 import { useAuth } from "../contexts/AuthContext";
@@ -30,7 +32,7 @@ function PublicGamesPage() {
   const [playerFilter, setPlayerFilter] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
-  const [showSaved, setShowSaved] = useState('all');
+  const [showSaved, setShowSaved] = useState("all");
   const { currentUser } = useAuth();
 
   // Estados para los filtros activos (los que realmente se aplican)
@@ -39,34 +41,37 @@ function PublicGamesPage() {
     playerFilter: "",
     ratingFilter: "all",
     dateFilter: "all",
-    showSaved: "all"
+    showSaved: "all",
   });
 
-  const fetchPublicGames = useCallback(async (page, filters) => {
-    try {
-      setIsLoading(true);
-      const response = await axios.get("http://localhost:5000/api/games", {
-        params: { 
-          page, 
-          limit: itemsPerPage, 
-          ...filters,
-          userId: currentUser?.uid,
-          showSaved: filters.showSaved
-        },
-      });
-      
-      if (response.data) {
-        setGames(response.data.games || []);
-        setNumGames(response.data.total);
+  const fetchPublicGames = useCallback(
+    async (page, filters) => {
+      try {
+        setIsLoading(true);
+        const response = await axios.get("http://localhost:5000/api/games", {
+          params: {
+            page,
+            limit: itemsPerPage,
+            ...filters,
+            userId: currentUser?.uid,
+            showSaved: filters.showSaved,
+          },
+        });
+
+        if (response.data) {
+          setGames(response.data.games || []);
+          setNumGames(response.data.total);
+        }
+      } catch (error) {
+        console.error("Error fetching public games:", error);
+        setGames([]);
+        setNumGames(0);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching public games:", error);
-      setGames([]);
-      setNumGames(0);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [itemsPerPage, currentUser]);
+    },
+    [itemsPerPage, currentUser]
+  );
 
   const applyFilters = () => {
     setCurrentPage(1);
@@ -75,7 +80,7 @@ function PublicGamesPage() {
       playerFilter,
       ratingFilter,
       dateFilter,
-      showSaved
+      showSaved,
     });
   };
 
@@ -91,7 +96,7 @@ function PublicGamesPage() {
       playerFilter: "",
       ratingFilter: "all",
       dateFilter: "all",
-      showSaved: "all"
+      showSaved: "all",
     });
   };
 
@@ -107,12 +112,12 @@ function PublicGamesPage() {
   const totalPages = Math.ceil((numGames || 0) / itemsPerPage);
 
   return (
-    <Box sx={{ padding: 2 }}>
+    <Box sx={{ padding: { xs: 1, sm: 2 } }}>
       <Typography variant="h4" gutterBottom>
         Public Games
       </Typography>
       <Typography variant="subtitle1" sx={{ marginBottom: 2 }}>
-        Total Replays:{' '}
+        Total Replays:{" "}
         {isLoading ? (
           <CircularProgress size={20} sx={{ ml: 1 }} />
         ) : (
@@ -120,109 +125,168 @@ function PublicGamesPage() {
         )}
       </Typography>
 
-      {/* Filters row */}
-        <Box variant="filter">
+      {/* Filters row - improved with responsive Grid layout */}
+      <Box
+        sx={{
+          mb: 3,
+          p: 2,
+          borderRadius: 1,
+          boxShadow: 1,
+        }}
+      >
+        <Grid container spacing={2} alignItems="center">
           {/* Sort dropdown */}
-          <FormControl>
-            <Select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              displayEmpty
-              renderValue={(value) => `Sort by: ${value}`}
-            >
-              <MenuItem value={"date DESC"}>Date Descending</MenuItem>
-              <MenuItem value={"date ASC"}>Date Ascending</MenuItem>
-              <MenuItem value={"rating DESC"}>Rating Descending</MenuItem>
-              <MenuItem value={"rating ASC"}>Rating Ascending</MenuItem>
-            </Select>
-          </FormControl>
-
-          {/* Player search */}
-          <TextField
-            placeholder="Search by player"
-            value={playerFilter}
-            onChange={(e) => setPlayerFilter(e.target.value)}
-            size="small"
-          />
-
-          {/* Rating filter */}
-          <FormControl>
-            <Select
-              value={ratingFilter}
-              onChange={(e) => setRatingFilter(e.target.value)}
-              displayEmpty
-              renderValue={(value) => `Rating: ${value}`}
-            >
-              <MenuItem value="all">All Ratings</MenuItem>
-              <MenuItem value="unknown">Unknown</MenuItem>
-              <MenuItem value="1200+">&gt;1200</MenuItem>
-              <MenuItem value="1500+">&gt;1500</MenuItem>
-              <MenuItem value="1800+">&gt;1800</MenuItem>
-            </Select>
-          </FormControl>
-
-          {/* Date filter */}
-          <FormControl>
-            <Select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              displayEmpty
-              renderValue={(value) => `Date: ${value}`}
-            >
-              <MenuItem value="all">All Time</MenuItem>
-              <MenuItem value="week">Last Week</MenuItem>
-              <MenuItem value="month">Last Month</MenuItem>
-              <MenuItem value="year">Last Year</MenuItem>
-            </Select>
-          </FormControl>
-
-          {/* Show saved filter */}
-          {currentUser && (
-            <FormControl>
+          <Grid item xs={12} sm={6} md={4} lg={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Sort by</InputLabel>
               <Select
-                value={showSaved}
-                onChange={(e) => setShowSaved(e.target.value)}
-                displayEmpty
-                renderValue={(value) => `Show: ${value}`}
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                label="Sort by"
               >
-                <MenuItem value="all">All Replays</MenuItem>
-                <MenuItem value="unsaved">Unsaved Only</MenuItem>
+                <MenuItem value={"date DESC"}>Date Descending</MenuItem>
+                <MenuItem value={"date ASC"}>Date Ascending</MenuItem>
+                <MenuItem value={"rating DESC"}>Rating Descending</MenuItem>
+                <MenuItem value={"rating ASC"}>Rating Ascending</MenuItem>
               </Select>
             </FormControl>
+          </Grid>
+
+          {/* Player search */}
+          <Grid item xs={12} sm={6} md={4} lg={2}>
+            <TextField
+              label="Search by player"
+              value={playerFilter}
+              onChange={(e) => setPlayerFilter(e.target.value)}
+              size="small"
+              fullWidth
+            />
+          </Grid>
+
+          {/* Rating filter */}
+          <Grid item xs={12} sm={6} md={4} lg={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Rating</InputLabel>
+              <Select
+                value={ratingFilter}
+                onChange={(e) => setRatingFilter(e.target.value)}
+                label="Rating"
+              >
+                <MenuItem value="all">All Ratings</MenuItem>
+                <MenuItem value="unknown">Unknown</MenuItem>
+                <MenuItem value="1200+">&gt;1200</MenuItem>
+                <MenuItem value="1500+">&gt;1500</MenuItem>
+                <MenuItem value="1800+">&gt;1800</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Date filter */}
+          <Grid item xs={12} sm={6} md={4} lg={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Date</InputLabel>
+              <Select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                label="Date"
+              >
+                <MenuItem value="all">All Time</MenuItem>
+                <MenuItem value="week">Last Week</MenuItem>
+                <MenuItem value="month">Last Month</MenuItem>
+                <MenuItem value="year">Last Year</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Show saved filter - only displayed for logged-in users */}
+          {currentUser && (
+            <Grid item xs={12} sm={6} md={4} lg={2}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Show</InputLabel>
+                <Select
+                  value={showSaved}
+                  onChange={(e) => setShowSaved(e.target.value)}
+                  label="Show"
+                >
+                  <MenuItem value="all">All Replays</MenuItem>
+                  <MenuItem value="unsaved">Unsaved Only</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
           )}
 
-          {/* Apply button */}
-          <Button
-            variant="containedSuccess"
-            onClick={applyFilters}
+          {/* Action buttons */}
+          <Grid
+            item
+            xs={12}
+            sm={12}
+            md={12}
+            lg={currentUser ? 2 : 4}
+            sx={{ display: "flex", gap: 1 }}
           >
-            Apply Filters
-          </Button>
-          <Button
-            variant="containedSecondary"
-            onClick={resetFilters}
-          >
-            Reset Filters
-          </Button>
-        </Box>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={applyFilters}
+              fullWidth
+              sx={{
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: 3,
+                  backgroundColor: (theme) => theme.palette.primary.dark,
+                }
+              }}
+            >
+              Apply
+            </Button>
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={resetFilters}
+              fullWidth
+              sx={{
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: 1,
+                  borderColor: (theme) => theme.palette.secondary.dark,
+                  backgroundColor: 'rgba(156, 39, 176, 0.04)', // Slight purple background
+                }
+              }}
+            >
+              Reset
+            </Button>
+          </Grid>
+        </Grid>
+      </Box>
 
+      {/* Loading state */}
       {isLoading ? (
         <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
           <CircularProgress />
         </Box>
       ) : (
         <>
-          {games.map((game) => (
-            <ReplayCard key={game.replay_id} game={game} />
-          ))}
+          {/* Game cards */}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {games.map((game) => (
+              <ReplayCard key={game.replay_id} game={game} />
+            ))}
+          </Box>
+
+          {/* Pagination */}
           {totalPages > 1 && (
-            <Pagination
-              count={totalPages}
-              page={currentPage}
-              onChange={handlePageChange}
-              color="primary"
-              sx={{ marginTop: 2, display: "flex", justifyContent: "center" }}
-            />
+            <Box sx={{ mt: 4, display: "flex", justifyContent: "center" }}>
+              <Pagination
+                count={totalPages}
+                page={currentPage}
+                onChange={handlePageChange}
+                color="primary"
+                siblingCount={1}
+                boundaryCount={1}
+              />
+            </Box>
           )}
         </>
       )}

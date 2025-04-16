@@ -17,11 +17,21 @@ import {
   Typography,
   Paper,
   Box,
-  TextField
+  TextField,
+  IconButton,
+  useTheme,
+  useMediaQuery,
+  Tooltip,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import useDraggable from '../hooks/useDraggable';
 import TriStateCheckbox from './TriStateCheckBox';
+import CloseIcon from '@mui/icons-material/Close';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import InfoIcon from '@mui/icons-material/Info';
 
 const WhiteCheckbox = styled(Checkbox)(({ theme }) => ({
   color: 'white',
@@ -44,6 +54,10 @@ const menuPropsDown = {
 };
 
 const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleConditions }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+
   const handleSelectChange = (e, key) => {
     setBattleConditions(prev => ({ ...prev, [key]: e.target.value }));
     
@@ -258,286 +272,689 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
     color: 'inherit',
     backgroundColor: '#221FC7',
     '& .MuiOutlinedInput-notchedOutline': { borderColor: 'inherit' },
-    '& .MuiSvgIcon-root': { color: 'inherit' }
+    '& .MuiSvgIcon-root': { color: 'inherit' },
+    '& .MuiSelect-select': {
+      paddingRight: '32px'
+    }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} PaperComponent={DraggablePaperComponent} fullWidth>
-      <DialogTitle id="draggable-dialog-title" style={{ cursor: 'grab' }}>
-        Battle Conditions
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      PaperComponent={DraggablePaperComponent} 
+      fullWidth 
+      maxWidth={isMobile ? "sm" : "md"}
+      aria-labelledby="draggable-dialog-title"
+    >
+      <DialogTitle 
+        id="draggable-dialog-title" 
+        style={{ cursor: 'grab' }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant={isMobile ? "h6" : "h5"} component="div">
+            Battle Conditions
+          </Typography>
+          <IconButton 
+            onClick={onClose} 
+            sx={{ color: 'white' }}
+            aria-label="close"
+            size={isMobile ? "small" : "medium"}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
       </DialogTitle>
+      
       <DialogContent dividers>
-        <Grid container spacing={2}>
-          {/* Sección de condiciones generales */}
-          <Grid item xs={12}>
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ flex: 0.7 }}>
-                  <InputLabel sx={{ color: 'inherit' }}>Weather</InputLabel>
-                  <Select
-                    value={battleConditions.weather}
-                    onChange={(e) => handleSelectChange(e, 'weather')}
-                    label="Weather"
-                    sx={selectSx}
-                    MenuProps={menuPropsDown}
-                    fullWidth
-                  >
-                    <MenuItem value="">Any</MenuItem>
-                    <MenuItem value="none">None</MenuItem>
-                    <MenuItem value="RainDance">RainDance</MenuItem>
-                    <MenuItem value="SunnyDay">SunnyDay</MenuItem>
-                    <MenuItem value="Sandstorm">Sandstorm</MenuItem>
-                    <MenuItem value="Hail">Hail</MenuItem>
-                  </Select>
-                </Box>
-                <TextField
-                  label="Turns Left"
-                  type="number"
-                  value={battleConditions.weatherDuration || 0}
-                  onChange={(e) => handleDurationChange('weather', 'weather', e.target.value)}
-                  inputProps={{ min: 1, max: 8, step: 1 }}
-                  sx={{ width: '80px' }}
+        {/* --------- Sección de condiciones generales: Climate y Terrain --------- */}
+        <Box sx={{ mb: 2 }}>
+          <Typography 
+            variant={isMobile ? "subtitle2" : "subtitle1"} 
+            component="h3"
+            sx={{ 
+              fontWeight: 'bold', 
+              mb: 1, 
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}
+          >
+            Field Conditions
+            <Tooltip title="Weather, terrain and room effects that affect both sides of the field">
+              <InfoIcon fontSize="small" sx={{ color: 'white' }} />
+            </Tooltip>
+          </Typography>
+
+          {/* Weather, terrain y room en vista móvil: acordeón */}
+          {isMobile ? (
+            <Accordion 
+              defaultExpanded 
+              sx={{ 
+                backgroundColor: 'transparent',
+                boxShadow: 'none',
+                '&::before': { display: 'none' } 
+              }}
+            >
+              <AccordionSummary
+                expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />}
+                aria-controls="weather-content"
+                id="weather-header"
+                sx={{ px: 0 }}
+              >
+                <Typography>Weather, Terrain & Room Effects</Typography>
+              </AccordionSummary>
+              <AccordionDetails sx={{ px: 0 }}>
+                <FieldConditionControls 
+                  battleConditions={battleConditions}
+                  handleSelectChange={handleSelectChange}
+                  handleDurationChange={handleDurationChange}
+                  selectSx={selectSx}
+                  isMobile={isMobile}
                 />
-              </Box>
-            </FormControl>
+              </AccordionDetails>
+            </Accordion>
+          ) : (
+            <FieldConditionControls 
+              battleConditions={battleConditions}
+              handleSelectChange={handleSelectChange}
+              handleDurationChange={handleDurationChange}
+              selectSx={selectSx}
+              isMobile={isMobile}
+            />
+          )}
+        </Box>
 
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ flex: 0.7 }}>
-                  <InputLabel sx={{ color: 'inherit' }}>Field</InputLabel>
-                  <Select
-                    value={battleConditions.field}
-                    onChange={(e) => handleSelectChange(e, 'field')}
-                    label="Field"
-                    sx={selectSx}
-                    MenuProps={menuPropsDown}
-                    fullWidth
+        <Divider sx={{ my: 2, borderColor: 'grey.500' }} />
+
+        {/* --------- Sección de Side Effects --------- */}
+        <Box sx={{ mb: 2 }}>
+          <Typography 
+            variant={isMobile ? "subtitle2" : "subtitle1"} 
+            component="h3"
+            sx={{ 
+              fontWeight: 'bold', 
+              mb: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}
+          >
+            Side Effects
+            <Tooltip title="Effects specific to one side of the field like Reflect, Light Screen, etc.">
+              <InfoIcon fontSize="small" sx={{ color: 'white' }} />
+            </Tooltip>
+          </Typography>
+
+          <Grid container spacing={isMobile ? 0 : 2}>
+            {/* En móvil: efectos en acordeón para cada lado */}
+            {isMobile ? (
+              <>
+                <Grid item xs={12}>
+                  <Accordion 
+                    defaultExpanded 
+                    sx={{ 
+                      backgroundColor: 'transparent',
+                      boxShadow: 'none',
+                      '&::before': { display: 'none' },
+                      mb: 1
+                    }}
                   >
-                    <MenuItem value="">Any</MenuItem>
-                    <MenuItem value="none">None</MenuItem>
-                    <MenuItem value="ElectricTerrain">ElectricTerrain</MenuItem>
-                    <MenuItem value="GrassyTerrain">GrassyTerrain</MenuItem>
-                    <MenuItem value="MistyTerrain">MistyTerrain</MenuItem>
-                    <MenuItem value="PsychicTerrain">PsychicTerrain</MenuItem>
-                  </Select>
-                </Box>
-                <TextField
-                  label="Turns Left"
-                  type="number"
-                  value={battleConditions.fieldDuration || 0}
-                  onChange={(e) => handleDurationChange('field', 'field', e.target.value)}
-                  inputProps={{ min: 1, max: 8, step: 1 }}
-                  sx={{ width: '80px' }}
-                />
-              </Box>
-            </FormControl>
-
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ flex: 0.7 }}>
-                  <InputLabel sx={{ color: 'inherit' }}>Room Effects</InputLabel>
-                  <Select
-                    value={battleConditions.room}
-                    onChange={(e) => handleSelectChange(e, 'room')}
-                    label="Room Effects"
-                    sx={selectSx}
-                    MenuProps={menuPropsDown}
-                    fullWidth
+                    <AccordionSummary
+                      expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />}
+                      aria-controls="your-side-content"
+                      id="your-side-header"
+                      sx={{ px: 1 }}
+                    >
+                      <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                        Your Side
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ px: 0 }}>
+                      <SideEffectsControls 
+                        side="yourSide"
+                        battleConditions={battleConditions}
+                        handleSideEffectChange={handleSideEffectChange}
+                        handleDurationChange={handleDurationChange}
+                        sideEffectsList={sideEffectsList}
+                        isMobile={isMobile}
+                      />
+                    </AccordionDetails>
+                  </Accordion>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Accordion
+                    sx={{ 
+                      backgroundColor: 'transparent',
+                      boxShadow: 'none',
+                      '&::before': { display: 'none' }
+                    }}
                   >
-                    <MenuItem value="">Any</MenuItem>
-                    <MenuItem value="none">None</MenuItem>
-                    <MenuItem value="TrickRoom">TrickRoom</MenuItem>
-                    <MenuItem value="Gravity">Gravity</MenuItem>
-                    <MenuItem value="MagicRoom">MagicRoom</MenuItem>
-                    <MenuItem value="WonderRoom">WonderRoom</MenuItem>
-                  </Select>
-                </Box>
-                <TextField
-                  label="Turns Left"
-                  type="number"
-                  value={battleConditions.roomDuration || 0}
-                  onChange={(e) => handleDurationChange('room', 'room', e.target.value)}
-                  inputProps={{ min: 1, max: 8, step: 1 }}
-                  sx={{ width: '80px' }}
-                />
-              </Box>
-            </FormControl>
+                    <AccordionSummary
+                      expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />}
+                      aria-controls="opponent-side-content"
+                      id="opponent-side-header"
+                      sx={{ px: 1 }}
+                    >
+                      <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                        Opponent Side
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ px: 0 }}>
+                      <SideEffectsControls 
+                        side="opponentSide"
+                        battleConditions={battleConditions}
+                        handleSideEffectChange={handleSideEffectChange}
+                        handleDurationChange={handleDurationChange}
+                        sideEffectsList={sideEffectsList}
+                        isMobile={isMobile}
+                      />
+                    </AccordionDetails>
+                  </Accordion>
+                </Grid>
+              </>
+            ) : (
+              <>
+                {/* Vista desktop: dos columnas */}
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body1" sx={{ mb: 1, fontWeight: 'medium' }}>
+                    Your Side
+                  </Typography>
+                  <SideEffectsControls 
+                    side="yourSide"
+                    battleConditions={battleConditions}
+                    handleSideEffectChange={handleSideEffectChange}
+                    handleDurationChange={handleDurationChange}
+                    sideEffectsList={sideEffectsList}
+                    isMobile={isMobile}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body1" sx={{ mb: 1, fontWeight: 'medium' }}>
+                    Opponent Side
+                  </Typography>
+                  <SideEffectsControls 
+                    side="opponentSide"
+                    battleConditions={battleConditions}
+                    handleSideEffectChange={handleSideEffectChange}
+                    handleDurationChange={handleDurationChange}
+                    sideEffectsList={sideEffectsList}
+                    isMobile={isMobile}
+                  />
+                </Grid>
+              </>
+            )}
           </Grid>
+        </Box>
 
-          <Grid item xs={12}>
-            <Divider sx={{ my: 2, borderColor: 'grey.500' }} />
-          </Grid>
+        <Divider sx={{ my: 2, borderColor: 'grey.500' }} />
 
-          {/* Sección de Side Effects */}
-          <Grid item xs={12}>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>Side Effects</Typography>
-            <Grid container spacing={2}>
-              {/* Your Side */}
-              <Grid item xs={6}>
-                <Typography variant="body1" sx={{ mb: 1 }}>Your Side</Typography>
-                <FormGroup>
-                  {sideEffectsList.map(effect => (
-                    <Box key={effect} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                      <FormControlLabel
-                        control={
-                          <TriStateCheckbox
-                            value={battleConditions.sideEffects?.yourSide?.[effect]}
-                            onChange={(newValue) => handleSideEffectChange('yourSide', effect, newValue)}
-                            sx={{ color: 'white' }}
-                          />
-                        }
-                        label={effect === "tailwind" ? "Tailwind (Your Side)" : effect}
-                        sx={{ color: 'white' }}
-                      />
-                      <TextField
-                        label="Turns Left"
-                        type="number"
-                        value={battleConditions.sideEffectsDuration?.yourSide?.[effect] || 0}
-                        onChange={(e) => handleDurationChange('sideEffect', `yourSide.${effect}`, e.target.value)}
-                        inputProps={{ min: 1, max: effect === "tailwind" ? 5 : 8, step: 1 }}
-                        sx={{ width: '80px' }}
-                      />
-                    </Box>
-                  ))}
-                </FormGroup>
-              </Grid>
-              {/* Opponent Side */}
-              <Grid item xs={6}>
-                <Typography variant="body1" sx={{ mb: 1 }}>Opponent Side</Typography>
-                <FormGroup>
-                  {sideEffectsList.map(effect => (
-                    <Box key={effect} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                      <FormControlLabel
-                        control={
-                          <TriStateCheckbox
-                            value={battleConditions.sideEffects?.opponentSide?.[effect]}
-                            onChange={(newValue) => handleSideEffectChange('opponentSide', effect, newValue)}
-                            sx={{ color: 'white' }}
-                          />
-                        }
-                        label={effect}
-                        sx={{ color: 'white' }}
-                      />
-                      <TextField
-                        label="Turns Left"
-                        type="number"
-                        value={battleConditions.sideEffectsDuration?.opponentSide?.[effect] || 0}
-                        onChange={(e) => handleDurationChange('sideEffect', `opponentSide.${effect}`, e.target.value)}
-                        inputProps={{ min: 1, max: effect === "tailwind" ? 5 : 8, step: 1 }}
-                        sx={{ width: '80px' }}
-                      />
-                    </Box>
-                  ))}
-                </FormGroup>
-              </Grid>
-            </Grid>
-          </Grid>
+        {/* --------- Sección de Entry Hazards --------- */}
+        <Box sx={{ mb: 2 }}>
+          <Typography 
+            variant={isMobile ? "subtitle2" : "subtitle1"} 
+            component="h3"
+            sx={{ 
+              fontWeight: 'bold', 
+              mb: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}
+          >
+            Entry Hazards
+            <Tooltip title="Hazards that damage or affect Pokémon when they switch in">
+              <InfoIcon fontSize="small" sx={{ color: 'white' }} />
+            </Tooltip>
+          </Typography>
 
-          <Grid item xs={12}>
-            <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>Entry Hazards</Typography>
-            <Grid container spacing={2}>
-              {/* Lado "Your Side" */}
-              <Grid item xs={6}>
-                <Typography variant="body1" sx={{ mb: 1 }}>Your Side</Typography>
-                <FormGroup>
-                  {hazardsList.map(hazard => (
-                    <Box key={hazard} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                      <FormControlLabel
-                        control={
-                          <TriStateCheckbox
-                            value={battleConditions.entryHazards?.yourSide?.[hazard] === false 
-                              ? false 
-                              : battleConditions.entryHazards?.yourSide?.[hazard] === true 
-                                ? true 
-                                : null}
-                            onChange={(newValue) => handleHazardChange('yourSide', hazard)(newValue)}
-                            name={hazard}
-                            sx={{ color: 'white' }}
-                          />
-                        }
-                        label={hazard}
-                        sx={{ color: 'white' }}
+          <Grid container spacing={isMobile ? 0 : 2}>
+            {/* En móvil: hazards en acordeón para cada lado */}
+            {isMobile ? (
+              <>
+                <Grid item xs={12}>
+                  <Accordion 
+                    defaultExpanded 
+                    sx={{ 
+                      backgroundColor: 'transparent',
+                      boxShadow: 'none',
+                      '&::before': { display: 'none' },
+                      mb: 1
+                    }}
+                  >
+                    <AccordionSummary
+                      expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />}
+                      aria-controls="your-hazards-content"
+                      id="your-hazards-header"
+                      sx={{ px: 1 }}
+                    >
+                      <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                        Your Side
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ px: 0 }}>
+                      <HazardsControls 
+                        side="yourSide"
+                        battleConditions={battleConditions}
+                        handleHazardChange={handleHazardChange}
+                        handleDurationChange={handleDurationChange}
+                        hazardsList={hazardsList}
+                        isMobile={isMobile}
                       />
-                      {(hazard === "Spikes" || hazard === "Toxic Spikes") && (
-                        <TextField
-                          label="Level"
-                          type="number"
-                          value={battleConditions.entryHazardsLevel?.yourSide?.[hazard] || 0}
-                          onChange={(e) => handleDurationChange('hazardLevel', `yourSide.${hazard}`, e.target.value)}
-                          inputProps={{ 
-                            min: 1, 
-                            max: hazard === "Spikes" ? 3 : hazard === "Toxic Spikes" ? 2 : 8, 
-                            step: 1 
-                          }}
-                          sx={{ width: '80px' }}
-                        />
-                      )}
-                    </Box>
-                  ))}
-                </FormGroup>
-              </Grid>
-              {/* Lado "Opponent Side" */}
-              <Grid item xs={6}>
-                <Typography variant="body1" sx={{ mb: 1 }}>Opponent Side</Typography>
-                <FormGroup>
-                  {hazardsList.map(hazard => (
-                    <Box key={hazard} sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                      <FormControlLabel
-                        control={
-                          <TriStateCheckbox
-                            value={battleConditions.entryHazards?.opponentSide?.[hazard] === false 
-                              ? false 
-                              : battleConditions.entryHazards?.opponentSide?.[hazard] === true 
-                                ? true 
-                                : null}
-                            onChange={(newValue) => handleHazardChange('opponentSide', hazard)(newValue)}
-                            name={hazard}
-                            sx={{ color: 'white' }}
-                          />
-                        }
-                        label={hazard}
-                        sx={{ color: 'white' }}
+                    </AccordionDetails>
+                  </Accordion>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Accordion
+                    sx={{ 
+                      backgroundColor: 'transparent',
+                      boxShadow: 'none',
+                      '&::before': { display: 'none' }
+                    }}
+                  >
+                    <AccordionSummary
+                      expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />}
+                      aria-controls="opponent-hazards-content"
+                      id="opponent-hazards-header"
+                      sx={{ px: 1 }}
+                    >
+                      <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                        Opponent Side
+                      </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ px: 0 }}>
+                      <HazardsControls 
+                        side="opponentSide"
+                        battleConditions={battleConditions}
+                        handleHazardChange={handleHazardChange}
+                        handleDurationChange={handleDurationChange}
+                        hazardsList={hazardsList}
+                        isMobile={isMobile}
                       />
-                      {(hazard === "Spikes" || hazard === "Toxic Spikes") && (
-                        <TextField
-                          label="Level"
-                          type="number"
-                          value={battleConditions.entryHazardsLevel?.opponentSide?.[hazard] || 0}
-                          onChange={(e) => handleDurationChange('hazardLevel', `opponentSide.${hazard}`, e.target.value)}
-                          inputProps={{ 
-                            min: 1, 
-                            max: hazard === "Spikes" ? 3 : hazard === "Toxic Spikes" ? 2 : 8, 
-                            step: 1 
-                          }}
-                          sx={{ width: '80px' }}
-                        />
-                      )}
-                    </Box>
-                  ))}
-                </FormGroup>
-              </Grid>
-            </Grid>
+                    </AccordionDetails>
+                  </Accordion>
+                </Grid>
+              </>
+            ) : (
+              <>
+                {/* Vista desktop: dos columnas */}
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body1" sx={{ mb: 1, fontWeight: 'medium' }}>
+                    Your Side
+                  </Typography>
+                  <HazardsControls 
+                    side="yourSide"
+                    battleConditions={battleConditions}
+                    handleHazardChange={handleHazardChange}
+                    handleDurationChange={handleDurationChange}
+                    hazardsList={hazardsList}
+                    isMobile={isMobile}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body1" sx={{ mb: 1, fontWeight: 'medium' }}>
+                    Opponent Side
+                  </Typography>
+                  <HazardsControls 
+                    side="opponentSide"
+                    battleConditions={battleConditions}
+                    handleHazardChange={handleHazardChange}
+                    handleDurationChange={handleDurationChange}
+                    hazardsList={hazardsList}
+                    isMobile={isMobile}
+                  />
+                </Grid>
+              </>
+            )}
           </Grid>
-        </Grid>
+        </Box>
       </DialogContent>
-      <DialogActions>
+      
+      <DialogActions sx={{ p: 2, flexWrap: 'wrap', gap: 1 }}>
         <Button 
           onClick={handleClearData} 
           variant="outlined" 
           color="warning"
-          sx={{ mr: 'auto' }}
+          aria-label="Clear all battle conditions"
+          sx={{ 
+            mr: { xs: 0, sm: 'auto' }, 
+            order: { xs: 3, sm: 1 },
+            width: { xs: '100%', sm: 'auto' },
+            mt: { xs: 1, sm: 0 }
+          }}
         >
-          Clear Conditions
+          Clear All
         </Button>
-        <Button onClick={onClose} variant="contained" color="error">
+        <Button 
+          onClick={onClose} 
+          variant="contained" 
+          color="error"
+          aria-label="Cancel changes"
+          sx={{ 
+            flex: { xs: 1, sm: 'none' },
+            order: { xs: 1, sm: 2 }
+          }}
+        >
           Cancel
         </Button>
-        <Button onClick={handleApply} variant="contained" color="success">
+        <Button 
+          onClick={handleApply} 
+          variant="contained" 
+          color="success"
+          aria-label="Apply battle conditions"
+          sx={{ 
+            flex: { xs: 1, sm: 'none' },
+            order: { xs: 2, sm: 3 }
+          }}
+        >
           Apply
         </Button>
       </DialogActions>
     </Dialog>
   );
 };
+
+// Componente separado para los controles de Field Conditions
+const FieldConditionControls = ({ battleConditions, handleSelectChange, handleDurationChange, selectSx, isMobile }) => (
+  <Grid container spacing={isMobile ? 1 : 2}>
+    <Grid item xs={12}>
+      <FormControl 
+        fullWidth 
+        sx={{ mb: 1 }}
+        size={isMobile ? "small" : "medium"}
+      >
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          flexDirection: { xs: 'column', sm: 'row' }
+        }}>
+          <Box sx={{ flex: { xs: '1', sm: '0.7' }, width: { xs: '100%', sm: 'auto' } }}>
+            <InputLabel id="weather-label" sx={{ color: 'inherit' }}>Weather</InputLabel>
+            <Select
+              labelId="weather-label"
+              value={battleConditions.weather}
+              onChange={(e) => handleSelectChange(e, 'weather')}
+              label="Weather"
+              sx={selectSx}
+              MenuProps={menuPropsDown}
+              fullWidth
+              aria-label="Select weather condition"
+            >
+              <MenuItem value="">Any</MenuItem>
+              <MenuItem value="none">None</MenuItem>
+              <MenuItem value="RainDance">Rain Dance</MenuItem>
+              <MenuItem value="SunnyDay">Sunny Day</MenuItem>
+              <MenuItem value="Sandstorm">Sandstorm</MenuItem>
+              <MenuItem value="Hail">Hail</MenuItem>
+            </Select>
+          </Box>
+          <TextField
+            label="Turns"
+            type="number"
+            value={battleConditions.weatherDuration || 0}
+            onChange={(e) => handleDurationChange('weather', 'weather', e.target.value)}
+            inputProps={{ min: 0, max: 8, step: 1 }}
+            sx={{ 
+              width: { xs: '100%', sm: '80px' },
+              mt: { xs: 1, sm: 0 }
+            }}
+            size={isMobile ? "small" : "medium"}
+            aria-label="Weather turns remaining"
+          />
+        </Box>
+      </FormControl>
+    </Grid>
+
+    <Grid item xs={12}>
+      <FormControl 
+        fullWidth 
+        sx={{ mb: 1 }}
+        size={isMobile ? "small" : "medium"}
+      >
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          flexDirection: { xs: 'column', sm: 'row' }
+        }}>
+          <Box sx={{ flex: { xs: '1', sm: '0.7' }, width: { xs: '100%', sm: 'auto' } }}>
+            <InputLabel id="field-label" sx={{ color: 'inherit' }}>Terrain</InputLabel>
+            <Select
+              labelId="field-label"
+              value={battleConditions.field}
+              onChange={(e) => handleSelectChange(e, 'field')}
+              label="Terrain"
+              sx={selectSx}
+              MenuProps={menuPropsDown}
+              fullWidth
+              aria-label="Select terrain effect"
+            >
+              <MenuItem value="">Any</MenuItem>
+              <MenuItem value="none">None</MenuItem>
+              <MenuItem value="ElectricTerrain">Electric Terrain</MenuItem>
+              <MenuItem value="GrassyTerrain">Grassy Terrain</MenuItem>
+              <MenuItem value="MistyTerrain">Misty Terrain</MenuItem>
+              <MenuItem value="PsychicTerrain">Psychic Terrain</MenuItem>
+            </Select>
+          </Box>
+          <TextField
+            label="Turns"
+            type="number"
+            value={battleConditions.fieldDuration || 0}
+            onChange={(e) => handleDurationChange('field', 'field', e.target.value)}
+            inputProps={{ min: 0, max: 8, step: 1 }}
+            sx={{ 
+              width: { xs: '100%', sm: '80px' },
+              mt: { xs: 1, sm: 0 }
+            }}
+            size={isMobile ? "small" : "medium"}
+            aria-label="Terrain turns remaining"
+          />
+        </Box>
+      </FormControl>
+    </Grid>
+
+    <Grid item xs={12}>
+      <FormControl 
+        fullWidth 
+        sx={{ mb: 0 }}
+        size={isMobile ? "small" : "medium"}
+      >
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          flexDirection: { xs: 'column', sm: 'row' }
+        }}>
+          <Box sx={{ flex: { xs: '1', sm: '0.7' }, width: { xs: '100%', sm: 'auto' } }}>
+            <InputLabel id="room-label" sx={{ color: 'inherit' }}>Room Effect</InputLabel>
+            <Select
+              labelId="room-label"
+              value={battleConditions.room}
+              onChange={(e) => handleSelectChange(e, 'room')}
+              label="Room Effect"
+              sx={selectSx}
+              MenuProps={menuPropsDown}
+              fullWidth
+              aria-label="Select room effect"
+            >
+              <MenuItem value="">Any</MenuItem>
+              <MenuItem value="none">None</MenuItem>
+              <MenuItem value="TrickRoom">Trick Room</MenuItem>
+              <MenuItem value="Gravity">Gravity</MenuItem>
+              <MenuItem value="MagicRoom">Magic Room</MenuItem>
+              <MenuItem value="WonderRoom">Wonder Room</MenuItem>
+            </Select>
+          </Box>
+          <TextField
+            label="Turns"
+            type="number"
+            value={battleConditions.roomDuration || 0}
+            onChange={(e) => handleDurationChange('room', 'room', e.target.value)}
+            inputProps={{ min: 0, max: 8, step: 1 }}
+            sx={{ 
+              width: { xs: '100%', sm: '80px' },
+              mt: { xs: 1, sm: 0 }
+            }}
+            size={isMobile ? "small" : "medium"}
+            aria-label="Room effect turns remaining"
+          />
+        </Box>
+      </FormControl>
+    </Grid>
+  </Grid>
+);
+
+// Componente separado para los controles de Side Effects
+const SideEffectsControls = ({ side, battleConditions, handleSideEffectChange, handleDurationChange, sideEffectsList, isMobile }) => (
+  <FormGroup>
+    {sideEffectsList.map(effect => (
+      <Box 
+        key={effect} 
+        sx={{ 
+          display: 'flex', 
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          flexDirection: { xs: 'column', sm: 'row' }, 
+          gap: { xs: 1, sm: 2 }, 
+          mb: 1.5 
+        }}
+      >
+        <FormControlLabel
+          control={
+            <TriStateCheckbox
+              value={battleConditions.sideEffects?.[side]?.[effect]}
+              onChange={(newValue) => handleSideEffectChange(side, effect, newValue)}
+              sx={{ color: 'white' }}
+              size={isMobile ? "small" : "medium"}
+            />
+          }
+          label={
+            <Tooltip title={getEffectDescription(effect)}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <span>{effect.charAt(0).toUpperCase() + effect.slice(1)}</span>
+                <InfoIcon sx={{ fontSize: '0.875rem', color: 'white', opacity: 0.8 }} />
+              </Box>
+            </Tooltip>
+          }
+          sx={{ 
+            color: 'white', 
+            margin: 0,
+            minWidth: { xs: '140px', sm: '150px' }
+          }}
+        />
+        <TextField
+          label="Turns"
+          type="number"
+          value={battleConditions.sideEffectsDuration?.[side]?.[effect] || 0}
+          onChange={(e) => handleDurationChange('sideEffect', `${side}.${effect}`, e.target.value)}
+          inputProps={{ 
+            min: 0, 
+            max: effect === "tailwind" ? 5 : 8, 
+            step: 1 
+          }}
+          sx={{ 
+            width: { xs: '100%', sm: '80px' }
+          }}
+          size={isMobile ? "small" : "medium"}
+          aria-label={`${effect} turns remaining`}
+        />
+      </Box>
+    ))}
+  </FormGroup>
+);
+
+// Componente separado para los controles de Hazards
+const HazardsControls = ({ side, battleConditions, handleHazardChange, handleDurationChange, hazardsList, isMobile }) => (
+  <FormGroup>
+    {hazardsList.map(hazard => (
+      <Box 
+        key={hazard} 
+        sx={{ 
+          display: 'flex', 
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: { xs: 1, sm: 2 }, 
+          mb: 1.5 
+        }}
+      >
+        <FormControlLabel
+          control={
+            <TriStateCheckbox
+              value={battleConditions.entryHazards?.[side]?.[hazard] === false 
+                ? false 
+                : battleConditions.entryHazards?.[side]?.[hazard] === true 
+                  ? true 
+                  : null}
+              onChange={(newValue) => handleHazardChange(side, hazard)(newValue)}
+              name={hazard}
+              sx={{ color: 'white' }}
+              size={isMobile ? "small" : "medium"}
+            />
+          }
+          label={
+            <Tooltip title={getHazardDescription(hazard)}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <span>{hazard}</span>
+                <InfoIcon sx={{ fontSize: '0.875rem', color: 'white', opacity: 0.8 }} />
+              </Box>
+            </Tooltip>
+          }
+          sx={{ 
+            color: 'white', 
+            margin: 0,
+            minWidth: { xs: '140px', sm: '150px' }
+          }}
+        />
+        {(hazard === "Spikes" || hazard === "Toxic Spikes") ? (
+          <TextField
+            label="Level"
+            type="number"
+            value={battleConditions.entryHazardsLevel?.[side]?.[hazard] || 0}
+            onChange={(e) => handleDurationChange('hazardLevel', `${side}.${hazard}`, e.target.value)}
+            inputProps={{ 
+              min: 0, 
+              max: hazard === "Spikes" ? 3 : hazard === "Toxic Spikes" ? 2 : 8, 
+              step: 1 
+            }}
+            sx={{ 
+              width: { xs: '100%', sm: '80px' }
+            }}
+            size={isMobile ? "small" : "medium"}
+            aria-label={`${hazard} level`}
+          />
+        ) : (
+          <Box sx={{ width: { xs: '100%', sm: '80px' } }} />
+        )}
+      </Box>
+    ))}
+  </FormGroup>
+);
+
+// Función auxiliar para obtener descripciones de los efectos
+function getEffectDescription(effect) {
+  const descriptions = {
+    "tailwind": "Doubles Speed for 4 turns",
+    "reflect": "Halves damage from Physical attacks for 5 turns",
+    "lightscreen": "Halves damage from Special attacks for 5 turns",
+    "auroraveil": "Halves damage from all attacks for 5 turns (only active during Hail)"
+  };
+  return descriptions[effect] || effect;
+}
+
+// Función auxiliar para obtener descripciones de los hazards
+function getHazardDescription(hazard) {
+  const descriptions = {
+    "Spikes": "Damages non-flying Pokémon on switch-in. Up to 3 layers possible.",
+    "Toxic Spikes": "Poisons non-flying Pokémon on switch-in. 2 layers causes Toxic poison.",
+    "Stealth Rock": "Damages Pokémon on switch-in. Damage depends on type effectiveness against Rock.",
+    "Sticky Web": "Lowers Speed of non-flying/levitating Pokémon on switch-in."
+  };
+  return descriptions[hazard] || hazard;
+}
 
 export default BattleConditionsDialog;
