@@ -1123,6 +1123,7 @@ const fetchPokemonDetails = async (pokemonName) => {
                         totalItems={usageData.length}
                         onPageChange={handlePageChange}
                         showUsagePercentage={rankingType !== 'victories'}
+                        rankingType={rankingType}
                     />
                     </Grid>
 
