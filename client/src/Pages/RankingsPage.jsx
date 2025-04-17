@@ -1056,17 +1056,15 @@ const fetchPokemonDetails = async (pokemonName) => {
             <Box sx={{ 
                 display: 'flex', 
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                mb: 4
+                mb: 4,
             }}>
-                {/* Contenedor para el select de formato */}
-                <FormControl sx={{ minWidth: 200 }}>
+                {/* Selector de formato SIEMPRE primero */}
+                <FormControl sx={{ minWidth: 200, mr: 3 }}>
                     <InputLabel>Format</InputLabel>
                     <Select
                         value={format}
                         label="Format"
                         onChange={(e) => {
-                            console.log("Format selected:", e.target.value);
                             handleFormatChange(e.target.value);
                         }}
                         disabled={isLoadingFormat}
@@ -1075,7 +1073,6 @@ const fetchPokemonDetails = async (pokemonName) => {
                             <MenuItem key={fmt} value={fmt}>{fmt}</MenuItem>
                         ))}
                     </Select>
-                    
                     {isLoadingFormat && (
                         <CircularProgress 
                             size={24} 
@@ -1089,13 +1086,23 @@ const fetchPokemonDetails = async (pokemonName) => {
                     )}
                 </FormControl>
 
-                {/* Botón de toggle alineado a la derecha */}
+                {/* Botón de toggle Usage/Winrate */}
                 <Button 
                     variant="contained" 
                     onClick={() => setRankingType(rankingType === 'usage' ? 'victories' : 'usage')}
                     disabled={isLoadingFormat}
+                    sx={{ mr: 2 }}
                 >
                     {rankingType === 'usage' ? 'Winrate Ranking' : 'Usage Ranking'}
+                </Button>
+
+                {/* Botón Teams Ranking */}
+                <Button 
+                    variant="contained" 
+                    onClick={() => setRankingType('teams')}
+                    disabled={isLoadingFormat}
+                >
+                    Teams Ranking
                 </Button>
             </Box>
 
