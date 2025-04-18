@@ -1140,9 +1140,12 @@ const PokemonUsage = () => {
                 Pokémon Usage Statistics
             </Typography>
 
-            <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center',
+            {/* Control buttons: responsive layout, more visual */}
+            <Box sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: { xs: 'stretch', sm: 'center' },
+                gap: 2,
                 mb: 4,
             }}>
                 {/* Selector de formato SIEMPRE primero */}
@@ -1173,30 +1176,50 @@ const PokemonUsage = () => {
                     )}
                 </FormControl>
 
-                {/* Botón de toggle Usage/Winrate */}
-                <Button 
-                    variant="contained" 
+                <Button
+                    variant='contained'
+                    color="primary"
+                    size="large"
+                    disableElevation
                     onClick={() => setRankingType(rankingType === 'usage' ? 'victories' : 'usage')}
                     disabled={isLoadingFormat}
-                    sx={{ mr: 2 }}
+                    sx={{
+                        flex: { xs: '1 1 100%', sm: 'auto' },
+                        fontSize: { xs: 12, sm: 14 },
+                        py: { xs: 1, sm: 1.5 },
+                    }}
                 >
                     {rankingType === 'usage' ? 'Winrate Ranking' : 'Usage Ranking'}
                 </Button>
 
-                {/* Botón Teams Ranking */}
-                <Button 
-                    variant="contained" 
+                <Button
+                    variant={rankingType === 'teams' ? 'outlined' : 'contained'}
+                    color="primary"
+                    size="large"
+                    disableElevation
                     onClick={() => setRankingType('teams')}
-                    disabled={isLoadingFormat}
+                    disabled={isLoadingFormat || rankingType === 'teams'}
+                    sx={{
+                        flex: { xs: '1 1 100%', sm: 'auto' },
+                        fontSize: { xs: 12, sm: 14 },
+                        py: { xs: 1, sm: 1.5 },
+                    }}
                 >
                     Teams Ranking
                 </Button>
 
-                {/* Botón Leads Ranking */}
-                <Button 
-                    variant="contained" 
+                <Button
+                    variant={rankingType === 'leads' ? 'outlined' : 'contained'}
+                    color="primary"
+                    size="large"
+                    disableElevation
                     onClick={() => setRankingType('leads')}
-                    disabled={isLoadingFormat}
+                    disabled={isLoadingFormat || rankingType === 'leads'}
+                    sx={{
+                        flex: { xs: '1 1 100%', sm: 'auto' },
+                        fontSize: { xs: 12, sm: 14 },
+                        py: { xs: 1, sm: 1.5 },
+                    }}
                 >
                     Leads Ranking
                 </Button>
