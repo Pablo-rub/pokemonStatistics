@@ -109,7 +109,11 @@ function SavedGamesPage() {
       </Typography>
 
       {games.map((game, index) => (
-        <ReplayCard key={index} game={game} />
+        <ReplayCard
+          key={index}
+          game={game}
+          showAnalyze
+        />
       ))}
     </Box>
   );
