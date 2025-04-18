@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Select, MenuItem, FormControl, InputLabel,
-  Grid, CircularProgress, IconButton, Button, Paper
+  Grid, CircularProgress, IconButton, Button, Paper, Pagination
 } from '@mui/material';
 import axios from 'axios';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
@@ -12,6 +12,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import PokemonList from '../components/rankings/PokemonList';
 import DetailsPane from '../components/rankings/DetailsPane';
 import MultiLineChart from '../components/rankings/MultiLineChart';
+import PokemonSprite from '../components/PokemonSprite';
 
 //todo
 // ranking generales de tera, items, abilities, moves
@@ -29,8 +30,8 @@ const PokemonUsage = () => {
     const [selectedPokemon, setSelectedPokemon] = useState(null);
     const [pokemonDetails, setPokemonDetails] = useState(null);
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-    const [isLoadingInitial, setIsLoadingInitial] = useState(true); // Nuevo estado para carga inicial
-    const [isLoadingFormat, setIsLoadingFormat] = useState(false); // Nuevo estado para cambio de formato
+    const [isLoadingInitial, setIsLoadingInitial] = useState(true);
+    const [isLoadingFormat, setIsLoadingFormat] = useState(false);
     const [page, setPage] = useState(1);
     const itemsPerPage = 6;
     const [currentCategory, setCurrentCategory] = useState(0);
@@ -40,6 +41,14 @@ const PokemonUsage = () => {
     const [teamData, setTeamData] = useState([]);
     const [teamHistoricalData, setTeamHistoricalData] = useState([]);
     const [isLoadingTeams, setIsLoadingTeams] = useState(false);
+    const [teamsPage, setTeamsPage] = useState(1);
+    const teamsLimit = 12;
+    const [teamsSortBy, setTeamsSortBy] = useState('usage');
+    const [teamsSortDir, setTeamsSortDir] = useState('desc');
+    const [teamsTotal, setTeamsTotal] = useState(0);
+    // Nuevo estado para filtrar por mes
+    const [teamsMonths, setTeamsMonths] = useState([]);
+    const [teamsMonth, setTeamsMonth] = useState('');
 
     // Mapeo de endpoints para cada categoría (excepto historicalUsage)
     const victoryEndpoints = {
@@ -156,24 +165,46 @@ const PokemonUsage = () => {
     useEffect(() => {
         if (rankingType !== 'teams' || !format) return;
         setIsLoadingTeams(true);
-        axios.get('/api/teams/usage', { params: { format } })
-            .then(({ data: { teams = [] } }) => {
-                setTeamData(teams);
-                // build historical chart points per month
-                const months = [...new Set(teams.flatMap(t => t.history.map(h => h.month)))].sort();
-                const chart = months.map(month => {
-                    const point = { month };
-                    teams.forEach(t => {
-                        const rec = t.history.find(h => h.month === month);
-                        point[t.name] = rec ? rec.usage : 0;
-                    });
-                    return point;
-                });
-                setTeamHistoricalData(chart);
+        axios.get('/api/teams/usage', {
+            params: {
+                format,
+                month: teamsMonth,
+                page: teamsPage,
+                limit: teamsLimit,
+                sortBy: teamsSortBy,
+                sortDir: teamsSortDir
+            }
+        })
+        .then(({ data: { teams, total } }) => {
+            setTeamData(teams);
+            setTeamsTotal(total);
+        })
+        .finally(() => setIsLoadingTeams(false));
+    }, [rankingType, format, teamsPage, teamsSortBy, teamsSortDir, teamsMonth]);
+
+    useEffect(() => {
+        setIsLoadingFormat(true);
+        axios.get('/api/formats/currentMonth')
+            .then(({ data }) => {
+                setTeamsMonths(data.months);
+                setTeamsMonth(data.currentMonth);
             })
-            .catch(console.error)
-            .finally(() => setIsLoadingTeams(false));
-    }, [rankingType, format]);
+            .finally(() => setIsLoadingFormat(false));
+    }, []);
+
+    // Cargar lista de meses para filtro de teams
+    useEffect(() => {
+        axios.get('/api/months')
+          .then(({ data }) => {
+            setTeamsMonths(data);
+            if (data.length) setTeamsMonth(data[0]);
+          });
+    }, []);
+    
+    const handleTeamsMonthChange = e => {
+        setTeamsMonth(e.target.value);
+        setTeamsPage(1);
+    };
 
     const handleFormatChange = async (selectedFormat) => {
         setFormat(selectedFormat);
@@ -239,6 +270,12 @@ const PokemonUsage = () => {
         } finally {
             setIsLoadingFormat(false);
         }
+    };
+
+    const handleTeamsPageChange = (_, value) => setTeamsPage(value);
+    const handleTeamsSortByChange = (e) => {
+        setTeamsSortBy(e.target.value);
+        setTeamsPage(1);
     };
 
     const parseData = (data) => {
@@ -1148,28 +1185,59 @@ const PokemonUsage = () => {
                         </Box>
                     ) : (
                         <>
-                            <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
-                                Top Teams in {format}
-                            </Typography>
-                            <Box sx={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fill, minmax(200px,1fr))',
-                                gap: 2,
-                                mb: 4
-                            }}>
-                                {teamData.map((team, i) => (
-                                    <Paper key={i} sx={{ p: 2, bgcolor: '#221FC7', color: 'white' }}>
-                                        <Typography noWrap variant="subtitle2">{team.name}</Typography>
-                                        <Typography variant="h5">{team.usage.toFixed(1)}%</Typography>
-                                    </Paper>
-                                ))}
+                            <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
+                                <FormControl size="small">
+                                    <InputLabel>Ordenar por</InputLabel>
+                                    <Select value={teamsSortBy} label="Ordenar por" onChange={handleTeamsSortByChange}>
+                                        <MenuItem value="usage">Uso %</MenuItem>
+                                        <MenuItem value="total_games">Partidas</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <FormControl size="small">
+                                  <InputLabel>Mes</InputLabel>
+                                  <Select value={teamsMonth} label="Mes" onChange={handleTeamsMonthChange}>
+                                    {teamsMonths.map(m => (
+                                      <MenuItem key={m} value={m}>{m}</MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
                             </Box>
-                            <Typography variant="subtitle1" sx={{ color: 'white', mb: 1 }}>
-                                Team Usage Trends
-                            </Typography>
-                            <MultiLineChart
-                                chartData={teamHistoricalData}
-                                elements={teamData.map(t => t.name)}
+                            <Grid container spacing={2} sx={{ mb: 2 }}>
+                                {teamData.map((team, i) => (
+                                    <Grid item xs={12} sm={6} md={4} lg={3} key={i}>
+                                        <Paper sx={{ p: 2, bgcolor: '#221FC7', color: 'white', textAlign: 'center' }}>
+                                            <Box
+                                                sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1, mb: 1 }}
+                                                role="img"
+                                                aria-label={`Team ${i + 1} sprites`}
+                                            >
+                                                {team.name.split(';').map((poke, idx) => {
+                                                    const displayName = poke
+                                                        .split('-')
+                                                        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                                                        .join(' ');
+                                                    return (
+                                                        <PokemonSprite
+                                                            key={idx}
+                                                            pokemon={{ name: poke }}
+                                                            size={32}
+                                                            aria-label={displayName}
+                                                        />
+                                                    );
+                                                })}
+                                            </Box>
+                                            <Typography variant="h5">{team.usage}%</Typography>
+                                            <Typography variant="caption">{team.total_games} games</Typography>
+                                        </Paper>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                            <Pagination
+                                count={Math.ceil(teamsTotal / teamsLimit)}
+                                page={teamsPage}
+                                onChange={handleTeamsPageChange}
+                                color="primary"
+                                sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}
                             />
                         </>
                     )}

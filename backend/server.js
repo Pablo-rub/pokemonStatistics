@@ -3415,7 +3415,18 @@ app.get('/api/victories/teammates', async (req, res) => {
 // Endpoint: Team usage statistics grouped by month
 app.get('/api/teams/usage', async (req, res) => {
   try {
-    const { format: formatParam } = req.query;
+    const {
+      format: formatParam,
+      month: monthParam,
+      page = '1',
+      limit = '12',
+      sortBy = 'usage',
+      sortDir = 'desc'
+    } = req.query;
+    const pageInt  = parseInt(page,  10);
+    const limitInt = parseInt(limit, 10);
+    const offset   = (pageInt - 1) * limitInt;
+
     if (!formatParam) {
       return res.status(400).json({ error: 'Format parameter is required' });
     }
@@ -3487,7 +3498,7 @@ app.get('/api/teams/usage', async (req, res) => {
       params: { formatName, minRating }
     });
 
-    // Group by team and assemble history
+    // Group rows by team and build history array
     const teamMap = {};
     rows.forEach(({ month, team, total_games, wins, win_rate }) => {
       if (!teamMap[team]) {
@@ -3501,18 +3512,27 @@ app.get('/api/teams/usage', async (req, res) => {
       });
     });
 
-    // Build final array, sort history ascending, set latest usage
+    // Build full team array with history and current‐month stats
     const teams = Object.values(teamMap).map(t => {
-      t.history.sort((a, b) => a.month.localeCompare(b.month));
-      // latest month win_rate
-      t.usage = t.history[t.history.length - 1].usage;
-      // cumulative stats
-      t.total_games = t.history.reduce((sum, h) => sum + h.total_games, 0);
-      t.wins       = t.history.reduce((sum, h) => sum + h.wins,       0);
+      t.history.sort((a,b) => a.month.localeCompare(b.month));
+      // find record for the selected month
+      const rec = t.history.find(h => h.month === monthParam) || { usage:0, total_games:0, wins:0 };
+      t.monthly_usage       = rec.usage;
+      t.monthly_total_games = rec.total_games;
+      t.monthly_wins        = rec.wins;
       return t;
     });
 
-    res.json({ teams });
+    // sort by monthly_usage or monthly_total_games
+    teams.sort((a,b) => {
+      const dir = sortDir.toLowerCase()==='asc'?1:-1;
+      const field = sortBy==='total_games'?'monthly_total_games':'monthly_usage';
+      return dir*(a[field] - b[field]);
+    });
+
+    // apply pagination
+    const paged = teams.slice(offset, offset + limitInt);
+    res.json({ teams: paged, total: teams.length });
   } catch (error) {
     console.error("Error fetching team usage:", error);
     res.status(500).json({ error: "Error fetching team usage" });
