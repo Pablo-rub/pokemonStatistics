@@ -3445,7 +3445,10 @@ app.get('/api/teams/usage', async (req, res) => {
           COUNT(*) AS total_games,
           SUM(CASE WHEN winner = player1 THEN 1 ELSE 0 END) AS wins
         FROM \`pokemon-statistics.pokemon_replays.replays\`
-        WHERE format = @formatName
+        WHERE LOWER(format) LIKE '%vgc%'
+          AND LOWER(format) LIKE '%2025%'
+          AND LOWER(format) LIKE '%reg g%'
+          AND LOWER(format) LIKE '%bo3%'
           AND (rating IS NULL OR rating >= @minRating)
         GROUP BY month, team
         UNION ALL
@@ -3461,13 +3464,18 @@ app.get('/api/teams/usage', async (req, res) => {
           COUNT(*) AS total_games,
           SUM(CASE WHEN winner = player2 THEN 1 ELSE 0 END) AS wins
         FROM \`pokemon-statistics.pokemon_replays.replays\`
-        WHERE format = @formatName
+        WHERE LOWER(format) LIKE '%vgc%'
+          AND LOWER(format) LIKE '%2025%'
+          AND LOWER(format) LIKE '%reg g%'
+          AND LOWER(format) LIKE '%bo3%'
           AND (rating IS NULL OR rating >= @minRating)
         GROUP BY month, team
       )
       SELECT
         month,
         team,
+        SUM(total_games) AS total_games,
+        SUM(wins) AS wins,
         ROUND(SUM(wins)/SUM(total_games)*100, 2) AS win_rate
       FROM team_stats
       GROUP BY month, team
@@ -3481,17 +3489,26 @@ app.get('/api/teams/usage', async (req, res) => {
 
     // Group by team and assemble history
     const teamMap = {};
-    rows.forEach(({ month, team, win_rate }) => {
+    rows.forEach(({ month, team, total_games, wins, win_rate }) => {
       if (!teamMap[team]) {
         teamMap[team] = { name: team, history: [] };
       }
-      teamMap[team].history.push({ month, usage: win_rate });
+      teamMap[team].history.push({
+        month,
+        usage: win_rate,
+        total_games,
+        wins
+      });
     });
 
     // Build final array, sort history ascending, set latest usage
     const teams = Object.values(teamMap).map(t => {
       t.history.sort((a, b) => a.month.localeCompare(b.month));
+      // latest month win_rate
       t.usage = t.history[t.history.length - 1].usage;
+      // cumulative stats
+      t.total_games = t.history.reduce((sum, h) => sum + h.total_games, 0);
+      t.wins       = t.history.reduce((sum, h) => sum + h.wins,       0);
       return t;
     });
 
@@ -3510,62 +3527,84 @@ app.get('/api/leads/usage', async (req, res) => {
       return res.status(400).json({ error: 'Format parameter is required' });
     }
 
-    // extraer rating mínimo de la cadena
+    // extraer rating mínimo (ej. “1760” de “gen9vgc2025reggbo3-1760”)
     let minRating = 0;
-    let formatName = formatParam;
-    const parts2 = formatParam.split('-');
-    const last2 = parts2[parts2.length - 1];
-    if (/^\d+$/.test(last2)) {
-      minRating = parseInt(last2, 10);
-      parts2.pop();
-      formatName = parts2.join('-');
+    const parts = formatParam.split('-');
+    const last = parts[parts.length - 1];
+    if (/^\d+$/.test(last)) {
+      minRating = parseInt(last, 10);
+      parts.pop();
     }
 
     const query = `
       WITH lead_stats AS (
         SELECT
           FORMAT_TIMESTAMP('%Y-%m', date) AS month,
-          LOWER(teams.p1[OFFSET(0)].name) AS lead,
-          COUNT(*) AS cnt
+          /* first two starters on player1 side */
+          CONCAT(
+            LOWER(teams.p1[OFFSET(0)].name), ';',
+            LOWER(teams.p1[OFFSET(1)].name)
+          ) AS lead,
+          COUNT(*) AS total_games,
+          SUM(CASE WHEN winner = player1 THEN 1 ELSE 0 END) AS wins
         FROM \`pokemon-statistics.pokemon_replays.replays\`
-        WHERE format = @formatName
+        WHERE LOWER(format) LIKE '%vgc%'
+          AND LOWER(format) LIKE '%2025%'
+          AND LOWER(format) LIKE '%reg g%'
+          AND LOWER(format) LIKE '%bo3%'
           AND (rating IS NULL OR rating >= @minRating)
+          AND ARRAY_LENGTH(teams.p1) >= 2   -- need two starting Pokémon
         GROUP BY month, lead
         UNION ALL
         SELECT
           FORMAT_TIMESTAMP('%Y-%m', date) AS month,
-          LOWER(teams.p2[OFFSET(0)].name) AS lead,
-          COUNT(*) AS cnt
+          /* first two starters on player2 side */
+          CONCAT(
+            LOWER(teams.p2[OFFSET(0)].name), ';',
+            LOWER(teams.p2[OFFSET(1)].name)
+          ) AS lead,
+          COUNT(*) AS total_games,
+          SUM(CASE WHEN winner = player2 THEN 1 ELSE 0 END) AS wins
         FROM \`pokemon-statistics.pokemon_replays.replays\`
-        WHERE format = @formatName
+        WHERE LOWER(format) LIKE '%vgc%'
+          AND LOWER(format) LIKE '%2025%'
+          AND LOWER(format) LIKE '%reg g%'
+          AND LOWER(format) LIKE '%bo3%'
           AND (rating IS NULL OR rating >= @minRating)
+          AND ARRAY_LENGTH(teams.p2) >= 2   -- need two starting Pokémon
         GROUP BY month, lead
       )
       SELECT
         month,
         lead,
-        SUM(cnt) AS usage
+        SUM(total_games) AS total_games,
+        SUM(wins) AS wins,
+        ROUND(SUM(wins)/SUM(total_games)*100, 2) AS win_rate
       FROM lead_stats
       GROUP BY month, lead
-      ORDER BY month ASC, usage DESC
+      ORDER BY month ASC, win_rate DESC
     `;
 
     const [rows] = await bigQuery.query({
       query,
-      params: { formatName, minRating }
+      params: { minRating }
     });
 
+    // Agrupar por lead y armar el historial
     const leadMap = {};
-    rows.forEach(({ month, lead, usage }) => {
+    rows.forEach(({ month, lead, total_games, wins, win_rate }) => {
       if (!leadMap[lead]) {
         leadMap[lead] = { name: lead, history: [] };
       }
-      leadMap[lead].history.push({ month, usage });
+      leadMap[lead].history.push({ month, total_games, wins, usage: win_rate });
     });
 
+    // Construir el array final, ordenar historial y calcular totales
     const leads = Object.values(leadMap).map(obj => {
       obj.history.sort((a, b) => a.month.localeCompare(b.month));
       obj.usage = obj.history[obj.history.length - 1]?.usage || 0;
+      obj.total_games = obj.history.reduce((sum, h) => sum + h.total_games, 0);
+      obj.wins = obj.history.reduce((sum, h) => sum + h.wins, 0);
       return obj;
     });
 
