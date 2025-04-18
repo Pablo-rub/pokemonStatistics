@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
 import { Paper, Typography, Box, Grid, useTheme, useMediaQuery, IconButton } from "@mui/material";
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import PokemonSprite from "./PokemonSprite";
 import { useAuth, useSavedReplays } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const ReplayCard = ({ game }) => {
   const { currentUser, savedReplaysIds } = useAuth();
@@ -12,6 +13,7 @@ const ReplayCard = ({ game }) => {
   const isXsScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const isMdScreen = useMediaQuery(theme.breakpoints.between('md', 'lg'));
   const isLgScreen = useMediaQuery(theme.breakpoints.up('lg'));
+  const navigate = useNavigate();
 
   const spriteSize = {
     xs: 60,
@@ -60,6 +62,11 @@ const ReplayCard = ({ game }) => {
       console.error("Error formatting date:", error);
       return "Unknown";
     }
+  };
+
+  const handleAnalyze = e => {
+    e.stopPropagation();
+    navigate(`/analyze-battle/${game.replay_id}`);
   };
 
   return (
@@ -238,9 +245,18 @@ const ReplayCard = ({ game }) => {
           }}
         >
           {currentUser && (
-            <IconButton onClick={toggleSave} color={isSaved ? 'error' : 'default'} className="MuiIconButton-root">
-              {isSaved ? <FavoriteIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} /> : <FavoriteBorderIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />}
-            </IconButton>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <IconButton
+                onClick={handleAnalyze}
+                sx={{ mr: 1 }}
+                title="Analizar"
+              >
+                <AnalyticsIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />
+              </IconButton>
+              <IconButton onClick={toggleSave} color={isSaved ? 'error' : 'default'} className="MuiIconButton-root">
+                {isSaved ? <FavoriteIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} /> : <FavoriteBorderIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />}
+              </IconButton>
+            </Box>
           )}
         </Grid>
       </Grid>
