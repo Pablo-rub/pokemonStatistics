@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Paper, Typography, Box, Checkbox, Grid, useTheme, useMediaQuery } from "@mui/material";
-import FavoriteBorder from '@mui/icons-material/FavoriteBorder';
-import Favorite from '@mui/icons-material/Favorite';
+import { Paper, Typography, Box, Grid, useTheme, useMediaQuery, IconButton } from "@mui/material";
+import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
+import FavoriteIcon from '@mui/icons-material/Favorite';
 import PokemonSprite from "./PokemonSprite";
-import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, useSavedReplays } from '../contexts/AuthContext';
 
 const ReplayCard = ({ game }) => {
-  const { currentUser } = useAuth();
-  const [isSaved, setIsSaved] = useState(false);
-  const [showMessage, setShowMessage] = useState(false);
-  const [message, setMessage] = useState('');
+  const { currentUser, savedReplaysIds } = useAuth();
+  const { save, unsave } = useSavedReplays();
   const theme = useTheme();
   const isXsScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const isMdScreen = useMediaQuery(theme.breakpoints.between('md', 'lg'));
@@ -30,41 +27,12 @@ const ReplayCard = ({ game }) => {
     return spriteSize.sm;
   };
 
-  useEffect(() => {
-    const checkSavedStatus = async () => {
-      if (!currentUser) return;
-      try {
-        const response = await axios.get(`http://localhost:5000/api/users/${currentUser.uid}/saved-replays`);
-        setIsSaved(response.data.some(replay => replay.replay_id === game.replay_id));
-      } catch (error) {
-        console.error('Error checking saved status:', error);
-      }
-    };
-    checkSavedStatus();
-  }, [currentUser, game.replay_id]);
+  const isSaved = savedReplaysIds.includes(game.replay_id);
 
-  const handleSaveToggle = async () => {
+  const toggleSave = () => {
     if (!currentUser) return;
-
-    try {
-      if (isSaved) {
-        await axios.delete(`http://localhost:5000/api/users/${currentUser.uid}/saved-replays/${game.replay_id}`);
-        setMessage('Replay removed');
-      } else {
-        await axios.post(`http://localhost:5000/api/users/${currentUser.uid}/saved-replays`, {
-          replayId: game.replay_id
-        });
-        setMessage('Replay saved');
-      }
-      setIsSaved(!isSaved);
-      setShowMessage(true);
-      setTimeout(() => setShowMessage(false), 2000);
-    } catch (error) {
-      console.error('Error toggling save:', error);
-      setMessage('Error');
-      setShowMessage(true);
-      setTimeout(() => setShowMessage(false), 2000);
-    }
+    if (isSaved) unsave(game.replay_id);
+    else save(game);
   };
 
   const formatDate = (timestamp) => {
@@ -97,7 +65,7 @@ const ReplayCard = ({ game }) => {
   return (
     <Paper 
       onClick={(e) => {
-        if (!e.target.closest('.MuiCheckbox-root')) {
+        if (!e.target.closest('.MuiIconButton-root')) {
           window.open(`https://replay.pokemonshowdown.com/${game.replay_id}`, '_blank');
         }
       }}
@@ -270,48 +238,9 @@ const ReplayCard = ({ game }) => {
           }}
         >
           {currentUser && (
-            <Box sx={{ position: 'relative' }}>
-              <Checkbox 
-                icon={<FavoriteBorder sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 }, color: "white" }} />} 
-                checkedIcon={<Favorite sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 }, color: "white" }} />}
-                checked={isSaved}
-                onChange={handleSaveToggle}
-                className="MuiCheckbox-root"
-                sx={{
-                  color: 'white',
-                  '&.Mui-checked': {
-                    color: 'white',
-                  },
-                  transition: 'transform 0.2s ease, color 0.2s ease',
-                  '&:hover': {
-                    transform: 'scale(1.2)',
-                    color: '#ff6d75',
-                  },
-                  '&.Mui-checked:hover': {
-                    color: '#ff6d75',
-                  }
-                }}
-              />
-              {showMessage && (
-                <Typography
-                  sx={{
-                    position: 'absolute',
-                    top: -20,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    color: 'white',
-                    padding: '4px 8px',
-                    borderRadius: 1,
-                    fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem' },
-                    whiteSpace: 'nowrap',
-                    zIndex: 1,
-                  }}
-                >
-                  {message}
-                </Typography>
-              )}
-            </Box>
+            <IconButton onClick={toggleSave} color={isSaved ? 'error' : 'default'} className="MuiIconButton-root">
+              {isSaved ? <FavoriteIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} /> : <FavoriteBorderIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />}
+            </IconButton>
           )}
         </Grid>
       </Grid>
