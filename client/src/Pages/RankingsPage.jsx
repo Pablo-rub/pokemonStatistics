@@ -15,11 +15,8 @@ import MultiLineChart from '../components/rankings/MultiLineChart';
 import PokemonSprite from '../components/PokemonSprite';
 
 //todo
-// ranking generales de tera, items, abilities, moves
-// ranking de mejores equipos
-// ranking de mejores sets de un pokemon
-// chart teammates
-// historical winrate
+// ocultar error raro
+// eliminar meses innecesarios
 
 const PokemonUsage = () => {
     const [formats, setFormats] = useState([]);
@@ -47,6 +44,16 @@ const PokemonUsage = () => {
     const [teamsTotal, setTeamsTotal] = useState(0);
     const [teamsMonths, setTeamsMonths] = useState([]);
     const [teamsMonth, setTeamsMonth] = useState('');
+
+    // Leads ranking state
+    const [leadData, setLeadData] = useState([]);
+    const [isLoadingLeads, setIsLoadingLeads] = useState(false);
+    const [leadsPage, setLeadsPage] = useState(1);
+    const leadsLimit = 12;
+    const [leadsSortBy, setLeadsSortBy] = useState('win_rate');
+    const [leadsSortDir, setLeadsSortDir] = useState('desc');
+    const [leadsTotal, setLeadsTotal] = useState(0);
+    const [leadsMonth, setLeadsMonth] = useState('');
 
     // Mapeo de endpoints para cada categoría (excepto historicalUsage)
     const victoryEndpoints = {
@@ -179,6 +186,27 @@ const PokemonUsage = () => {
         })
         .finally(() => setIsLoadingTeams(false));
     }, [rankingType, format, teamsPage, teamsSortBy, teamsSortDir, teamsMonth]);
+
+    // Fetch leads usage when selected
+    useEffect(() => {
+        if (rankingType !== 'leads' || !format) return;
+        setIsLoadingLeads(true);
+        axios.get('/api/leads/usage', {
+            params: {
+                format,
+                month: leadsMonth,
+                page: leadsPage,
+                limit: leadsLimit,
+                sortBy: leadsSortBy,
+                sortDir: leadsSortDir
+            }
+        })
+        .then(({ data: { leads, total } }) => {
+            setLeadData(leads);
+            setLeadsTotal(total);
+        })
+        .finally(() => setIsLoadingLeads(false));
+    }, [rankingType, format, leadsPage, leadsSortBy, leadsSortDir, leadsMonth]);
 
     useEffect(() => {
         setIsLoadingFormat(true);
@@ -1163,6 +1191,15 @@ const PokemonUsage = () => {
                 >
                     Teams Ranking
                 </Button>
+
+                {/* Botón Leads Ranking */}
+                <Button 
+                    variant="contained" 
+                    onClick={() => setRankingType('leads')}
+                    disabled={isLoadingFormat}
+                >
+                    Leads Ranking
+                </Button>
             </Box>
 
             {error && (
@@ -1236,6 +1273,54 @@ const PokemonUsage = () => {
                                 onChange={handleTeamsPageChange}
                                 color="primary"
                                 sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}
+                            />
+                        </>
+                    )}
+                </Box>
+            ) : rankingType === 'leads' ? (
+                <Box sx={{ mb: 4 }}>
+                    {isLoadingLeads ? (
+                        <Box sx={{ display:'flex', justifyContent:'center', my:4 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : (
+                        <>
+                            <Box sx={{ display:'flex', gap:2, mb:2, alignItems:'center' }}>
+                                <FormControl size="small">
+                                    <InputLabel>Ordenar por</InputLabel>
+                                    <Select value={leadsSortBy} label="Ordenar por" onChange={e=>setLeadsSortBy(e.target.value)}>
+                                        <MenuItem value="win_rate">Win Rate %</MenuItem>
+                                        <MenuItem value="total_games">Games</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <FormControl size="small">
+                                    <InputLabel>Mes</InputLabel>
+                                    <Select value={leadsMonth} label="Mes" onChange={e=>{setLeadsMonth(e.target.value); setLeadsPage(1);}}>
+                                        {teamsMonths.map(m => <MenuItem key={m} value={m}>{m}</MenuItem>)}
+                                    </Select>
+                                </FormControl>
+                            </Box>
+                            <Grid container spacing={2} sx={{ mb:2 }}>
+                                {leadData.map((lead, i) => (
+                                    <Grid item xs={12} sm={6} md={4} lg={3} key={i}>
+                                        <Paper sx={{ p:2, bgcolor:'#221FC7', color:'white', textAlign:'center' }}>
+                                            <Box sx={{ display:'flex', justifyContent:'center', gap:1, mb:1 }}>
+                                                {lead.name.split(';').map((p,idx) => (
+                                                    <PokemonSprite key={idx} pokemon={{name:p}} size={28} />
+                                                ))}
+                                            </Box>
+                                            <Typography variant="h5">{lead.monthly_usage}%</Typography>
+                                            <Typography variant="caption">{lead.monthly_total_games} games</Typography>
+                                        </Paper>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                            <Pagination
+                                count={Math.ceil(leadsTotal / leadsLimit)}
+                                page={leadsPage}
+                                onChange={(e,v)=>setLeadsPage(v)}
+                                color="primary"
+                                sx={{ display:'flex', justifyContent:'center', mt:2 }}
                             />
                         </>
                     )}
