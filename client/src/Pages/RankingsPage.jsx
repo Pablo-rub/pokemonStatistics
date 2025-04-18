@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Select, MenuItem, FormControl, InputLabel,
-  Grid, CircularProgress, IconButton, Button
+  Grid, CircularProgress, IconButton, Button, Paper
 } from '@mui/material';
 import axios from 'axios';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
@@ -37,6 +37,9 @@ const PokemonUsage = () => {
     const [rankingType, setRankingType] = useState('usage');
     const [victoryData, setVictoryData] = useState([]);
     const [isVictoryDataLoading, setIsVictoryDataLoading] = useState(false);
+    const [teamData, setTeamData] = useState([]);
+    const [teamHistoricalData, setTeamHistoricalData] = useState([]);
+    const [isLoadingTeams, setIsLoadingTeams] = useState(false);
 
     // Mapeo de endpoints para cada categoría (excepto historicalUsage)
     const victoryEndpoints = {
@@ -150,6 +153,28 @@ const PokemonUsage = () => {
         fetchVictoryData();
     }, [rankingType, currentCategory, selectedPokemon]);
 
+    useEffect(() => {
+        if (rankingType !== 'teams' || !format) return;
+        setIsLoadingTeams(true);
+        axios.get('/api/teams/usage', { params: { format } })
+            .then(({ data: { teams = [] } }) => {
+                setTeamData(teams);
+                // build historical chart points per month
+                const months = [...new Set(teams.flatMap(t => t.history.map(h => h.month)))].sort();
+                const chart = months.map(month => {
+                    const point = { month };
+                    teams.forEach(t => {
+                        const rec = t.history.find(h => h.month === month);
+                        point[t.name] = rec ? rec.usage : 0;
+                    });
+                    return point;
+                });
+                setTeamHistoricalData(chart);
+            })
+            .catch(console.error)
+            .finally(() => setIsLoadingTeams(false));
+    }, [rankingType, format]);
+
     const handleFormatChange = async (selectedFormat) => {
         setFormat(selectedFormat);
         setIsLoadingFormat(true);
@@ -245,91 +270,90 @@ const PokemonUsage = () => {
         }
     };
 
-    // Modify the fetchPokemonDetails function to ensure we properly handle all data types
-const fetchPokemonDetails = async (pokemonName) => {
-    setIsLoadingDetails(true);
-    try {
-        // Get the most recent month 
-        const latestMonth = Object.keys(historicalData).sort().reverse()[0];
-        
-        console.log(`Fetching details for ${pokemonName} in ${format} (${latestMonth})`);
-        
-        const response = await axios.get(`http://localhost:5000/api/rankings`, {
-            params: {
-                format: format,
-                month: latestMonth,
-                moveset: true
-            }
-        });
-        
-        console.log("API Response received, status:", response.status);
-        
-        if (response.data && response.data.data) {
-            // Find the Pokémon in the data (case-insensitive if needed)
-            let detailsKey = Object.keys(response.data.data).find(
-                key => key.toLowerCase() === pokemonName.toLowerCase()
-            );
+    const fetchPokemonDetails = async (pokemonName) => {
+        setIsLoadingDetails(true);
+        try {
+            // Get the most recent month 
+            const latestMonth = Object.keys(historicalData).sort().reverse()[0];
             
-            if (detailsKey) {
-                const pokemonData = response.data.data[detailsKey];
-                console.log("Found Pokémon data:", pokemonData);
+            console.log(`Fetching details for ${pokemonName} in ${format} (${latestMonth})`);
+            
+            const response = await axios.get(`http://localhost:5000/api/rankings`, {
+                params: {
+                    format: format,
+                    month: latestMonth,
+                    moveset: true
+                }
+            });
+            
+            console.log("API Response received, status:", response.status);
+            
+            if (response.data && response.data.data) {
+                // Find the Pokémon in the data (case-insensitive if needed)
+                let detailsKey = Object.keys(response.data.data).find(
+                    key => key.toLowerCase() === pokemonName.toLowerCase()
+                );
                 
-                // Create the details object with proper parsing
-                const details = {
-                    abilities: Object.entries(pokemonData.Abilities || {}).map(([name, usage]) => ({
-                        name,
-                        percentage: usage
-                    })).sort((a, b) => b.percentage - a.percentage),
+                if (detailsKey) {
+                    const pokemonData = response.data.data[detailsKey];
+                    console.log("Found Pokémon data:", pokemonData);
                     
-                    moves: Object.entries(pokemonData.Moves || {}).map(([name, usage]) => ({
-                        name,
-                        percentage: usage
-                    })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
+                    // Create the details object with proper parsing
+                    const details = {
+                        abilities: Object.entries(pokemonData.Abilities || {}).map(([name, usage]) => ({
+                            name,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage),
+                        
+                        moves: Object.entries(pokemonData.Moves || {}).map(([name, usage]) => ({
+                            name,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
+                        
+                        items: Object.entries(pokemonData.Items || {}).map(([name, usage]) => ({
+                            name,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
+                        
+                        // For spreads, use the value field instead of name
+                        spreads: Object.entries(pokemonData.Spreads || {}).map(([value, usage]) => ({
+                            value,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
+                        
+                        teraTypes: Object.entries(pokemonData["Tera Types"] || {}).map(([type, usage]) => ({
+                            type,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage),
+                        
+                        // For teammates, ensure we map the data correctly
+                        teammates: Object.entries(pokemonData.Teammates || {}).map(([name, usage]) => ({
+                            name,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10)
+                    };
                     
-                    items: Object.entries(pokemonData.Items || {}).map(([name, usage]) => ({
-                        name,
-                        percentage: usage
-                    })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
+                    console.log("Processed details:", details);
+                    console.log("Rendering teammates data:", details.teammates);
+                    console.log("Rendering spreads data:", details.spreads);
                     
-                    // For spreads, use the value field instead of name
-                    spreads: Object.entries(pokemonData.Spreads || {}).map(([value, usage]) => ({
-                        value,
-                        percentage: usage
-                    })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
-                    
-                    teraTypes: Object.entries(pokemonData["Tera Types"] || {}).map(([type, usage]) => ({
-                        type,
-                        percentage: usage
-                    })).sort((a, b) => b.percentage - a.percentage),
-                    
-                    // For teammates, ensure we map the data correctly
-                    teammates: Object.entries(pokemonData.Teammates || {}).map(([name, usage]) => ({
-                        name,
-                        percentage: usage
-                    })).sort((a, b) => b.percentage - a.percentage).slice(0, 10)
-                };
-                
-                console.log("Processed details:", details);
-                console.log("Rendering teammates data:", details.teammates);
-                console.log("Rendering spreads data:", details.spreads);
-                
-                setPokemonDetails(details);
+                    setPokemonDetails(details);
+                } else {
+                    console.error(`No data found for Pokémon: ${pokemonName}`);
+                    setPokemonDetails(null);
+                }
             } else {
-                console.error(`No data found for Pokémon: ${pokemonName}`);
+                console.error("Invalid response structure:", response.data);
                 setPokemonDetails(null);
             }
-        } else {
-            console.error("Invalid response structure:", response.data);
+        } catch (error) {
+            console.error("Error fetching Pokémon details:", error);
+            setError("Error fetching Pokémon details");
             setPokemonDetails(null);
+        } finally {
+            setIsLoadingDetails(false);
         }
-    } catch (error) {
-        console.error("Error fetching Pokémon details:", error);
-        setError("Error fetching Pokémon details");
-        setPokemonDetails(null);
-    } finally {
-        setIsLoadingDetails(false);
-    }
-};
+    };
 
     const handlePokemonSelect = (pokemon) => {
         setSelectedPokemon(pokemon);
@@ -1115,6 +1139,40 @@ const fetchPokemonDetails = async (pokemonName) => {
             {isLoadingInitial ? (
                 <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
                     <CircularProgress />
+                </Box>
+            ) : rankingType === 'teams' ? (
+                <Box sx={{ mb: 4 }}>
+                    {isLoadingTeams ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : (
+                        <>
+                            <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                                Top Teams in {format}
+                            </Typography>
+                            <Box sx={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fill, minmax(200px,1fr))',
+                                gap: 2,
+                                mb: 4
+                            }}>
+                                {teamData.map((team, i) => (
+                                    <Paper key={i} sx={{ p: 2, bgcolor: '#221FC7', color: 'white' }}>
+                                        <Typography noWrap variant="subtitle2">{team.name}</Typography>
+                                        <Typography variant="h5">{team.usage.toFixed(1)}%</Typography>
+                                    </Paper>
+                                ))}
+                            </Box>
+                            <Typography variant="subtitle1" sx={{ color: 'white', mb: 1 }}>
+                                Team Usage Trends
+                            </Typography>
+                            <MultiLineChart
+                                chartData={teamHistoricalData}
+                                elements={teamData.map(t => t.name)}
+                            />
+                        </>
+                    )}
                 </Box>
             ) : (
                 <Grid container spacing={2}>
