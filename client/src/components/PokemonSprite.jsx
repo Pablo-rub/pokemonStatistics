@@ -25,6 +25,9 @@ const PokemonSprite = ({ pokemon }) => {
       'Toxtricity-Low-Key': 'toxtricity-lowkey',
       'Kommo-o': 'kommoo',
       'Porygon-Z': 'porygonz',
+      'Tauros-Paldea-Blaze': 'tauros-paldeablaze',
+      'Tauros-Paldea-Aqua': 'tauros-paldeaaqua',
+      'Tauros-Paldea-Combat': 'tauros-paldeacombat',
     };
 
     // Comprobar si es un caso especial
