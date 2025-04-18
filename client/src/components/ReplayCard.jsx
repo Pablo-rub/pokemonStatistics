@@ -6,7 +6,7 @@ import PokemonSprite from "./PokemonSprite";
 import { useAuth, useSavedReplays } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-const ReplayCard = ({ game }) => {
+const ReplayCard = ({ game, showAnalyze = false }) => {
   const { currentUser, savedReplaysIds } = useAuth();
   const { save, unsave } = useSavedReplays();
   const theme = useTheme();
@@ -246,15 +246,27 @@ const ReplayCard = ({ game }) => {
         >
           {currentUser && (
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              {showAnalyze && (
+                <IconButton
+                  onClick={handleAnalyze}
+                  sx={{ mr: 1, color: 'white' }}
+                  title="Analizar"
+                >
+                  <AnalyticsIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />
+                </IconButton>
+              )}
               <IconButton
-                onClick={handleAnalyze}
-                sx={{ mr: 1 }}
-                title="Analizar"
+                onClick={toggleSave}
+                sx={{
+                  color: isSaved
+                    ? theme.palette.error.main
+                    : 'white'
+                }}
               >
-                <AnalyticsIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />
-              </IconButton>
-              <IconButton onClick={toggleSave} color={isSaved ? 'error' : 'default'} className="MuiIconButton-root">
-                {isSaved ? <FavoriteIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} /> : <FavoriteBorderIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />}
+                {isSaved
+                  ? <FavoriteIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />
+                  : <FavoriteBorderIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />
+                }
               </IconButton>
             </Box>
           )}
