@@ -3415,105 +3415,163 @@ app.get('/api/victories/teammates', async (req, res) => {
 // Endpoint: Team usage statistics grouped by month
 app.get('/api/teams/usage', async (req, res) => {
   try {
+    const { format: formatParam } = req.query;
+    if (!formatParam) {
+      return res.status(400).json({ error: 'Format parameter is required' });
+    }
+
+    // extraer rating mínimo (p.ej. “1760” de “gen9vgc2025reggbo3-1760”)
+    let minRating = 0;
+    let formatName = formatParam;
+    const parts = formatParam.split('-');
+    const last = parts[parts.length - 1];
+    if (/^\d+$/.test(last)) {
+      minRating = parseInt(last, 10);
+      parts.pop();
+      formatName = parts.join('-');
+    }
+
     const query = `
       WITH team_stats AS (
-        SELECT 
+        SELECT
           FORMAT_TIMESTAMP('%Y-%m', date) AS month,
           ARRAY_TO_STRING(
             ARRAY(
               SELECT LOWER(p.name)
               FROM UNNEST(teams.p1) AS p
               ORDER BY LOWER(p.name)
-            ), ';') AS team,
+            ), ';'
+          ) AS team,
           COUNT(*) AS total_games,
           SUM(CASE WHEN winner = player1 THEN 1 ELSE 0 END) AS wins
         FROM \`pokemon-statistics.pokemon_replays.replays\`
+        WHERE format = @formatName
+          AND (rating IS NULL OR rating >= @minRating)
         GROUP BY month, team
         UNION ALL
-        SELECT 
+        SELECT
           FORMAT_TIMESTAMP('%Y-%m', date) AS month,
           ARRAY_TO_STRING(
             ARRAY(
               SELECT LOWER(p.name)
               FROM UNNEST(teams.p2) AS p
               ORDER BY LOWER(p.name)
-            ), ';') AS team,
+            ), ';'
+          ) AS team,
           COUNT(*) AS total_games,
           SUM(CASE WHEN winner = player2 THEN 1 ELSE 0 END) AS wins
         FROM \`pokemon-statistics.pokemon_replays.replays\`
+        WHERE format = @formatName
+          AND (rating IS NULL OR rating >= @minRating)
         GROUP BY month, team
       )
-      SELECT 
+      SELECT
         month,
         team,
-        SUM(total_games) AS total_games,
-        SUM(wins) AS wins,
         ROUND(SUM(wins)/SUM(total_games)*100, 2) AS win_rate
       FROM team_stats
       GROUP BY month, team
-      ORDER BY month DESC, win_rate DESC
+      ORDER BY month ASC, win_rate DESC
     `;
-    const [rows] = await bigQuery.query(query);
-    res.json(rows);
+
+    const [rows] = await bigQuery.query({
+      query,
+      params: { formatName, minRating }
+    });
+
+    // Group by team and assemble history
+    const teamMap = {};
+    rows.forEach(({ month, team, win_rate }) => {
+      if (!teamMap[team]) {
+        teamMap[team] = { name: team, history: [] };
+      }
+      teamMap[team].history.push({ month, usage: win_rate });
+    });
+
+    // Build final array, sort history ascending, set latest usage
+    const teams = Object.values(teamMap).map(t => {
+      t.history.sort((a, b) => a.month.localeCompare(b.month));
+      t.usage = t.history[t.history.length - 1].usage;
+      return t;
+    });
+
+    res.json({ teams });
   } catch (error) {
-    console.error("Error fetching team usage statistics:", error);
-    res.status(500).json({ error: "Error fetching team usage statistics" });
+    console.error("Error fetching team usage:", error);
+    res.status(500).json({ error: "Error fetching team usage" });
   }
 });
 
 // Endpoint: Lead usage statistics grouped by month
 app.get('/api/leads/usage', async (req, res) => {
   try {
+    const { format: formatParam } = req.query;
+    if (!formatParam) {
+      return res.status(400).json({ error: 'Format parameter is required' });
+    }
+
+    // extraer rating mínimo de la cadena
+    let minRating = 0;
+    let formatName = formatParam;
+    const parts2 = formatParam.split('-');
+    const last2 = parts2[parts2.length - 1];
+    if (/^\d+$/.test(last2)) {
+      minRating = parseInt(last2, 10);
+      parts2.pop();
+      formatName = parts2.join('-');
+    }
+
     const query = `
       WITH lead_stats AS (
-        -- Lado 1: Extraer los 2 primeros Pokémon del equipo p1
-        SELECT 
+        SELECT
           FORMAT_TIMESTAMP('%Y-%m', date) AS month,
-          ARRAY_TO_STRING(
-            ARRAY(
-              SELECT LOWER(p.name)
-              FROM UNNEST(teams.p1) AS p WITH OFFSET pos
-              WHERE pos < 2
-              ORDER BY LOWER(p.name)
-            ), ';') AS lead,
-          COUNT(*) AS total_games,
-          SUM(CASE WHEN winner = player1 THEN 1 ELSE 0 END) AS wins
+          LOWER(teams.p1[OFFSET(0)].name) AS lead,
+          COUNT(*) AS cnt
         FROM \`pokemon-statistics.pokemon_replays.replays\`
-        WHERE ARRAY_LENGTH(teams.p1) >= 2
+        WHERE format = @formatName
+          AND (rating IS NULL OR rating >= @minRating)
         GROUP BY month, lead
-
         UNION ALL
-
-        -- Lado 2: Extraer los 2 primeros Pokémon del equipo p2
-        SELECT 
+        SELECT
           FORMAT_TIMESTAMP('%Y-%m', date) AS month,
-          ARRAY_TO_STRING(
-            ARRAY(
-              SELECT LOWER(p.name)
-              FROM UNNEST(teams.p2) AS p WITH OFFSET pos
-              WHERE pos < 2
-              ORDER BY LOWER(p.name)
-            ), ';') AS lead,
-          COUNT(*) AS total_games,
-          SUM(CASE WHEN winner = player2 THEN 1 ELSE 0 END) AS wins
+          LOWER(teams.p2[OFFSET(0)].name) AS lead,
+          COUNT(*) AS cnt
         FROM \`pokemon-statistics.pokemon_replays.replays\`
-        WHERE ARRAY_LENGTH(teams.p2) >= 2
+        WHERE format = @formatName
+          AND (rating IS NULL OR rating >= @minRating)
         GROUP BY month, lead
       )
-      SELECT 
+      SELECT
         month,
         lead,
-        SUM(total_games) AS total_games,
-        SUM(wins) AS wins,
-        ROUND(SUM(wins)/SUM(total_games)*100, 2) AS win_rate
+        SUM(cnt) AS usage
       FROM lead_stats
       GROUP BY month, lead
-      ORDER BY month DESC, win_rate DESC
+      ORDER BY month ASC, usage DESC
     `;
-    const [rows] = await bigQuery.query(query);
-    res.json(rows);
+
+    const [rows] = await bigQuery.query({
+      query,
+      params: { formatName, minRating }
+    });
+
+    const leadMap = {};
+    rows.forEach(({ month, lead, usage }) => {
+      if (!leadMap[lead]) {
+        leadMap[lead] = { name: lead, history: [] };
+      }
+      leadMap[lead].history.push({ month, usage });
+    });
+
+    const leads = Object.values(leadMap).map(obj => {
+      obj.history.sort((a, b) => a.month.localeCompare(b.month));
+      obj.usage = obj.history[obj.history.length - 1]?.usage || 0;
+      return obj;
+    });
+
+    res.json({ leads });
   } catch (error) {
-    console.error("Error fetching leads usage statistics:", error);
-    res.status(500).json({ error: "Error fetching leads usage statistics" });
+    console.error("Error fetching leads usage:", error);
+    res.status(500).json({ error: "Error fetching leads usage" });
   }
 });
