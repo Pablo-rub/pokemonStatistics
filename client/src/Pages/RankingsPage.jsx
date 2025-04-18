@@ -39,14 +39,12 @@ const PokemonUsage = () => {
     const [victoryData, setVictoryData] = useState([]);
     const [isVictoryDataLoading, setIsVictoryDataLoading] = useState(false);
     const [teamData, setTeamData] = useState([]);
-    const [teamHistoricalData, setTeamHistoricalData] = useState([]);
     const [isLoadingTeams, setIsLoadingTeams] = useState(false);
     const [teamsPage, setTeamsPage] = useState(1);
     const teamsLimit = 12;
     const [teamsSortBy, setTeamsSortBy] = useState('usage');
     const [teamsSortDir, setTeamsSortDir] = useState('desc');
     const [teamsTotal, setTeamsTotal] = useState(0);
-    // Nuevo estado para filtrar por mes
     const [teamsMonths, setTeamsMonths] = useState([]);
     const [teamsMonth, setTeamsMonth] = useState('');
 
@@ -1226,8 +1224,8 @@ const PokemonUsage = () => {
                                                     );
                                                 })}
                                             </Box>
-                                            <Typography variant="h5">{team.usage}%</Typography>
-                                            <Typography variant="caption">{team.total_games} games</Typography>
+                                            <Typography variant="h5">{team.monthly_usage}%</Typography>
+                                            <Typography variant="caption">{team.monthly_total_games} games</Typography>
                                         </Paper>
                                     </Grid>
                                 ))}
