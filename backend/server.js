@@ -3570,12 +3570,10 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: 'Replay not found' });
     const { teams, turns } = rows[0];
 
-    // Llamamos al Turn Assistant para cada turno
     const analysis = await Promise.all(turns.map(async turn => {
-      // Preparamos el body de la petición
+      // 1) Preparamos el body para Turn Assistant
       const body = {
         pokemonData: {
-          // si tu TA espera exactamente estos keys
           topLeft: turn.revealed_pokemon.player1[0]?.name || null,
           topRight: turn.revealed_pokemon.player1[1]?.name || null,
           bottomLeft: turn.revealed_pokemon.player2[0]?.name || null,
@@ -3583,31 +3581,42 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
         },
         battleConditions: {
           weather: turn.weather?.condition || '',
-          field: turn.field?.terrain || '',
-          room: turn.room?.condition || '',
-          sideEffects: {},           // adapta si quieres pasar screens, tailwind…
-          sideEffectsDuration: {}    // idem
+          field:   turn.field?.terrain    || '',
+          room:    turn.room?.condition    || '',
+          sideEffects: {},
+          sideEffectsDuration: {}
         },
-        yourTeam: teams.p1.map(p => p.name),
-        opponentTeam: teams.p2.map(p => p.name),
-        filterStats: false,
-        statChanges: {}
+        yourTeam:      teams.p1.map(p => p.name),
+        opponentTeam:  teams.p2.map(p => p.name),
+        filterStats:   false,
+        statChanges:   {}
       };
-      // Petición interna a tu propio servidor
+
+      // 2) Llamada al Turn Assistant
       const url = `http://localhost:${PORT}/api/turn-assistant/analyze`;
-      const { data: taResult } = await axios.post(url, body);
-      // Devolvemos un resumen
+      const { data: ta } = await axios.post(url, body);
+
+      // 3) Devolvemos la estructura completa para el front
       return {
-        turn_number:    turn.turn_number,
-        moveUsedP1:     turn.moves_done.player1[0] || null,
-        moveUsedP2:     turn.moves_done.player2[0] || null,
+        turn_number: turn.turn_number,
+        // juntamos todos los movimientos que hubo este turno
+        moveUsedP1: (turn.moves_done.player1 || []).join(', ') || '—',
+        moveUsedP2: (turn.moves_done.player2 || []).join(', ') || '—',
         state: {
           field:   turn.field,
           weather: turn.weather,
           room:    turn.room
         },
-        // Desempaqueta lo que venga del Turn Assistant
-        ...taResult
+        // incluimos los dos Pokémon revelados por jugador
+        revealed: {
+          p1: (turn.revealed_pokemon.player1 || []).map(p => p.name),
+          p2: (turn.revealed_pokemon.player2 || []).map(p => p.name)
+        },
+        // ahora sí extraemos las probabilidades que devolvió el TA
+        winProbP1:      ta.winProbP1,
+        winProbP2:      ta.winProbP2,
+        altWinProbsP1:  ta.altWinProbsP1,
+        altWinProbsP2:  ta.altWinProbsP2
       };
     }));
 
