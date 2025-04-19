@@ -16,7 +16,7 @@ import { getAuthErrorMessage } from '../utils/errorMessages';
 import axios from 'axios';
 import { db } from '../firebase/firebase';
 import { 
-  collection, doc, setDoc, deleteDoc, getDoc, onSnapshot 
+  collection, doc, setDoc, deleteDoc, getDoc 
 } from 'firebase/firestore';
 
 const AuthContext = createContext();
@@ -33,7 +33,6 @@ export function AuthProvider({ children }) {
 
   const createUserRecord = async (user) => {
     try {
-      // First create the user entry in saved_replays table
       await axios.post('http://localhost:5000/api/users/saved-replays', {
         userId: user.uid,
       });
@@ -47,14 +46,12 @@ export function AuthProvider({ children }) {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      // Check if user already exists in database
       try {
         const response = await axios.get(`http://localhost:5000/api/users/${result.user.uid}/saved-replays`);
         if (!response.data || response.data.length === 0) {
           await createUserRecord(result.user);
         }
       } catch (error) {
-        // If user doesn't exist, create record
         if (error.response && error.response.status === 404) {
           await createUserRecord(result.user);
         }
@@ -70,7 +67,6 @@ export function AuthProvider({ children }) {
   const signUpWithEmail = async (email, password, displayName) => {
     try {
       if (password.length < 6) {
-        // eslint-disable-next-line no-throw-literal
         throw { code: 'auth/weak-password' };
       }
       const result = await createUserWithEmailAndPassword(auth, email, password);
@@ -121,9 +117,7 @@ export function AuthProvider({ children }) {
         );
         await reauthenticateWithCredential(currentUser, credential);
       }
-      // First delete saved replays
       await axios.delete(`http://localhost:5000/api/users/${currentUser.uid}/saved-replays`);
-      // Then delete Firebase user
       await deleteUser(currentUser);
     } catch (error) {
       throw error;
@@ -148,12 +142,25 @@ export function AuthProvider({ children }) {
       setSavedReplaysIds([]);
       return;
     }
-    const colRef = collection(db, 'users', currentUser.uid, 'savedReplays');
-    const unsub = onSnapshot(colRef, snap => {
-      setSavedReplaysIds(snap.docs.map(d => d.id));
-    });
-    return unsub;
+    axios
+      .get(`/api/users/${currentUser.uid}/saved-replays`)
+      .then(res =>
+        setSavedReplaysIds(res.data.map(g => g.replay_id))
+      )
+      .catch(console.error);
   }, [currentUser]);
+
+  const save = async replayId => {
+    await axios.post(`/api/users/${currentUser.uid}/saved-replays`, { replayId });
+    setSavedReplaysIds(ids => [...ids, replayId]);
+  };
+
+  const unsave = async replayId => {
+    await axios.delete(
+      `/api/users/${currentUser.uid}/saved-replays/${replayId}`
+    );
+    setSavedReplaysIds(ids => ids.filter(id => id !== replayId));
+  };
 
   const value = {
     currentUser,
@@ -165,6 +172,8 @@ export function AuthProvider({ children }) {
     authError,
     changePassword,
     deleteAccount,
+    save,
+    unsave,
     EmailAuthProvider,
     reauthenticateWithCredential,
     updatePassword
