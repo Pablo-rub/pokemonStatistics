@@ -14,6 +14,10 @@ import {
 } from "firebase/auth";
 import { getAuthErrorMessage } from '../utils/errorMessages';
 import axios from 'axios';
+import { db } from '../firebase/firebase';
+import { 
+  collection, doc, setDoc, deleteDoc, getDoc, onSnapshot 
+} from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -25,6 +29,7 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
+  const [savedReplaysIds, setSavedReplaysIds] = useState([]);
 
   const createUserRecord = async (user) => {
     try {
@@ -138,8 +143,21 @@ export function AuthProvider({ children }) {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    if (!currentUser) {
+      setSavedReplaysIds([]);
+      return;
+    }
+    const colRef = collection(db, 'users', currentUser.uid, 'savedReplays');
+    const unsub = onSnapshot(colRef, snap => {
+      setSavedReplaysIds(snap.docs.map(d => d.id));
+    });
+    return unsub;
+  }, [currentUser]);
+
   const value = {
     currentUser,
+    savedReplaysIds,
     signInWithGoogle,
     signInWithEmail,
     signUpWithEmail,
@@ -158,3 +176,23 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
+
+export const useSavedReplays = () => {
+  const { currentUser } = useAuth();
+  const base = collection(db, 'users', currentUser.uid, 'savedReplays');
+
+  const isSaved = async (id) => {
+    const snap = await getDoc(doc(base, id));
+    return snap.exists();
+  };
+
+  const save = async (game) => {
+    await setDoc(doc(base, game.replay_id), game);
+  };
+
+  const unsave = async (replayId) => {
+    await deleteDoc(doc(base, replayId));
+  };
+
+  return { isSaved, save, unsave };
+};

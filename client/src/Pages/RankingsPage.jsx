@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Select, MenuItem, FormControl, InputLabel,
-  Grid, CircularProgress, IconButton, Button
+  Grid, CircularProgress, IconButton, Button, Paper, Pagination
 } from '@mui/material';
 import axios from 'axios';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
@@ -12,13 +12,11 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import PokemonList from '../components/rankings/PokemonList';
 import DetailsPane from '../components/rankings/DetailsPane';
 import MultiLineChart from '../components/rankings/MultiLineChart';
+import PokemonSprite from '../components/PokemonSprite';
 
 //todo
-// ranking generales de tera, items, abilities, moves
-// ranking de mejores equipos
-// ranking de mejores sets de un pokemon
-// chart teammates
-// historical winrate
+// ocultar error raro
+// eliminar meses innecesarios
 
 const PokemonUsage = () => {
     const [formats, setFormats] = useState([]);
@@ -29,14 +27,33 @@ const PokemonUsage = () => {
     const [selectedPokemon, setSelectedPokemon] = useState(null);
     const [pokemonDetails, setPokemonDetails] = useState(null);
     const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-    const [isLoadingInitial, setIsLoadingInitial] = useState(true); // Nuevo estado para carga inicial
-    const [isLoadingFormat, setIsLoadingFormat] = useState(false); // Nuevo estado para cambio de formato
+    const [isLoadingInitial, setIsLoadingInitial] = useState(true);
+    const [isLoadingFormat, setIsLoadingFormat] = useState(false);
     const [page, setPage] = useState(1);
     const itemsPerPage = 6;
     const [currentCategory, setCurrentCategory] = useState(0);
     const [rankingType, setRankingType] = useState('usage');
     const [victoryData, setVictoryData] = useState([]);
     const [isVictoryDataLoading, setIsVictoryDataLoading] = useState(false);
+    const [teamData, setTeamData] = useState([]);
+    const [isLoadingTeams, setIsLoadingTeams] = useState(false);
+    const [teamsPage, setTeamsPage] = useState(1);
+    const teamsLimit = 12;
+    const [teamsSortBy, setTeamsSortBy] = useState('usage');
+    const [teamsSortDir, setTeamsSortDir] = useState('desc');
+    const [teamsTotal, setTeamsTotal] = useState(0);
+    const [teamsMonths, setTeamsMonths] = useState([]);
+    const [teamsMonth, setTeamsMonth] = useState('');
+
+    // Leads ranking state
+    const [leadData, setLeadData] = useState([]);
+    const [isLoadingLeads, setIsLoadingLeads] = useState(false);
+    const [leadsPage, setLeadsPage] = useState(1);
+    const leadsLimit = 12;
+    const [leadsSortBy, setLeadsSortBy] = useState('win_rate');
+    const [leadsSortDir, setLeadsSortDir] = useState('desc');
+    const [leadsTotal, setLeadsTotal] = useState(0);
+    const [leadsMonth, setLeadsMonth] = useState('');
 
     // Mapeo de endpoints para cada categoría (excepto historicalUsage)
     const victoryEndpoints = {
@@ -150,6 +167,71 @@ const PokemonUsage = () => {
         fetchVictoryData();
     }, [rankingType, currentCategory, selectedPokemon]);
 
+    useEffect(() => {
+        if (rankingType !== 'teams' || !format) return;
+        setIsLoadingTeams(true);
+        axios.get('/api/teams/usage', {
+            params: {
+                format,
+                month: teamsMonth,
+                page: teamsPage,
+                limit: teamsLimit,
+                sortBy: teamsSortBy,
+                sortDir: teamsSortDir
+            }
+        })
+        .then(({ data: { teams, total } }) => {
+            setTeamData(teams);
+            setTeamsTotal(total);
+        })
+        .finally(() => setIsLoadingTeams(false));
+    }, [rankingType, format, teamsPage, teamsSortBy, teamsSortDir, teamsMonth]);
+
+    // Fetch leads usage when selected
+    useEffect(() => {
+        if (rankingType !== 'leads' || !format) return;
+        setIsLoadingLeads(true);
+        axios.get('/api/leads/usage', {
+            params: {
+                format,
+                month: leadsMonth,
+                page: leadsPage,
+                limit: leadsLimit,
+                sortBy: leadsSortBy,
+                sortDir: leadsSortDir
+            }
+        })
+        .then(({ data: { leads, total } }) => {
+            setLeadData(leads);
+            setLeadsTotal(total);
+        })
+        .finally(() => setIsLoadingLeads(false));
+    }, [rankingType, format, leadsPage, leadsSortBy, leadsSortDir, leadsMonth]);
+
+    useEffect(() => {
+        setIsLoadingFormat(true);
+        axios.get('/api/formats/currentMonth')
+            .then(({ data }) => {
+                setTeamsMonths(data.months);
+                setTeamsMonth(data.currentMonth);
+            })
+            .finally(() => setIsLoadingFormat(false));
+    }, []);
+
+    // Cargar lista de meses para filtro de teams
+    useEffect(() => {
+        axios.get('/api/months')
+          .then(({ data }) => {
+            setTeamsMonths(data);
+            if (data.length) setTeamsMonth(data[0]);
+          });
+    }, []);
+    
+    const handleTeamsMonthChange = e => {
+        setTeamsMonth(e.target.value);
+        setTeamsPage(1);
+    };
+
     const handleFormatChange = async (selectedFormat) => {
         setFormat(selectedFormat);
         setIsLoadingFormat(true);
@@ -216,6 +298,12 @@ const PokemonUsage = () => {
         }
     };
 
+    const handleTeamsPageChange = (_, value) => setTeamsPage(value);
+    const handleTeamsSortByChange = (e) => {
+        setTeamsSortBy(e.target.value);
+        setTeamsPage(1);
+    };
+
     const parseData = (data) => {
         if (typeof data === 'object' && data !== null) {
             const parsedData = [];
@@ -245,91 +333,90 @@ const PokemonUsage = () => {
         }
     };
 
-    // Modify the fetchPokemonDetails function to ensure we properly handle all data types
-const fetchPokemonDetails = async (pokemonName) => {
-    setIsLoadingDetails(true);
-    try {
-        // Get the most recent month 
-        const latestMonth = Object.keys(historicalData).sort().reverse()[0];
-        
-        console.log(`Fetching details for ${pokemonName} in ${format} (${latestMonth})`);
-        
-        const response = await axios.get(`http://localhost:5000/api/rankings`, {
-            params: {
-                format: format,
-                month: latestMonth,
-                moveset: true
-            }
-        });
-        
-        console.log("API Response received, status:", response.status);
-        
-        if (response.data && response.data.data) {
-            // Find the Pokémon in the data (case-insensitive if needed)
-            let detailsKey = Object.keys(response.data.data).find(
-                key => key.toLowerCase() === pokemonName.toLowerCase()
-            );
+    const fetchPokemonDetails = async (pokemonName) => {
+        setIsLoadingDetails(true);
+        try {
+            // Get the most recent month 
+            const latestMonth = Object.keys(historicalData).sort().reverse()[0];
             
-            if (detailsKey) {
-                const pokemonData = response.data.data[detailsKey];
-                console.log("Found Pokémon data:", pokemonData);
+            console.log(`Fetching details for ${pokemonName} in ${format} (${latestMonth})`);
+            
+            const response = await axios.get(`http://localhost:5000/api/rankings`, {
+                params: {
+                    format: format,
+                    month: latestMonth,
+                    moveset: true
+                }
+            });
+            
+            console.log("API Response received, status:", response.status);
+            
+            if (response.data && response.data.data) {
+                // Find the Pokémon in the data (case-insensitive if needed)
+                let detailsKey = Object.keys(response.data.data).find(
+                    key => key.toLowerCase() === pokemonName.toLowerCase()
+                );
                 
-                // Create the details object with proper parsing
-                const details = {
-                    abilities: Object.entries(pokemonData.Abilities || {}).map(([name, usage]) => ({
-                        name,
-                        percentage: usage
-                    })).sort((a, b) => b.percentage - a.percentage),
+                if (detailsKey) {
+                    const pokemonData = response.data.data[detailsKey];
+                    console.log("Found Pokémon data:", pokemonData);
                     
-                    moves: Object.entries(pokemonData.Moves || {}).map(([name, usage]) => ({
-                        name,
-                        percentage: usage
-                    })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
+                    // Create the details object with proper parsing
+                    const details = {
+                        abilities: Object.entries(pokemonData.Abilities || {}).map(([name, usage]) => ({
+                            name,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage),
+                        
+                        moves: Object.entries(pokemonData.Moves || {}).map(([name, usage]) => ({
+                            name,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
+                        
+                        items: Object.entries(pokemonData.Items || {}).map(([name, usage]) => ({
+                            name,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
+                        
+                        // For spreads, use the value field instead of name
+                        spreads: Object.entries(pokemonData.Spreads || {}).map(([value, usage]) => ({
+                            value,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
+                        
+                        teraTypes: Object.entries(pokemonData["Tera Types"] || {}).map(([type, usage]) => ({
+                            type,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage),
+                        
+                        // For teammates, ensure we map the data correctly
+                        teammates: Object.entries(pokemonData.Teammates || {}).map(([name, usage]) => ({
+                            name,
+                            percentage: usage
+                        })).sort((a, b) => b.percentage - a.percentage).slice(0, 10)
+                    };
                     
-                    items: Object.entries(pokemonData.Items || {}).map(([name, usage]) => ({
-                        name,
-                        percentage: usage
-                    })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
+                    console.log("Processed details:", details);
+                    console.log("Rendering teammates data:", details.teammates);
+                    console.log("Rendering spreads data:", details.spreads);
                     
-                    // For spreads, use the value field instead of name
-                    spreads: Object.entries(pokemonData.Spreads || {}).map(([value, usage]) => ({
-                        value,
-                        percentage: usage
-                    })).sort((a, b) => b.percentage - a.percentage).slice(0, 10),
-                    
-                    teraTypes: Object.entries(pokemonData["Tera Types"] || {}).map(([type, usage]) => ({
-                        type,
-                        percentage: usage
-                    })).sort((a, b) => b.percentage - a.percentage),
-                    
-                    // For teammates, ensure we map the data correctly
-                    teammates: Object.entries(pokemonData.Teammates || {}).map(([name, usage]) => ({
-                        name,
-                        percentage: usage
-                    })).sort((a, b) => b.percentage - a.percentage).slice(0, 10)
-                };
-                
-                console.log("Processed details:", details);
-                console.log("Rendering teammates data:", details.teammates);
-                console.log("Rendering spreads data:", details.spreads);
-                
-                setPokemonDetails(details);
+                    setPokemonDetails(details);
+                } else {
+                    console.error(`No data found for Pokémon: ${pokemonName}`);
+                    setPokemonDetails(null);
+                }
             } else {
-                console.error(`No data found for Pokémon: ${pokemonName}`);
+                console.error("Invalid response structure:", response.data);
                 setPokemonDetails(null);
             }
-        } else {
-            console.error("Invalid response structure:", response.data);
+        } catch (error) {
+            console.error("Error fetching Pokémon details:", error);
+            setError("Error fetching Pokémon details");
             setPokemonDetails(null);
+        } finally {
+            setIsLoadingDetails(false);
         }
-    } catch (error) {
-        console.error("Error fetching Pokémon details:", error);
-        setError("Error fetching Pokémon details");
-        setPokemonDetails(null);
-    } finally {
-        setIsLoadingDetails(false);
-    }
-};
+    };
 
     const handlePokemonSelect = (pokemon) => {
         setSelectedPokemon(pokemon);
@@ -1053,20 +1140,21 @@ const fetchPokemonDetails = async (pokemonName) => {
                 Pokémon Usage Statistics
             </Typography>
 
-            <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                mb: 4
+            {/* Control buttons: responsive layout, more visual */}
+            <Box sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: { xs: 'stretch', sm: 'center' },
+                gap: 2,
+                mb: 4,
             }}>
-                {/* Contenedor para el select de formato */}
-                <FormControl sx={{ minWidth: 200 }}>
+                {/* Selector de formato SIEMPRE primero */}
+                <FormControl sx={{ minWidth: 200, mr: 3 }}>
                     <InputLabel>Format</InputLabel>
                     <Select
                         value={format}
                         label="Format"
                         onChange={(e) => {
-                            console.log("Format selected:", e.target.value);
                             handleFormatChange(e.target.value);
                         }}
                         disabled={isLoadingFormat}
@@ -1075,7 +1163,6 @@ const fetchPokemonDetails = async (pokemonName) => {
                             <MenuItem key={fmt} value={fmt}>{fmt}</MenuItem>
                         ))}
                     </Select>
-                    
                     {isLoadingFormat && (
                         <CircularProgress 
                             size={24} 
@@ -1089,13 +1176,52 @@ const fetchPokemonDetails = async (pokemonName) => {
                     )}
                 </FormControl>
 
-                {/* Botón de toggle alineado a la derecha */}
-                <Button 
-                    variant="contained" 
+                <Button
+                    variant='contained'
+                    color="primary"
+                    size="large"
+                    disableElevation
                     onClick={() => setRankingType(rankingType === 'usage' ? 'victories' : 'usage')}
                     disabled={isLoadingFormat}
+                    sx={{
+                        flex: { xs: '1 1 100%', sm: 'auto' },
+                        fontSize: { xs: 12, sm: 14 },
+                        py: { xs: 1, sm: 1.5 },
+                    }}
                 >
                     {rankingType === 'usage' ? 'Winrate Ranking' : 'Usage Ranking'}
+                </Button>
+
+                <Button
+                    variant={rankingType === 'teams' ? 'outlined' : 'contained'}
+                    color="primary"
+                    size="large"
+                    disableElevation
+                    onClick={() => setRankingType('teams')}
+                    disabled={isLoadingFormat || rankingType === 'teams'}
+                    sx={{
+                        flex: { xs: '1 1 100%', sm: 'auto' },
+                        fontSize: { xs: 12, sm: 14 },
+                        py: { xs: 1, sm: 1.5 },
+                    }}
+                >
+                    Teams Ranking
+                </Button>
+
+                <Button
+                    variant={rankingType === 'leads' ? 'outlined' : 'contained'}
+                    color="primary"
+                    size="large"
+                    disableElevation
+                    onClick={() => setRankingType('leads')}
+                    disabled={isLoadingFormat || rankingType === 'leads'}
+                    sx={{
+                        flex: { xs: '1 1 100%', sm: 'auto' },
+                        fontSize: { xs: 12, sm: 14 },
+                        py: { xs: 1, sm: 1.5 },
+                    }}
+                >
+                    Leads Ranking
                 </Button>
             </Box>
 
@@ -1108,6 +1234,119 @@ const fetchPokemonDetails = async (pokemonName) => {
             {isLoadingInitial ? (
                 <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "50vh" }}>
                     <CircularProgress />
+                </Box>
+            ) : rankingType === 'teams' ? (
+                <Box sx={{ mb: 4 }}>
+                    {isLoadingTeams ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : (
+                        <>
+                            <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
+                                <FormControl size="small">
+                                    <InputLabel>Ordenar por</InputLabel>
+                                    <Select value={teamsSortBy} label="Ordenar por" onChange={handleTeamsSortByChange}>
+                                        <MenuItem value="usage">Uso %</MenuItem>
+                                        <MenuItem value="total_games">Partidas</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <FormControl size="small">
+                                  <InputLabel>Mes</InputLabel>
+                                  <Select value={teamsMonth} label="Mes" onChange={handleTeamsMonthChange}>
+                                    {teamsMonths.map(m => (
+                                      <MenuItem key={m} value={m}>{m}</MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                            </Box>
+                            <Grid container spacing={2} sx={{ mb: 2 }}>
+                                {teamData.map((team, i) => (
+                                    <Grid item xs={12} sm={6} md={4} lg={3} key={i}>
+                                        <Paper sx={{ p: 2, bgcolor: '#221FC7', color: 'white', textAlign: 'center' }}>
+                                            <Box
+                                                sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 1, mb: 1 }}
+                                                role="img"
+                                                aria-label={`Team ${i + 1} sprites`}
+                                            >
+                                                {team.name.split(';').map((poke, idx) => {
+                                                    const displayName = poke
+                                                        .split('-')
+                                                        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+                                                        .join(' ');
+                                                    return (
+                                                        <PokemonSprite
+                                                            key={idx}
+                                                            pokemon={{ name: poke }}
+                                                            size={32}
+                                                            aria-label={displayName}
+                                                        />
+                                                    );
+                                                })}
+                                            </Box>
+                                            <Typography variant="h5">{team.monthly_usage}%</Typography>
+                                            <Typography variant="caption">{team.monthly_total_games} games</Typography>
+                                        </Paper>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                            <Pagination
+                                count={Math.ceil(teamsTotal / teamsLimit)}
+                                page={teamsPage}
+                                onChange={handleTeamsPageChange}
+                                color="primary"
+                                sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}
+                            />
+                        </>
+                    )}
+                </Box>
+            ) : rankingType === 'leads' ? (
+                <Box sx={{ mb: 4 }}>
+                    {isLoadingLeads ? (
+                        <Box sx={{ display:'flex', justifyContent:'center', my:4 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : (
+                        <>
+                            <Box sx={{ display:'flex', gap:2, mb:2, alignItems:'center' }}>
+                                <FormControl size="small">
+                                    <InputLabel>Ordenar por</InputLabel>
+                                    <Select value={leadsSortBy} label="Ordenar por" onChange={e=>setLeadsSortBy(e.target.value)}>
+                                        <MenuItem value="win_rate">Win Rate %</MenuItem>
+                                        <MenuItem value="total_games">Games</MenuItem>
+                                    </Select>
+                                </FormControl>
+                                <FormControl size="small">
+                                    <InputLabel>Mes</InputLabel>
+                                    <Select value={leadsMonth} label="Mes" onChange={e=>{setLeadsMonth(e.target.value); setLeadsPage(1);}}>
+                                        {teamsMonths.map(m => <MenuItem key={m} value={m}>{m}</MenuItem>)}
+                                    </Select>
+                                </FormControl>
+                            </Box>
+                            <Grid container spacing={2} sx={{ mb:2 }}>
+                                {leadData.map((lead, i) => (
+                                    <Grid item xs={12} sm={6} md={4} lg={3} key={i}>
+                                        <Paper sx={{ p:2, bgcolor:'#221FC7', color:'white', textAlign:'center' }}>
+                                            <Box sx={{ display:'flex', justifyContent:'center', gap:1, mb:1 }}>
+                                                {lead.name.split(';').map((p,idx) => (
+                                                    <PokemonSprite key={idx} pokemon={{name:p}} size={28} />
+                                                ))}
+                                            </Box>
+                                            <Typography variant="h5">{lead.monthly_usage}%</Typography>
+                                            <Typography variant="caption">{lead.monthly_total_games} games</Typography>
+                                        </Paper>
+                                    </Grid>
+                                ))}
+                            </Grid>
+                            <Pagination
+                                count={Math.ceil(leadsTotal / leadsLimit)}
+                                page={leadsPage}
+                                onChange={(e,v)=>setLeadsPage(v)}
+                                color="primary"
+                                sx={{ display:'flex', justifyContent:'center', mt:2 }}
+                            />
+                        </>
+                    )}
                 </Box>
             ) : (
                 <Grid container spacing={2}>
@@ -1123,6 +1362,7 @@ const fetchPokemonDetails = async (pokemonName) => {
                         totalItems={usageData.length}
                         onPageChange={handlePageChange}
                         showUsagePercentage={rankingType !== 'victories'}
+                        rankingType={rankingType}
                     />
                     </Grid>
 
