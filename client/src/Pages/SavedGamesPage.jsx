@@ -8,46 +8,28 @@ import {
 import { useNavigate } from "react-router-dom";
 import ReplayCard from "../components/ReplayCard";
 import { useAuth } from "../contexts/AuthContext";
-import axios from "axios";
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase/firebase';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LoginIcon from '@mui/icons-material/Login';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import LoginDialog from "../components/LoginDialog"; // Import LoginDialog
-
-//todo
-//subir partidas pasando url
+import LoginDialog from "../components/LoginDialog";
 
 function SavedGamesPage() {
-  const [games, setGames] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const { currentUser } = useAuth();
   const navigate = useNavigate();
-  const [refreshKey, setRefreshKey] = useState(0); // Add this state
-  const [loginDialogOpen, setLoginDialogOpen] = useState(false); // Add this state
-
-  const handleRefresh = () => {
-    setRefreshKey(prev => prev + 1);
-  };
+  const [games, setGames] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
 
   useEffect(() => {
-    const fetchSavedGames = async () => {
-      if (!currentUser) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const response = await axios.get(`http://localhost:5000/api/users/${currentUser.uid}/saved-replays`);
-        setGames(response.data || []);
-      } catch (error) {
-        console.error("Error fetching saved games:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchSavedGames();
-  }, [currentUser, refreshKey]); // Add refreshKey to dependencies
+    if (!currentUser) return setLoading(false);
+    const colRef = collection(db, 'users', currentUser.uid, 'savedReplays');
+    const unsub = onSnapshot(colRef, snap => {
+      setGames(snap.docs.map(d => d.data()));
+      setLoading(false);
+    });
+    return unsub;
+  }, [currentUser]);
 
   if (!currentUser) {
     return (
@@ -67,7 +49,7 @@ function SavedGamesPage() {
         <Button
           variant="contained"
           startIcon={<LoginIcon />}
-          onClick={() => setLoginDialogOpen(true)} // Change this instead of navigating
+          onClick={() => setLoginDialogOpen(true)}
         >
           Sign In
         </Button>
@@ -80,7 +62,7 @@ function SavedGamesPage() {
     );
   }
 
-  if (isLoading) {
+  if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
         <CircularProgress />
@@ -119,22 +101,19 @@ function SavedGamesPage() {
 
   return (
     <Box sx={{ padding: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h4">Saved Replays</Typography>
-        <Button
-          variant="contained"
-          startIcon={<RefreshIcon />}
-          onClick={handleRefresh}
-        >
-          Refresh
-        </Button>
-      </Box>
+      <Typography variant="h4" sx={{ marginBottom: 2 }}>
+        Saved Replays
+      </Typography>
       <Typography variant="subtitle1" sx={{ marginBottom: 2 }}>
         Total Saved: {games.length}
       </Typography>
 
-      {games.map((game) => (
-        <ReplayCard key={game.replay_id} game={game} />
+      {games.map((game, index) => (
+        <ReplayCard
+          key={index}
+          game={game}
+          showAnalyze
+        />
       ))}
     </Box>
   );
