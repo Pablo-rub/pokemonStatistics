@@ -7,8 +7,7 @@ import { useAuth, useSavedReplays } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const ReplayCard = ({ game, showAnalyze = false }) => {
-  const { currentUser, savedReplaysIds } = useAuth();
-  const { save, unsave } = useSavedReplays();
+  const { currentUser, savedReplaysIds, save, unsave } = useAuth();
   const theme = useTheme();
   const isXsScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const isMdScreen = useMediaQuery(theme.breakpoints.between('md', 'lg'));
@@ -31,10 +30,15 @@ const ReplayCard = ({ game, showAnalyze = false }) => {
 
   const isSaved = savedReplaysIds.includes(game.replay_id);
 
-  const toggleSave = () => {
+  const toggleSave = async e => {
+    e.stopPropagation();
     if (!currentUser) return;
-    if (isSaved) unsave(game.replay_id);
-    else save(game);
+    try {
+      if (isSaved) await unsave(game.replay_id);
+      else await save(game.replay_id);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const formatDate = (timestamp) => {
