@@ -8,10 +8,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import ReplayCard from "../components/ReplayCard";
 import { useAuth } from "../contexts/AuthContext";
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase/firebase';
-import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
+import axios from 'axios';
 import LoginIcon from '@mui/icons-material/Login';
+import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LoginDialog from "../components/LoginDialog";
 
 function SavedGamesPage() {
@@ -22,13 +21,14 @@ function SavedGamesPage() {
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (!currentUser) return setLoading(false);
-    const colRef = collection(db, 'users', currentUser.uid, 'savedReplays');
-    const unsub = onSnapshot(colRef, snap => {
-      setGames(snap.docs.map(d => d.data()));
+    if (!currentUser) {
       setLoading(false);
-    });
-    return unsub;
+      return;
+    }
+    axios.get(`/api/users/${currentUser.uid}/saved-replays`)
+      .then(res => setGames(res.data))
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
   }, [currentUser]);
 
   if (!currentUser) {
@@ -110,7 +110,7 @@ function SavedGamesPage() {
 
       {games.map((game, index) => (
         <ReplayCard
-          key={index}
+          key={game.replay_id}
           game={game}
           showAnalyze
         />
