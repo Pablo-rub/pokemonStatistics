@@ -3596,12 +3596,22 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
       const url = `http://localhost:${PORT}/api/turn-assistant/analyze`;
       const { data: ta } = await axios.post(url, body);
 
-      // 3) Devolvemos la estructura completa para el front
+      // 3) Build move lists, map blanks to 'flinch'
+      const rawP1 = turn.moves_done.player1 || [];
+      const rawP2 = turn.moves_done.player2 || [];
+
+      // For each active slot: if there's no move or it's empty → 'flinch'
+      const p1Moves = rawP1.map(m => (m && m.trim()) ? m : 'flinch');
+      const p2Moves = rawP2.map(m => (m && m.trim()) ? m : 'flinch');
+
+      // Always join by comma‑space
+      const moveUsedP1 = p1Moves.join(', ');
+      const moveUsedP2 = p2Moves.join(', ');
+
       return {
-        turn_number: turn.turn_number,
-        // juntamos todos los movimientos que hubo este turno
-        moveUsedP1: (turn.moves_done.player1 || []).join(', ') || '—',
-        moveUsedP2: (turn.moves_done.player2 || []).join(', ') || '—',
+        turn_number:  turn.turn_number,
+        moveUsedP1,
+        moveUsedP2,
         state: {
           field:   turn.field,
           weather: turn.weather,
