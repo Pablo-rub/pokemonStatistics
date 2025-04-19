@@ -3,7 +3,7 @@ import {
   Box, Typography, CircularProgress,
   Grid, Card, CardHeader, CardContent, Table,
   TableHead, TableRow, TableCell, TableBody,
-  LinearProgress, Chip, Stack
+  LinearProgress, Chip, Stack, useTheme
 } from '@mui/material';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
@@ -11,7 +11,9 @@ import PokemonSprite from '../components/PokemonSprite';
 
 const AnalyzeBattlePage = () => {
   const { replayId } = useParams();
+  const theme = useTheme();
   const [data, setData] = useState(null);
+
   useEffect(() => {
     axios.get(`/api/analyze-battle/${replayId}`)
       .then(res => setData(res.data))
@@ -21,30 +23,26 @@ const AnalyzeBattlePage = () => {
   if (!data) {
     return (
       <Box sx={{ textAlign: 'center', mt: 8 }}>
-        <CircularProgress />
+        <CircularProgress color="secondary" />
       </Box>
     );
   }
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant="h4" color="common.white" gutterBottom>
         Battle Analysis: {data.replayId}
       </Typography>
 
-      {/* Teams */}
       <Grid container spacing={4} sx={{ mb: 4 }}>
-        {['p1','p2'].map((side, idx) => (
-          <Grid key={side} item xs={12} md={6}>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              Player {idx+1} Team
+        {['p1','p2'].map((side, i) => (
+          <Grid key={side} item xs={12} sm={6}>
+            <Typography variant="h6" color="common.white" gutterBottom>
+              Player {i+1} Team
             </Typography>
-            <Stack direction="row" spacing={1}>
-              {data.teams[side].map(member =>
-                <PokemonSprite
-                  key={member.name}
-                  pokemon={{ name: member.name }}
-                />
+            <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+              {data.teams[side].map(p =>
+                <PokemonSprite key={p.name} pokemon={{ name: p.name }} />
               )}
             </Stack>
           </Grid>
@@ -53,61 +51,109 @@ const AnalyzeBattlePage = () => {
 
       <Grid container spacing={2}>
         {data.analysis.map(turn => (
-          <Grid key={turn.turn_number} item xs={12} md={6}>
-            <Card variant="outlined">
+          <Grid key={turn.turn_number} item xs={12} sm={6} md={4}>
+            <Card
+              elevation={3}
+              sx={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                bgcolor: theme.palette.primary.main,
+                color: theme.palette.primary.contrastText,
+                ':hover': { boxShadow: 6 }
+              }}
+              aria-labelledby={`turn-${turn.turn_number}`}
+            >
               <CardHeader
+                id={`turn-${turn.turn_number}`}
                 title={`Turn ${turn.turn_number}`}
-                subheader={`Move P1: ${turn.moveUsedP1} | Move P2: ${turn.moveUsedP2}`}
+                subheader={`P1: ${turn.moveUsedP1} — P2: ${turn.moveUsedP2}`}
+                titleTypographyProps={{ variant: 'h6', color: 'primary.contrastText' }}
+                subheaderTypographyProps={{ variant: 'body2', color: 'primary.contrastText' }}
+                sx={{
+                  '& .MuiCardHeader-action, & .MuiCardHeader-content': {
+                    color: theme.palette.primary.contrastText
+                  }
+                }}
               />
-              <CardContent>
-                {/* Side effects */}
-                <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  {turn.state?.field?.terrain && (
-                    <Chip label={`Field: ${turn.state.field.terrain}`} size="small" />
-                  )}
-                  {turn.state?.weather?.condition && (
-                    <Chip label={`Weather: ${turn.state.weather.condition}`} size="small" />
-                  )}
-                  {turn.state?.room?.condition && (
-                    <Chip label={`Room: ${turn.state.room.condition}`} size="small" />
-                  )}
-                </Box>
+              <CardContent sx={{ flexGrow: 1 }}>
+                {/* Field / Weather / Room chips */}
+                <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
+                  {['field','weather','room'].map(key => {
+                    const value = turn.state?.[key]?.[ key === 'field' ? 'terrain' : 'condition' ];
+                    if (!value) return null;
+                    const isField = key === 'field';
+                    return (
+                      <Chip
+                        key={key}
+                        label={`${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`}
+                        size="small"
+                        variant={isField ? 'outlined' : 'filled'}
+                        color={isField ? 'default' : 'success'}
+                        sx={{
+                          color: isField
+                            ? theme.palette.primary.contrastText
+                            : 'white',
+                          borderColor: isField
+                            ? theme.palette.primary.contrastText
+                            : undefined,
+                          bgcolor: isField
+                            ? 'transparent'
+                            : undefined,
+                        }}
+                      />
+                    );
+                  })}
+                </Stack>
 
-                <Table size="small">
+                <Table size="small" aria-label={`win-probabilities-turn-${turn.turn_number}`}>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Player</TableCell>
-                      <TableCell align="right">Win %</TableCell>
-                      <TableCell>Alternatives</TableCell>
+                      <TableCell sx={{ color: theme.palette.primary.contrastText }}>Player</TableCell>
+                      <TableCell align="right" sx={{ color: theme.palette.primary.contrastText }}>Win %</TableCell>
+                      <TableCell sx={{ color: theme.palette.primary.contrastText }}>Alternatives</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {['P1','P2'].map(pl => {
-                      const winProb = pl==='P1' ? turn.winProbP1 : turn.winProbP2;
-                      const alt     = pl==='P1' ? turn.altWinProbsP1 : turn.altWinProbsP2;
+                      const win = pl==='P1' ? turn.winProbP1 : turn.winProbP2;
+                      const alts = pl==='P1' ? turn.altWinProbsP1 : turn.altWinProbsP2;
                       return (
                         <TableRow key={pl}>
-                          <TableCell>{pl}</TableCell>
-                          <TableCell align="right" sx={{ minWidth: 100 }}>
+                          <TableCell component="th" scope="row">
+                            {pl}
+                          </TableCell>
+                          <TableCell align="right" sx={{ minWidth: 90 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Typography variant="body2">
-                                {(winProb*100).toFixed(0)}%
+                              <Typography variant="body2" color="textPrimary">
+                                {(win*100).toFixed(0)}%
                               </Typography>
                               <Box sx={{ flexGrow: 1, ml: 1 }}>
-                                <LinearProgress variant="determinate" value={winProb*100} />
+                                <LinearProgress
+                                  variant="determinate"
+                                  value={win*100}
+                                  color="success"
+                                  aria-valuenow={win*100}
+                                  aria-valuemin={0}
+                                  aria-valuemax={100}
+                                />
                               </Box>
                             </Box>
                           </TableCell>
                           <TableCell>
-                            {Object.entries(alt||{}).map(([move,p]) => (
-                              <Typography
-                                key={move}
-                                component="div"
-                                sx={{ fontSize: 12, mb: 0.5 }}
-                              >
-                                {move}: {(p*100).toFixed(1)}%
-                              </Typography>
-                            ))}
+                            <Box sx={{ maxHeight: 80, overflowY: 'auto' }}>
+                              {Object.entries(alts || {})
+                                .sort((a,b)=>b[1]-a[1])
+                                .map(([m,p]) => (
+                                <Typography
+                                  key={m}
+                                  variant="caption"
+                                  sx={{ display: 'block', mb: 0.5 }}
+                                >
+                                  {m}: {(p*100).toFixed(1)}%
+                                </Typography>
+                              ))}
+                            </Box>
                           </TableCell>
                         </TableRow>
                       );
