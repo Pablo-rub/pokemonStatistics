@@ -509,117 +509,107 @@ function parseMovesetText(text) {
 // Mount the obtainGameData router on the /api/replays path
 app.use('/api/replays', obtainGameDataRouter);
 
-// Save a replay for a user
+// Create a new user with empty saved_replays
+app.post('/api/users/saved-replays', async (req, res) => {
+  const { userId } = req.body;
+  const query = `
+    INSERT INTO \`pokemon-statistics.pokemon_replays.saved_replays\`
+      (user_id, replays_saved)
+    VALUES (@userId, [])
+  `;
+  try {
+    await bigQuery.query({ query, params: { userId } });
+    res.status(200).json({ message: 'User record created' });
+  } catch (error) {
+    console.error('Error creating user record:', error);
+    res.status(500).send('Error creating user');
+  }
+});
+
+// Save one replay for a user
 app.post('/api/users/:userId/saved-replays', async (req, res) => {
   const { userId } = req.params;
   const { replayId } = req.body;
-  
-  try {
-    // Check if user exists
-    const userQuery = `SELECT * FROM \`pokemon-statistics.pokemon_replays.saved_replays\` WHERE user_id = '${userId}'`;
-    const [userRows] = await bigQuery.query(userQuery);
+  if (!replayId) {
+    return res.status(400).json({ error: 'Missing replayId' });
+  }
 
-    if (userRows.length === 0) {
-      // Create new user entry
-      const insertQuery = `
-        INSERT INTO \`pokemon-statistics.pokemon_replays.saved_replays\`
-        (user_id, replays_saved)
-        VALUES ('${userId}', ARRAY<STRUCT<replay_id STRING>>[(STRUCT('${replayId}'))])
-      `;
-      await bigQuery.query(insertQuery);
-    } else {
-      // Update existing user's replays
-      const updateQuery = `
-        UPDATE \`pokemon-statistics.pokemon_replays.saved_replays\`
-        SET replays_saved = ARRAY_CONCAT(replays_saved, [STRUCT<replay_id STRING>('${replayId}')])
-        WHERE user_id = '${userId}'
-      `;
-      await bigQuery.query(updateQuery);
-    }
-    res.status(200).send("Replay saved successfully");
-  } catch (error) {
-    console.error("Error saving replay:", error);
-    res.status(500).send("Error saving replay");
+  const query = `
+    UPDATE \`pokemon-statistics.pokemon_replays.saved_replays\`
+    SET replays_saved = ARRAY_CONCAT(
+      replays_saved,
+      [STRUCT(@replayId AS replay_id)]
+    )
+    WHERE user_id = @userId
+  `;
+  try {
+    await bigQuery.query({ query, params: { userId, replayId } });
+    res.json({ message: 'Replay saved' });
+  } catch (err) {
+    console.error('Error saving replay:', err);
+    res.status(500).json({ error: 'Error saving replay' });
   }
 });
 
-// Create new user with empty replays array
-app.post('/api/users/saved-replays', async (req, res) => {
-  const { userId } = req.body;
-  
-  try {
-    const query = `
-      INSERT INTO \`pokemon-statistics.pokemon_replays.saved_replays\`
-      (user_id, replays_saved)
-      VALUES ('${userId}', ARRAY<STRUCT<replay_id STRING>>[])
-    `;
-    await bigQuery.query(query);
-    res.status(200).send("User created successfully with empty replays array");
-  } catch (error) {
-    console.error("Error creating user:", error);
-    res.status(500).send("Error creating user");
-  }
-});
-
-// Get user's saved replays
-app.get('/api/users/:userId/saved-replays', async (req, res) => {
-  const { userId } = req.params;
-  
-  try {
-    const query = `
-      SELECT r.*
-      FROM \`pokemon-statistics.pokemon_replays.replays\` r
-      JOIN UNNEST((
-        SELECT replays_saved 
-        FROM \`pokemon-statistics.pokemon_replays.saved_replays\` 
-        WHERE user_id = '${userId}'
-      )) saved
-      WHERE r.replay_id = saved.replay_id
-    `;
-    const [rows] = await bigQuery.query(query);
-    res.json(rows);
-  } catch (error) {
-    console.error("Error fetching saved replays:", error);
-    res.status(500).send("Error fetching saved replays");
-  }
-});
-
-// Delete a saved replay
+// Remove a saved replay
 app.delete('/api/users/:userId/saved-replays/:replayId', async (req, res) => {
   const { userId, replayId } = req.params;
-  
+  const query = `
+    UPDATE \`pokemon-statistics.pokemon_replays.saved_replays\`
+    SET replays_saved = (
+      SELECT ARRAY_AGG(r) FROM UNNEST(replays_saved) AS r
+      WHERE r.replay_id != @replayId
+    )
+    WHERE user_id = @userId
+  `;
   try {
-    const query = `
-      UPDATE \`pokemon-statistics.pokemon_replays.saved_replays\`
-      SET replays_saved = ARRAY(
-        SELECT STRUCT<replay_id STRING>(x.replay_id)
-        FROM UNNEST(replays_saved) x
-        WHERE x.replay_id != '${replayId}'
-      )
-      WHERE user_id = '${userId}'
-    `;
-    await bigQuery.query(query);
-    res.status(200).send("Replay removed successfully");
-  } catch (error) {
-    console.error("Error removing replay:", error);
-    res.status(500).send("Error removing replay");
+    await bigQuery.query({ query, params: { userId, replayId } });
+    res.json({ message: 'Replay removed' });
+  } catch (err) {
+    console.error('Error removing replay:', err);
+    res.status(500).json({ error: 'Error removing replay' });
   }
 });
 
-// Delete all saved replays (when deleting account)
-app.delete('/api/users/:userId/saved-replays', async (req, res) => {
+// Get all saved replays for a user
+app.get('/api/users/:userId/saved-replays', async (req, res) => {
   const { userId } = req.params;
-  
+
   try {
-    const query = `
-      DELETE FROM \`pokemon-statistics.pokemon_replays.saved_replays\`
-      WHERE user_id = '${userId}'
-    `;
-    await bigQuery.query(query);
-    res.status(200).send("All saved replays deleted successfully");
+    // 1) fetch the array of saved IDs
+    const [userRows] = await bigQuery.query({
+      query: `
+        SELECT replays_saved
+        FROM \`pokemon-statistics.pokemon_replays.saved_replays\`
+        WHERE user_id = @userId
+      `,
+      params: { userId }
+    });
+    if (!userRows.length || !userRows[0].replays_saved.length) {
+      return res.json([]);
+    }
+
+    // 2) build an IN‐clause to fetch the full replay objects
+    const ids = userRows[0].replays_saved.map(r => r.replay_id);
+    const placeholders = ids.map((_, i) => `@id${i}`).join(', ');
+    const params = ids.reduce((p, id, i) => ({
+      ...p,
+      [`id${i}`]: id
+    }), {});
+
+    const [games] = await bigQuery.query({
+      query: `
+        SELECT *
+        FROM \`pokemon-statistics.pokemon_replays.replays\`
+        WHERE replay_id IN (${placeholders})
+      `,
+      params
+    });
+
+    res.json(games);
   } catch (error) {
-    console.error("Error deleting saved replays:", error);
-    res.status(500).send("Error deleting saved replays");
+    console.error('Error fetching saved replays:', error);
+    res.status(500).send('Error fetching saved replays');
   }
 });
 
@@ -3564,5 +3554,85 @@ app.get('/api/leads/usage', async (req, res) => {
   } catch (error) {
     console.error("Error fetching lead usage:", error);
     res.status(500).json({ error: "Error fetching leads usage" });
+  }
+});
+
+// Analyze battle endpoint
+app.get('/api/analyze-battle/:replayId', async (req, res) => {
+  const { replayId } = req.params;
+  try {
+    const query = `
+      SELECT teams, turns
+      FROM \`pokemon-statistics.pokemon_replays.replays\`
+      WHERE replay_id = @replayId
+    `;
+    const [rows] = await bigQuery.query({ query, params: { replayId } });
+    if (!rows.length) return res.status(404).json({ error: 'Replay not found' });
+    const { teams, turns } = rows[0];
+
+    const analysis = await Promise.all(turns.map(async turn => {
+      // 1) Preparamos el body para Turn Assistant
+      const body = {
+        pokemonData: {
+          topLeft: turn.revealed_pokemon.player1[0]?.name || null,
+          topRight: turn.revealed_pokemon.player1[1]?.name || null,
+          bottomLeft: turn.revealed_pokemon.player2[0]?.name || null,
+          bottomRight: turn.revealed_pokemon.player2[1]?.name || null,
+        },
+        battleConditions: {
+          weather: turn.weather?.condition || '',
+          field:   turn.field?.terrain    || '',
+          room:    turn.room?.condition    || '',
+          sideEffects: {},
+          sideEffectsDuration: {}
+        },
+        yourTeam:      teams.p1.map(p => p.name),
+        opponentTeam:  teams.p2.map(p => p.name),
+        filterStats:   false,
+        statChanges:   {}
+      };
+
+      // 2) Llamada al Turn Assistant
+      const url = `http://localhost:${PORT}/api/turn-assistant/analyze`;
+      const { data: ta } = await axios.post(url, body);
+
+      // 3) Build move lists, map blanks to 'flinch'
+      const rawP1 = turn.moves_done.player1 || [];
+      const rawP2 = turn.moves_done.player2 || [];
+
+      // For each active slot: if there's no move or it's empty → 'flinch'
+      const p1Moves = rawP1.map(m => (m && m.trim()) ? m : 'flinch');
+      const p2Moves = rawP2.map(m => (m && m.trim()) ? m : 'flinch');
+
+      // Always join by comma‑space
+      const moveUsedP1 = p1Moves.join(', ');
+      const moveUsedP2 = p2Moves.join(', ');
+
+      return {
+        turn_number:  turn.turn_number,
+        moveUsedP1,
+        moveUsedP2,
+        state: {
+          field:   turn.field,
+          weather: turn.weather,
+          room:    turn.room
+        },
+        // incluimos los dos Pokémon revelados por jugador
+        revealed: {
+          p1: (turn.revealed_pokemon.player1 || []).map(p => p.name),
+          p2: (turn.revealed_pokemon.player2 || []).map(p => p.name)
+        },
+        // ahora sí extraemos las probabilidades que devolvió el TA
+        winProbP1:      ta.winProbP1,
+        winProbP2:      ta.winProbP2,
+        altWinProbsP1:  ta.altWinProbsP1,
+        altWinProbsP2:  ta.altWinProbsP2
+      };
+    }));
+
+    return res.json({ replayId, teams, analysis });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error analyzing battle' });
   }
 });
