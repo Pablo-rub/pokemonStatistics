@@ -108,10 +108,11 @@ const DetailsPane = ({
               <Typography variant="h5" sx={{ color: 'white' }}>
                 {selectedPokemon.name}
               </Typography>
-              <Typography variant="subtitle1" sx={{ color: 'white' }}>
-                Rank #{selectedPokemon.rank} • {rankingType === 'usage' ? 'Usage' : 'Victories'}:{' '}
-                {selectedPokemon.percentage}%
-              </Typography>
+              {rankingType === 'usage' && (
+                <Typography variant="subtitle1" sx={{ color: 'white' }}>
+                  Rank #{selectedPokemon.rank} • Usage: {selectedPokemon.percentage}%
+                </Typography>
+              )}
             </Box>
           </Box>
 

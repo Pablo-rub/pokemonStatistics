@@ -16,6 +16,7 @@ const PokemonList = ({
   totalItems,
   onPageChange,
   showUsagePercentage,
+  rankingType
 }) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -52,9 +53,11 @@ const PokemonList = ({
                     </Typography>
                   )}
                 </Box>
-                <Typography variant="caption" sx={{ color: 'white' }}>
-                  #{pokemon.rank}
-                </Typography>
+                {rankingType === 'usage' && (
+                  <Typography variant="caption" sx={{ color: 'white' }}>
+                    #{pokemon.rank}
+                  </Typography>
+                )}
               </Box>
             </Paper>
           ))}

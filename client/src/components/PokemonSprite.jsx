@@ -10,16 +10,24 @@ const PokemonSprite = ({ pokemon }) => {
     // Mapa de nombres especiales que requieren formateo específico
     const specialNames = {
       'Urshifu-Rapid-Strike': 'urshifu-rapidstrike',
+      'urshifu-rapid-strike': 'urshifu-rapidstrike',
       'Chien-Pao': 'chienpao',
+      'chien-pao': 'chienpao',
       'Chi-Yu': 'chiyu',
-      'Ho-Oh': 'hooh',
+      'chi-yu': 'chiyu',
       'Ting-Lu': 'tinglu',
+      'ting-lu': 'tinglu',
       'Wo-Chien': 'wochien',
+      'wo-chien': 'wochien',
+      'Ho-Oh': 'hooh',
       'Necrozma-Dawn-Wings': 'necrozma-dawnwings',
       'Necrozma-Dusk-Mane': 'necrozma-duskmane',
       'Toxtricity-Low-Key': 'toxtricity-lowkey',
       'Kommo-o': 'kommoo',
       'Porygon-Z': 'porygonz',
+      'Tauros-Paldea-Blaze': 'tauros-paldeablaze',
+      'Tauros-Paldea-Aqua': 'tauros-paldeaaqua',
+      'Tauros-Paldea-Combat': 'tauros-paldeacombat',
     };
 
     // Comprobar si es un caso especial

@@ -2466,92 +2466,6 @@ function analyzeMatchingScenarios(scenarios, yourPokemon, yourItems = {}, yourAb
   };
 }
 
-// Improved helper function to parse move strings and extract all relevant information
-function parseMoveString(moveString) {
-  if (!moveString) return null;
-  
-  // Common formats in the data:
-  // 1. "moveX used by PokemonA on PokemonB" -> "electro drift used by Miraidon on Whimsicott"
-  // 2. "move on target" -> "electro drift on Miraidon"
-  // 3. "move (spread)" -> "dazzling gleam (spread)"
-  // 4. "move (spread) used by Pokemon" -> "dazzling gleam (spread) used by Miraidon"
-  // 5. "PokemonA used move on PokemonB" -> "Miraidon used electro drift on Whimsicott"
-  // 6. "switch to Pokemon" -> "switch to Iron Hands"
-  // 7. "fainted, switch to Pokemon" -> "fainted, switch to Chi-Yu"
-  
-  let move = null;
-  let userPokemon = null;
-  let targetPokemon = null;
-  let isSpreadMove = false;
-  
-  // Case 1: "moveX used by PokemonA on PokemonB"
-  const usedByPattern = /^([^\s]+(?:\s+[^\s]+)*) used by ([^\s]+) on ([^\s]+)/;
-  const usedByMatch = moveString.match(usedByPattern);
-  if (usedByMatch) {
-    move = usedByMatch[1].trim();
-    userPokemon = usedByMatch[2].trim();
-    targetPokemon = usedByMatch[3].trim();
-    return { move, userPokemon, targetPokemon, isSpreadMove };
-  }
-  
-  // Case 2: "move on target"
-  const onTargetPattern = /^([^\s]+(?:\s+[^\s]+)*) on ([^\s,(]+)/;
-  const onTargetMatch = moveString.match(onTargetPattern);
-  if (onTargetMatch) {
-    move = onTargetMatch[1].trim();
-    targetPokemon = onTargetMatch[2].trim();
-    return { move, targetPokemon, isSpreadMove };
-  }
-  
-  // Case 3 & 4: Spread moves
-  const spreadPattern = /^([^\s(]+(?:\s+[^\s(]+)*) \(spread\)(?:\s+used by ([^\s]+))?/;
-  const spreadMatch = moveString.match(spreadPattern);
-  if (spreadMatch) {
-    move = spreadMatch[1].trim();
-    userPokemon = spreadMatch[2]?.trim(); // Optional user Pokemon
-    isSpreadMove = true;
-    return { move, userPokemon, isSpreadMove };
-  }
-  
-  // Case 5: "PokemonA used move on PokemonB"
-  const pokemonUsedPattern = /^([^\s]+) used ([^\s]+(?:\s+[^\s]+)*)(?: on ([^\s,]+))?/;
-  const pokemonUsedMatch = moveString.match(pokemonUsedPattern);
-  if (pokemonUsedMatch) {
-    userPokemon = pokemonUsedMatch[1].trim();
-    move = pokemonUsedMatch[2].trim();
-    targetPokemon = pokemonUsedMatch[3]?.trim(); // Optional target
-    return { move, userPokemon, targetPokemon, isSpreadMove };
-  }
-  
-  // Case 6: Switch actions
-  const switchPattern = /^(?:.*,\s*)?switch to ([^\s,]+)/;
-  const switchMatch = moveString.match(switchPattern);
-  if (switchMatch) {
-    move = "switch";
-    return { move, isSpreadMove };
-  }
-  
-  // Case 7: Fainted notifications
-  if (moveString.startsWith("fainted")) {
-    move = "fainted";
-    return { move, isSpreadMove };
-  }
-  
-  // If we reach here, use the whole string as the move (fallback)
-  return { move: moveString, isSpreadMove };
-}
-
-// Define un objeto de mapeo para los estados non-volatile
-const statusMapping = {
-  "burn": "brn",
-  "freeze": "frz",
-  "frostbite": "frt",
-  "paralysis": "par",
-  "poison": "psn",
-  "badly poisoned": "tox",
-  "sleep": "slp"
-};
-
 app.get('/api/items', async (req, res) => {
   try {
     // Consulta PokeAPI para obtener hasta 1000 ítems (ajusta el limit según sea necesario)
@@ -3415,35 +3329,74 @@ app.get('/api/victories/teammates', async (req, res) => {
 // Endpoint: Team usage statistics grouped by month
 app.get('/api/teams/usage', async (req, res) => {
   try {
+    const {
+      format: formatParam,
+      month: monthParam,
+      page = '1',
+      limit = '12',
+      sortBy = 'usage',
+      sortDir = 'desc'
+    } = req.query;
+    const pageInt  = parseInt(page,  10);
+    const limitInt = parseInt(limit, 10);
+    const offset   = (pageInt - 1) * limitInt;
+
+    if (!formatParam) {
+      return res.status(400).json({ error: 'Format parameter is required' });
+    }
+
+    // extraer rating mínimo (p.ej. “1760” de “gen9vgc2025reggbo3-1760”)
+    let minRating = 0;
+    let formatName = formatParam;
+    const parts = formatParam.split('-');
+    const last = parts[parts.length - 1];
+    if (/^\d+$/.test(last)) {
+      minRating = parseInt(last, 10);
+      parts.pop();
+      formatName = parts.join('-');
+    }
+
     const query = `
       WITH team_stats AS (
-        SELECT 
+        SELECT
           FORMAT_TIMESTAMP('%Y-%m', date) AS month,
           ARRAY_TO_STRING(
             ARRAY(
               SELECT LOWER(p.name)
               FROM UNNEST(teams.p1) AS p
               ORDER BY LOWER(p.name)
-            ), ';') AS team,
+            ), ';'
+          ) AS team,
           COUNT(*) AS total_games,
           SUM(CASE WHEN winner = player1 THEN 1 ELSE 0 END) AS wins
         FROM \`pokemon-statistics.pokemon_replays.replays\`
+        WHERE LOWER(format) LIKE '%vgc%'
+          AND LOWER(format) LIKE '%2025%'
+          AND LOWER(format) LIKE '%reg g%'
+          AND LOWER(format) LIKE '%bo3%'
+          AND (rating IS NULL OR rating >= @minRating)
         GROUP BY month, team
         UNION ALL
-        SELECT 
+        SELECT
           FORMAT_TIMESTAMP('%Y-%m', date) AS month,
           ARRAY_TO_STRING(
             ARRAY(
               SELECT LOWER(p.name)
               FROM UNNEST(teams.p2) AS p
               ORDER BY LOWER(p.name)
-            ), ';') AS team,
+            ), ';'
+          ) AS team,
           COUNT(*) AS total_games,
           SUM(CASE WHEN winner = player2 THEN 1 ELSE 0 END) AS wins
         FROM \`pokemon-statistics.pokemon_replays.replays\`
+        WHERE LOWER(format) LIKE '%vgc%'
+          AND LOWER(format) LIKE '%2025%'
+          AND LOWER(format) LIKE '%reg g%'
+          AND LOWER(format) LIKE '%bo3%'
+          AND (rating IS NULL OR rating >= @minRating)
         GROUP BY month, team
       )
-      SELECT 
+      SELECT
         month,
         team,
         SUM(total_games) AS total_games,
@@ -3451,69 +3404,165 @@ app.get('/api/teams/usage', async (req, res) => {
         ROUND(SUM(wins)/SUM(total_games)*100, 2) AS win_rate
       FROM team_stats
       GROUP BY month, team
-      ORDER BY month DESC, win_rate DESC
+      ORDER BY month ASC, win_rate DESC
     `;
-    const [rows] = await bigQuery.query(query);
-    res.json(rows);
+
+    const [rows] = await bigQuery.query({
+      query,
+      params: { formatName, minRating }
+    });
+
+    // Group rows by team and build history array
+    const teamMap = {};
+    rows.forEach(({ month, team, total_games, wins, win_rate }) => {
+      if (!teamMap[team]) {
+        teamMap[team] = { name: team, history: [] };
+      }
+      teamMap[team].history.push({
+        month,
+        usage: win_rate,
+        total_games,
+        wins
+      });
+    });
+
+    // Build full team array with history and current‐month stats
+    const teams = Object.values(teamMap).map(t => {
+      t.history.sort((a,b) => a.month.localeCompare(b.month));
+      // find record for the selected month
+      const rec = t.history.find(h => h.month === monthParam) || { usage:0, total_games:0, wins:0 };
+      t.monthly_usage       = rec.usage;
+      t.monthly_total_games = rec.total_games;
+      t.monthly_wins        = rec.wins;
+      return t;
+    });
+
+    // sort by monthly_usage or monthly_total_games
+    teams.sort((a,b) => {
+      const dir = sortDir.toLowerCase()==='asc'?1:-1;
+      const field = sortBy==='total_games'?'monthly_total_games':'monthly_usage';
+      return dir*(a[field] - b[field]);
+    });
+
+    // apply pagination
+    const paged = teams.slice(offset, offset + limitInt);
+    res.json({ teams: paged, total: teams.length });
   } catch (error) {
-    console.error("Error fetching team usage statistics:", error);
-    res.status(500).json({ error: "Error fetching team usage statistics" });
+    console.error("Error fetching team usage:", error);
+    res.status(500).json({ error: "Error fetching team usage" });
   }
 });
 
 // Endpoint: Lead usage statistics grouped by month
 app.get('/api/leads/usage', async (req, res) => {
   try {
+    const {
+      format: formatParam,
+      month: monthParam,
+      page = '1',
+      limit = '12',
+      sortBy = 'win_rate',
+      sortDir = 'desc'
+    } = req.query;
+    const pageInt  = parseInt(page, 10);
+    const limitInt = parseInt(limit, 10);
+    const offset   = (pageInt - 1) * limitInt;
+
+    if (!formatParam) {
+      return res.status(400).json({ error: 'Format parameter is required' });
+    }
+
+    // extraer rating mínimo (ej. “1760” de “gen9vgc2025reggbo3-1760”)
+    let minRating = 0;
+    const parts = formatParam.split('-');
+    const last = parts[parts.length - 1];
+    if (/^\d+$/.test(last)) {
+      minRating = parseInt(last, 10);
+      parts.pop();
+    }
+
     const query = `
       WITH lead_stats AS (
-        -- Lado 1: Extraer los 2 primeros Pokémon del equipo p1
-        SELECT 
+        SELECT
           FORMAT_TIMESTAMP('%Y-%m', date) AS month,
-          ARRAY_TO_STRING(
-            ARRAY(
-              SELECT LOWER(p.name)
-              FROM UNNEST(teams.p1) AS p WITH OFFSET pos
-              WHERE pos < 2
-              ORDER BY LOWER(p.name)
-            ), ';') AS lead,
+          /* first two starters on player1 side */
+          CONCAT(
+            LOWER(teams.p1[OFFSET(0)].name), ';',
+            LOWER(teams.p1[OFFSET(1)].name)
+          ) AS lead,
           COUNT(*) AS total_games,
           SUM(CASE WHEN winner = player1 THEN 1 ELSE 0 END) AS wins
         FROM \`pokemon-statistics.pokemon_replays.replays\`
-        WHERE ARRAY_LENGTH(teams.p1) >= 2
+        WHERE LOWER(format) LIKE '%vgc%'
+          AND LOWER(format) LIKE '%2025%'
+          AND LOWER(format) LIKE '%reg g%'
+          AND LOWER(format) LIKE '%bo3%'
+          AND (rating IS NULL OR rating >= @minRating)
+          AND ARRAY_LENGTH(teams.p1) >= 2   -- need two starting Pokémon
         GROUP BY month, lead
-
         UNION ALL
-
-        -- Lado 2: Extraer los 2 primeros Pokémon del equipo p2
-        SELECT 
+        SELECT
           FORMAT_TIMESTAMP('%Y-%m', date) AS month,
-          ARRAY_TO_STRING(
-            ARRAY(
-              SELECT LOWER(p.name)
-              FROM UNNEST(teams.p2) AS p WITH OFFSET pos
-              WHERE pos < 2
-              ORDER BY LOWER(p.name)
-            ), ';') AS lead,
+          /* first two starters on player2 side */
+          CONCAT(
+            LOWER(teams.p2[OFFSET(0)].name), ';',
+            LOWER(teams.p2[OFFSET(1)].name)
+          ) AS lead,
           COUNT(*) AS total_games,
           SUM(CASE WHEN winner = player2 THEN 1 ELSE 0 END) AS wins
         FROM \`pokemon-statistics.pokemon_replays.replays\`
-        WHERE ARRAY_LENGTH(teams.p2) >= 2
+        WHERE LOWER(format) LIKE '%vgc%'
+          AND LOWER(format) LIKE '%2025%'
+          AND LOWER(format) LIKE '%reg g%'
+          AND LOWER(format) LIKE '%bo3%'
+          AND (rating IS NULL OR rating >= @minRating)
+          AND ARRAY_LENGTH(teams.p2) >= 2   -- need two starting Pokémon
         GROUP BY month, lead
       )
-      SELECT 
+      SELECT
         month,
         lead,
         SUM(total_games) AS total_games,
-        SUM(wins) AS wins,
+        SUM(wins)       AS wins,
         ROUND(SUM(wins)/SUM(total_games)*100, 2) AS win_rate
       FROM lead_stats
       GROUP BY month, lead
-      ORDER BY month DESC, win_rate DESC
+      ORDER BY month ASC, win_rate DESC
     `;
-    const [rows] = await bigQuery.query(query);
-    res.json(rows);
+
+    const [rows] = await bigQuery.query({ query, params: { minRating } });
+
+    // Group rows by lead and build history
+    const leadMap = {};
+    rows.forEach(({ month, lead, total_games, wins, win_rate }) => {
+      if (!leadMap[lead]) leadMap[lead] = { name: lead, history: [] };
+      leadMap[lead].history.push({
+        month,
+        total_games,
+        wins,
+        usage: win_rate
+      });
+    });
+
+    // Assemble array, extract stats for monthParam, sort & paginate
+    let leads = Object.values(leadMap).map(l => {
+      l.history.sort((a,b) => a.month.localeCompare(b.month));
+      const rec = l.history.find(h => h.month === monthParam) || { usage:0, total_games:0, wins:0 };
+      l.monthly_usage       = rec.usage;
+      l.monthly_total_games = rec.total_games;
+      l.monthly_wins        = rec.wins;
+      return l;
+    });
+    const totalItems = leads.length;
+    leads.sort((a,b) => {
+      const dir = sortDir.toLowerCase()==='asc'?1:-1;
+      const field = sortBy==='total_games'? 'monthly_total_games' : 'monthly_usage';
+      return dir * (a[field] - b[field]);
+    });
+    const paged = leads.slice(offset, offset + limitInt);
+    res.json({ leads: paged, total: totalItems });
   } catch (error) {
-    console.error("Error fetching leads usage statistics:", error);
-    res.status(500).json({ error: "Error fetching leads usage statistics" });
+    console.error("Error fetching lead usage:", error);
+    res.status(500).json({ error: "Error fetching leads usage" });
   }
 });
