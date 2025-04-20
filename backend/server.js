@@ -3573,7 +3573,7 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
 
     // 2) For each turn, build payload with the actual on-field Pokémon objects
     const analysis = await Promise.all(turns.map(async turn => {
-      // === build the four active slots ===
+      // active pokemon
       const pokemonData = {
         topLeft:     turn.revealed_pokemon.player1[0] || null,
         topRight:    turn.revealed_pokemon.player1[1] || null,
@@ -3581,22 +3581,48 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
         bottomRight: turn.revealed_pokemon.player2[1] || null,
       };
 
+      console.log('pokemonData:', pokemonData);
+
+      // battle conditions
+      const battleConditions = {
+        weather: "",
+        weatherDuration: 0,
+        field: "",
+        fieldDuration: 0,
+        room: "",
+        roomDuration: 0,
+        sideEffects: {
+          yourSide: { tailwind: false },
+          opponentSide: { tailwind: false }
+        },
+        sideEffectsDuration: {
+          yourSide: { tailwind: 0 },
+          opponentSide: { tailwind: 0 }
+        },
+        entryHazards: {
+          yourSide: {},
+          opponentSide: {}
+        },
+        entryHazardsLevel: {
+          yourSide: {},
+          opponentSide: {}
+        },
+        entryHazardsDuration: {
+          yourSide: {},
+          opponentSide: {}
+        }
+      }
+
+      // teams
+      const yourTeam = "";
+      const opponentTeam = "";
+
       // === prepare the TA request ===
       const body = {
         pokemonData,
-        battleConditions: {
-          weather: { condition: turn.weather.condition, duration: turn.weather.duration },
-          field:   { terrain:  turn.field.terrain,   duration: turn.field.duration },
-          room:    { condition: turn.room.condition,  duration: turn.room.duration },
-          screens: turn.screens,
-          tailwind: turn.tailwind,
-          entryHazards: {
-            yourSide:     turn.spikes.player1,
-            opponentSide: turn.spikes.player2
-          }
-        },
-        yourTeam:     teams.p1,
-        opponentTeam: teams.p2
+        battleConditions,
+        yourTeam: yourTeam || [],
+        opponentTeam: opponentTeam || [],
       };
 
       // === call Turn‑Assistant ===
@@ -3605,33 +3631,25 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
         body
       );
 
-      // === extract moves ===
-      const rawP1 = turn.moves_done.player1 || [];
-      const rawP2 = turn.moves_done.player2 || [];
-      const p1Moves = rawP1.map(m => m?.trim() || 'flinch');
-      const p2Moves = rawP2.map(m => m?.trim() || 'flinch');
-      const moveUsedP1 = p1Moves.join(', ');
-      const moveUsedP2 = p2Moves.join(', ');
+      const raw = ta.data?.winRate ?? 0;
+      const winRate = raw > 1 ? raw / 100 : raw;
 
-      // === return enriched analysis ===
+      // === extraer el movimiento usado de cada jugador ===
+      const rawP1 = turn.moves_done?.player1 || [];
+      const rawP2 = turn.moves_done?.player2 || [];
+      const moveUsedP1 = rawP1.map(m => m?.trim() || '').join(', ');
+      const moveUsedP2 = rawP2.map(m => m?.trim() || '').join(', ');
+
       return {
         turn_number:   turn.turn_number,
-        // let front‑end confirm what we sent:
         activePokemon: {
           p1: [ pokemonData.topLeft?.name, pokemonData.topRight?.name ],
           p2: [ pokemonData.bottomLeft?.name, pokemonData.bottomRight?.name ]
         },
         moveUsedP1,
         moveUsedP2,
-        state: {
-          field:   turn.field,
-          weather: turn.weather,
-          room:    turn.room
-        },
-        winProbP1:     ta.data?.winRate        ?? 0,
-        altWinProbsP1: ta.data?.allMoveOptions ?? {},
-        winProbP2:     1 - (ta.data?.winRate   ?? 0),
-        altWinProbsP2: {} 
+        winProbP1:    ta.matchingScenarios ? winRate : 0,
+        winProbP2:    ta.matchingScenarios ? 1 - winRate : 0
       };
     }));
 
