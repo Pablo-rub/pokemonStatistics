@@ -3561,6 +3561,7 @@ app.get('/api/leads/usage', async (req, res) => {
 app.get('/api/analyze-battle/:replayId', async (req, res) => {
   const { replayId } = req.params;
   try {
+    // 1) Fetch teams + turns
     const query = `
       SELECT teams, turns
       FROM \`pokemon-statistics.pokemon_replays.replays\`
@@ -3570,46 +3571,56 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: 'Replay not found' });
     const { teams, turns } = rows[0];
 
+    // 2) For each turn, build payload with the actual on-field Pokémon objects
     const analysis = await Promise.all(turns.map(async turn => {
-      // 1) Preparamos el body para Turn Assistant
-      const body = {
-        pokemonData: {
-          topLeft: turn.revealed_pokemon.player1[0]?.name || null,
-          topRight: turn.revealed_pokemon.player1[1]?.name || null,
-          bottomLeft: turn.revealed_pokemon.player2[0]?.name || null,
-          bottomRight: turn.revealed_pokemon.player2[1]?.name || null,
-        },
-        battleConditions: {
-          weather: turn.weather?.condition || '',
-          field:   turn.field?.terrain    || '',
-          room:    turn.room?.condition    || '',
-          sideEffects: {},
-          sideEffectsDuration: {}
-        },
-        yourTeam:      teams.p1.map(p => p.name),
-        opponentTeam:  teams.p2.map(p => p.name),
-        filterStats:   false,
-        statChanges:   {}
+      // === build the four active slots ===
+      const pokemonData = {
+        topLeft:     turn.revealed_pokemon.player1[0] || null,
+        topRight:    turn.revealed_pokemon.player1[1] || null,
+        bottomLeft:  turn.revealed_pokemon.player2[0] || null,
+        bottomRight: turn.revealed_pokemon.player2[1] || null,
       };
 
-      // 2) Llamada al Turn Assistant
-      const url = `http://localhost:${PORT}/api/turn-assistant/analyze`;
-      const { data: ta } = await axios.post(url, body);
+      // === prepare the TA request ===
+      const body = {
+        pokemonData,
+        battleConditions: {
+          weather: { condition: turn.weather.condition, duration: turn.weather.duration },
+          field:   { terrain:  turn.field.terrain,   duration: turn.field.duration },
+          room:    { condition: turn.room.condition,  duration: turn.room.duration },
+          screens: turn.screens,
+          tailwind: turn.tailwind,
+          entryHazards: {
+            yourSide:     turn.spikes.player1,
+            opponentSide: turn.spikes.player2
+          }
+        },
+        yourTeam:     teams.p1,
+        opponentTeam: teams.p2
+      };
 
-      // 3) Build move lists, map blanks to 'flinch'
+      // === call Turn‑Assistant ===
+      const { data: ta } = await axios.post(
+        `http://localhost:${PORT}/api/turn-assistant/analyze`,
+        body
+      );
+
+      // === extract moves ===
       const rawP1 = turn.moves_done.player1 || [];
       const rawP2 = turn.moves_done.player2 || [];
-
-      // For each active slot: if there's no move or it's empty → 'flinch'
-      const p1Moves = rawP1.map(m => (m && m.trim()) ? m : 'flinch');
-      const p2Moves = rawP2.map(m => (m && m.trim()) ? m : 'flinch');
-
-      // Always join by comma‑space
+      const p1Moves = rawP1.map(m => m?.trim() || 'flinch');
+      const p2Moves = rawP2.map(m => m?.trim() || 'flinch');
       const moveUsedP1 = p1Moves.join(', ');
       const moveUsedP2 = p2Moves.join(', ');
 
+      // === return enriched analysis ===
       return {
-        turn_number:  turn.turn_number,
+        turn_number:   turn.turn_number,
+        // let front‑end confirm what we sent:
+        activePokemon: {
+          p1: [ pokemonData.topLeft?.name, pokemonData.topRight?.name ],
+          p2: [ pokemonData.bottomLeft?.name, pokemonData.bottomRight?.name ]
+        },
         moveUsedP1,
         moveUsedP2,
         state: {
@@ -3617,22 +3628,17 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
           weather: turn.weather,
           room:    turn.room
         },
-        // incluimos los dos Pokémon revelados por jugador
-        revealed: {
-          p1: (turn.revealed_pokemon.player1 || []).map(p => p.name),
-          p2: (turn.revealed_pokemon.player2 || []).map(p => p.name)
-        },
-        // ahora sí extraemos las probabilidades que devolvió el TA
-        winProbP1:      ta.winProbP1,
-        winProbP2:      ta.winProbP2,
-        altWinProbsP1:  ta.altWinProbsP1,
-        altWinProbsP2:  ta.altWinProbsP2
+        winProbP1:     ta.data?.winRate        ?? 0,
+        altWinProbsP1: ta.data?.allMoveOptions ?? {},
+        winProbP2:     1 - (ta.data?.winRate   ?? 0),
+        altWinProbsP2: {} 
       };
     }));
 
     return res.json({ replayId, teams, analysis });
-  } catch (err) {
-    console.error(err);
+  }
+  catch (err) {
+    console.error('Error in /api/analyze-battle:', err);
     return res.status(500).json({ error: 'Error analyzing battle' });
   }
 });
