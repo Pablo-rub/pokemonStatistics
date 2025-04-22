@@ -8,14 +8,12 @@ import {
   Stack,
   Alert,
   CircularProgress,
-  useTheme
 } from "@mui/material";
 import PokemonSprite from "../components/PokemonSprite";
 import TurnCard from "../components/TurnCard";
 
 const AnalyzeBattlePage = () => {
   const { replayId } = useParams();
-  const theme = useTheme();
   const [data, setData] = useState(null);
 
   useEffect(() => {

@@ -25,6 +25,10 @@ const TurnCard = ({ turn }) => {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
 
+  // Limpia comas iniciales en el texto de movimientos
+  const formattedMoveP1 = turn.moveUsedP1?.replace(/^,\s*/, '').trim();
+  const formattedMoveP2 = turn.moveUsedP2?.replace(/^,\s*/, '').trim();
+
   return (
     <Card
       elevation={3}
@@ -44,10 +48,10 @@ const TurnCard = ({ turn }) => {
         subheader={
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             <Typography variant="body2" sx={{ color: theme.palette.primary.contrastText }}>
-              P1: {turn.moveUsedP1}
+              P1: {formattedMoveP1 || '—'}
             </Typography>
             <Typography variant="body2" sx={{ color: theme.palette.primary.contrastText }}>
-              P2: {turn.moveUsedP2}
+              P2: {formattedMoveP2 || '—'}
             </Typography>
           </Box>
         }
@@ -115,9 +119,12 @@ const TurnCard = ({ turn }) => {
                   </TableCell>
                   <TableCell sx={{ color: theme.palette.primary.contrastText }}>
                     <Stack direction="row" spacing={0.5}>
-                      {activeNames.map((name,i) =>
-                        name && <PokemonSprite key={i} pokemon={{ name }} />
-                      )}
+                      {activeNames
+                        .filter(name => !!name)
+                        .map((name,i) =>
+                          <PokemonSprite key={i} pokemon={{ name }} />
+                        )
+                      }
                     </Stack>
                   </TableCell>
                 </TableRow>
