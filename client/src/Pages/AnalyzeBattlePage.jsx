@@ -143,11 +143,11 @@ const AnalyzeBattlePage = () => {
                           <TableRow key={pl}>
                             <TableCell sx={{ color: theme.palette.primary.contrastText }}>{pl}</TableCell>
                             <TableCell align="right" sx={{ color: theme.palette.primary.contrastText }}>
-                              {turn.noData || win === null ? 
-                                <Typography variant="body2" sx={{ fontStyle: 'italic' }}>?</Typography> : 
-                                `${(win * 100).toFixed(1)}%`
-                              }
-                            </TableCell>
+  {(turn.noData || win === null || (turn.winProbP1 === 0 && turn.winProbP2 === 0))
+    ? <Typography variant="body2" sx={{ fontStyle: 'italic' }}>?</Typography>
+    : `${(win * 100).toFixed(1)}%`
+  }
+</TableCell>
                             <TableCell sx={{ color: theme.palette.primary.contrastText }}>
                               <Stack direction="row" spacing={0.5}>
                                 {activeNames.map((name, i) => 
