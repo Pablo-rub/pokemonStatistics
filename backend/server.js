@@ -3574,14 +3574,35 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
     // 2) For each turn, build payload with the actual on-field Pokémon objects
     const analysis = await Promise.all(turns.map(async turn => {
       // active pokemon
-      const pokemonData = {
-        topLeft:     turn.revealed_pokemon.player1[0] || null,
-        topRight:    turn.revealed_pokemon.player1[1] || null,
-        bottomLeft:  turn.revealed_pokemon.player2[0] || null,
-        bottomRight: turn.revealed_pokemon.player2[1] || null,
-      };
+      const rawP1 = turn.moves_done?.player1 || [];
+      const rawP2 = turn.moves_done?.player2 || [];
+      const moveUsedP1 = rawP1.map(m => m?.trim() || '').join(', ');
+      const moveUsedP2 = rawP2.map(m => m?.trim() || '').join(', ');
 
-      console.log('pokemonData:', pokemonData);
+      // Get active Pokémon names from starts_with
+      const activeP1Names = turn.starts_with?.player1 || [];
+      const activeP2Names = turn.starts_with?.player2 || [];
+
+      // Find the detailed Pokémon data for each active Pokémon
+      const topLeftPokemon = activeP1Names[0] ? 
+        turn.revealed_pokemon.player1.find(p => p.name === activeP1Names[0]) : null;
+      
+      const topRightPokemon = activeP1Names[1] ? 
+        turn.revealed_pokemon.player1.find(p => p.name === activeP1Names[1]) : null;
+      
+      const bottomLeftPokemon = activeP2Names[0] ? 
+        turn.revealed_pokemon.player2.find(p => p.name === activeP2Names[0]) : null;
+      
+      const bottomRightPokemon = activeP2Names[1] ? 
+        turn.revealed_pokemon.player2.find(p => p.name === activeP2Names[1]) : null;
+
+      // Create minimal Pokémon objects with at least names if detailed data isn't available
+      const pokemonData = {
+        topLeft: topLeftPokemon || (activeP1Names[0] ? { name: activeP1Names[0] } : null),
+        topRight: topRightPokemon || (activeP1Names[1] ? { name: activeP1Names[1] } : null),
+        bottomLeft: bottomLeftPokemon || (activeP2Names[0] ? { name: activeP2Names[0] } : null),
+        bottomRight: bottomRightPokemon || (activeP2Names[1] ? { name: activeP2Names[1] } : null),
+      };
 
       // battle conditions
       const battleConditions = {
@@ -3614,43 +3635,52 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
       }
 
       // teams
-      const yourTeam = "";
-      const opponentTeam = "";
+      const yourTeam = [];
+      const opponentTeam = [];
 
       // === prepare the TA request ===
       const body = {
         pokemonData,
         battleConditions,
-        yourTeam: yourTeam || [],
-        opponentTeam: opponentTeam || [],
+        yourTeam,
+        opponentTeam,
       };
 
-      // === call Turn‑Assistant ===
-      const { data: ta } = await axios.post(
-        `http://localhost:${PORT}/api/turn-assistant/analyze`,
-        body
-      );
+      try {
+        // === call Turn-Assistant ===
+        const { data: ta } = await axios.post(
+          `http://localhost:${PORT}/api/turn-assistant/analyze`,
+          body
+        );
 
-      const raw = ta.data?.winRate ?? 0;
-      const winRate = raw > 1 ? raw / 100 : raw;
+        const raw = ta.data?.winRate ?? 0;
+        const winRate = raw > 1 ? raw / 100 : raw;
 
-      // === extraer el movimiento usado de cada jugador ===
-      const rawP1 = turn.moves_done?.player1 || [];
-      const rawP2 = turn.moves_done?.player2 || [];
-      const moveUsedP1 = rawP1.map(m => m?.trim() || '').join(', ');
-      const moveUsedP2 = rawP2.map(m => m?.trim() || '').join(', ');
-
-      return {
-        turn_number:   turn.turn_number,
-        activePokemon: {
-          p1: [ pokemonData.topLeft?.name, pokemonData.topRight?.name ],
-          p2: [ pokemonData.bottomLeft?.name, pokemonData.bottomRight?.name ]
-        },
-        moveUsedP1,
-        moveUsedP2,
-        winProbP1:    ta.matchingScenarios ? winRate : 0,
-        winProbP2:    ta.matchingScenarios ? 1 - winRate : 0
-      };
+        return {
+          turn_number:   turn.turn_number,
+          activePokemon: {
+            p1: [ activeP1Names[0] || null, activeP1Names[1] || null ],
+            p2: [ activeP2Names[0] || null, activeP2Names[1] || null ]
+          },
+          moveUsedP1,
+          moveUsedP2,
+          winProbP1:    ta.matchingScenarios ? winRate : 0,
+          winProbP2:    ta.matchingScenarios ? 1 - winRate : 0
+        };
+      } catch (error) {
+        console.log(`Error analyzing turn ${turn.turn_number}:`, error.message);
+        return {
+          turn_number:   turn.turn_number,
+          activePokemon: {
+            p1: [ activeP1Names[0] || null, activeP1Names[1] || null ],
+            p2: [ activeP2Names[0] || null, activeP2Names[1] || null ]
+          },
+          moveUsedP1,
+          moveUsedP2,
+          winProbP1: 0,
+          winProbP2: 0
+        };
+      }
     }));
 
     return res.json({ replayId, teams, analysis });
