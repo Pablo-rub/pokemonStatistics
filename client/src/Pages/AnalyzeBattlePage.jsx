@@ -1,13 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import axios from "axios";
 import {
-  Box, Typography, CircularProgress,
-  Grid, Card, CardHeader, CardContent, Table,
-  TableHead, TableRow, TableCell, TableBody,
-  LinearProgress, Chip, Stack, useTheme
-} from '@mui/material';
-import { useParams } from 'react-router-dom';
-import axios from 'axios';
-import PokemonSprite from '../components/PokemonSprite';
+  Box,
+  Grid,
+  Card,
+  CardHeader,
+  CardContent,
+  Typography,
+  Stack,
+  Chip,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  CircularProgress,
+  Alert,
+  useTheme,
+} from "@mui/material";
+import PokemonSprite from "../components/PokemonSprite";
 
 const AnalyzeBattlePage = () => {
   const { replayId } = useParams();
@@ -33,6 +45,12 @@ const AnalyzeBattlePage = () => {
       <Typography variant="h4" color="common.white" gutterBottom>
         Battle Analysis: {data.replayId}
       </Typography>
+
+      {data.hasInsufficientData && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Some turns don't have enough data for accurate predictions. This happens when there are few or no similar scenarios in our database.
+        </Alert>
+      )}
 
       <Grid container spacing={4} sx={{ mb: 4 }}>
         {['p1','p2'].map((side, i) => (
@@ -110,56 +128,65 @@ const AnalyzeBattlePage = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ color: theme.palette.primary.contrastText }}>Player</TableCell>
-                      <TableCell align="right" sx={{ color: theme.palette.primary.contrastText }}>Win %</TableCell>
-                      <TableCell sx={{ color: theme.palette.primary.contrastText }}>Alternatives</TableCell>
+                      <TableCell align="right" sx={{ color: theme.palette.primary.contrastText }}>Win %</TableCell>
+                      <TableCell sx={{ color: theme.palette.primary.contrastText }}>Active Pokémon</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {['P1','P2'].map(pl => {
-                      const win = pl==='P1' ? turn.winProbP1 : turn.winProbP2;
-                      const alts = pl==='P1' ? turn.altWinProbsP1 : turn.altWinProbsP2;
+                    {['P1','P2'].map((pl, idx) => {
+                      const win = pl === 'P1' ? turn.winProbP1 : turn.winProbP2;
+                      const activeNames = pl === 'P1' ? turn.activePokemon.p1 : turn.activePokemon.p2;
+
                       return (
                         <TableRow key={pl}>
-                          <TableCell component="th" scope="row">
-                            {pl}
+                          <TableCell sx={{ color: theme.palette.primary.contrastText }}>{pl}</TableCell>
+                          <TableCell align="right" sx={{ color: theme.palette.primary.contrastText }}>
+                            {turn.noData || win === null ? 
+                              <Typography variant="body2" sx={{ fontStyle: 'italic' }}>?</Typography> : 
+                              `${(win * 100).toFixed(1)}%`
+                            }
                           </TableCell>
-                          <TableCell align="right" sx={{ minWidth: 90 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <Typography variant="body2" color="textPrimary">
-                                {(win*100).toFixed(0)}%
-                              </Typography>
-                              <Box sx={{ flexGrow: 1, ml: 1 }}>
-                                <LinearProgress
-                                  variant="determinate"
-                                  value={win*100}
-                                  color="success"
-                                  aria-valuenow={win*100}
-                                  aria-valuemin={0}
-                                  aria-valuemax={100}
-                                />
-                              </Box>
-                            </Box>
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ maxHeight: 80, overflowY: 'auto' }}>
-                              {Object.entries(alts || {})
-                                .sort((a,b)=>b[1]-a[1])
-                                .map(([m,p]) => (
-                                <Typography
-                                  key={m}
-                                  variant="caption"
-                                  sx={{ display: 'block', mb: 0.5 }}
-                                >
-                                  {m}: {(p*100).toFixed(1)}%
-                                </Typography>
-                              ))}
-                            </Box>
+                          <TableCell sx={{ color: theme.palette.primary.contrastText }}>
+                            <Stack direction="row" spacing={0.5}>
+                              {activeNames.map((name, i) => 
+                                name && <PokemonSprite key={i} pokemon={{ name }} />
+                              )}
+                            </Stack>
                           </TableCell>
                         </TableRow>
                       );
                     })}
                   </TableBody>
                 </Table>
+
+                {turn.noData && (
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      display: 'block',
+                      textAlign: 'center',
+                      mt: 1,
+                      fontStyle: 'italic',
+                      color: 'rgba(255,255,255,0.7)'
+                    }}
+                  >
+                    Insufficient data for win prediction
+                  </Typography>
+                )}
+
+                {turn.scenarioCount > 0 && !turn.noData && (
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      display: 'block',
+                      textAlign: 'center',
+                      mt: 1,
+                      color: 'rgba(255,255,255,0.7)'
+                    }}
+                  >
+                    Based on {turn.scenarioCount} similar scenarios
+                  </Typography>
+                )}
               </CardContent>
             </Card>
           </Grid>
