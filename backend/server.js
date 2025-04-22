@@ -18,7 +18,8 @@ app.use(cors());
 // Enable parsing of JSON bodies
 app.use(express.json());
 
-const keyFilename = "D:/tfg/pokemonStatistics/credentials.json";
+const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
+//const keyFilename = "D:/tfg/pokemonStatistics/credentials.json";
 
 // Initialize the BigQuery client
 const bigQuery = new BigQuery({keyFilename});
@@ -3606,37 +3607,48 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
 
       // battle conditions
       const battleConditions = {
-        weather: "",
-        weatherDuration: 0,
-        field: "",
-        fieldDuration: 0,
-        room: "",
-        roomDuration: 0,
+        weather:    turn.weather?.condition || "",
+        weatherDuration: turn.weather?.duration  || 0,
+        field:      turn.field?.terrain   || "",
+        fieldDuration: turn.field?.duration    || 0,
+        room:       turn.room?.condition    || "",
+        roomDuration:  turn.room?.duration     || 0,
         sideEffects: {
-          yourSide: { tailwind: false },
-          opponentSide: { tailwind: false }
+        yourSide: {
+          tailwind:  turn.tailwind?.player1  || false,
+          reflect:   turn.screens?.reflect?.player1    || false,
+          lightscreen: turn.screens?.lightscreen?.player1 || false,
+          auroraveil:  turn.screens?.auroraveil?.player1  || false
         },
-        sideEffectsDuration: {
-          yourSide: { tailwind: 0 },
-          opponentSide: { tailwind: 0 }
-        },
-        entryHazards: {
-          yourSide: {},
-          opponentSide: {}
-        },
-        entryHazardsLevel: {
-          yourSide: {},
-          opponentSide: {}
-        },
-        entryHazardsDuration: {
-          yourSide: {},
-          opponentSide: {}
+        opponentSide: {
+          tailwind:  turn.tailwind?.player2  || false,
+          reflect:   turn.screens?.reflect?.player2    || false,
+          lightscreen: turn.screens?.lightscreen?.player2 || false,
+          auroraveil:  turn.screens?.auroraveil?.player2  || false
         }
-      }
+      },
+      sideEffectsDuration: {
+        yourSide: {
+          tailwind:  turn.tailwind?.duration1          || 0,
+          reflect:   turn.screens?.reflect?.duration1         || 0,
+          lightscreen: turn.screens?.lightscreen?.duration1    || 0,
+          auroraveil:  turn.screens?.auroraveil?.duration1     || 0
+        },
+        opponentSide: {
+          tailwind:  turn.tailwind?.duration2          || 0,
+          reflect:   turn.screens?.reflect?.duration2         || 0,
+          lightscreen: turn.screens?.lightscreen?.duration2    || 0,
+          auroraveil:  turn.screens?.auroraveil?.duration2     || 0
+        }
+      },
+      entryHazards:       { yourSide: {}, opponentSide: {} },
+      entryHazardsLevel:  { yourSide: {}, opponentSide: {} },
+      entryHazardsDuration:{ yourSide: {}, opponentSide: {} }
+    };
 
       // teams
-      const yourTeam = [];
-      const opponentTeam = [];
+      const yourTeam     = teams.p1 || [];
+      const opponentTeam = teams.p2 || [];
 
       // === prepare the TA request ===
       const body = {
