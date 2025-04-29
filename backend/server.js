@@ -3721,6 +3721,7 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
           winProbP2:      hasData ? 1 - winRate : null,
           noData:         !hasData,
           scenarioCount:  ta1.matchingScenarios || 0,
+          state:          battleConditions,
           allMoveOptions
         };
       } catch (error) {
