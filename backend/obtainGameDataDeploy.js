@@ -1,6 +1,8 @@
 const { BigQuery } = require('@google-cloud/bigquery');
 
-// todo: sticky web
+// todo
+// sticky web ?
+// electric terrain pasa de 3 a 0 turnos restantes
 
 // Initialize BigQuery without keyFilename for Cloud Functions
 const bigQuery = new BigQuery();

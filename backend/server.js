@@ -3747,3 +3747,93 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
     return res.status(500).json({ error: 'Error analyzing battle' });
   }
 });
+
+// Endpoint para estadísticas de múltiples replays
+app.post('/api/multistats', async (req, res) => {
+  try {
+    const { replayIds } = req.body;
+    if (!Array.isArray(replayIds) || replayIds.length < 2) {
+      return res.status(400).json({ error: 'Se necesitan al menos 2 replay IDs' });
+    }
+
+    // 1) Obtener el "baseId" (todo hasta -<timestamp>), para públicos y privados
+    const idMap = replayIds.map(id => {
+      const m = id.match(/^(.+-\d+)(?:-.+)?$/);
+      return { original: id, base: m?.[1] ?? id };
+    });
+    const uniqueBases = [...new Set(idMap.map(x => x.base))];
+
+    // 2) Query a BQ por esos baseIds
+    const list = uniqueBases.map(b => `'${b}'`).join(',');
+    const query = `
+      SELECT replay_id, player1, player2
+      FROM \`pokemon-statistics.pokemon_replays.replays\`
+      WHERE replay_id IN (${list})
+    `;
+    const [rows] = await bigQuery.query(query);
+    if (rows.length !== uniqueBases.length) {
+      const missing = uniqueBases.filter(b => !rows.find(r=>r.replay_id===b));
+      return res.status(404).json({ error: `Falta la baseId ${missing.join(', ')}` });
+    }
+
+    // 3) Fetch de todos los logs (usando original IDs)
+    const logsList = await Promise.all(
+      idMap.map(({ original }) =>
+        axios.get(`https://replay.pokemonshowdown.com/${original}.log`)
+             .then(r => r.data.split('\n'))
+      )
+    );
+
+    // 4) Montar array de replays con jugadores y log[]
+    const replays = idMap.map(({ original, base }, i) => {
+      const row = rows.find(r => r.replay_id === base);
+      let players = [row.player1, row.player2];
+
+      // si era private (original !== base) extraemos de log
+      if (original !== base) {
+        const log = logsList[i];
+        players = log
+          .filter(l => l.startsWith('|player|'))
+          .slice(0, 2)
+          .map(l => l.split('|')[3]);
+        if (players.length < 2) {
+          throw new Error(`No pude extraer jugadores de la replay privada ${original}`);
+        }
+      }
+
+      return {
+        replay_id: original,
+        players,
+        log: logsList[i]
+      };
+    });
+
+    // 5) Intersección de common players
+    let common = replays[0].players;
+    for (let j = 1; j < replays.length; j++) {
+      common = common.filter(p => replays[j].players.includes(p));
+      if (!common.length) {
+        return res
+          .status(400)
+          .json({ error: `La replay ${replays[j].replay_id} no comparte jugador común` });
+      }
+    }
+
+    const target = common[0];
+    const pokemonUsage = {}, moveUsage = {};
+    replays.forEach(r => {
+      const side = r.players[0] === target ? 'p1' : 'p2';
+      r.log.forEach(line => {
+        const m = line.match(new RegExp(`\\|move\\|${side}[ab]?\\|(.+?)\\|`));
+        if (m) moveUsage[m[1]] = (moveUsage[m[1]]||0) + 1;
+        const s = line.match(new RegExp(`\\|switch\\|${side}[ab]?:\\s(.+?)\\|`));
+        if (s) pokemonUsage[s[1]] = (pokemonUsage[s[1]]||0) + 1;
+      });
+    });
+
+    return res.json({ commonPlayers: common, pokemonUsage, moveUsage });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: error.message });
+  }
+});

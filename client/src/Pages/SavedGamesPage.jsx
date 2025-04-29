@@ -18,7 +18,18 @@ function SavedGamesPage() {
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Añadir estado para controlar el diálogo de login
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
+
+  // Estado con persistencia en localStorage
+  const [analyticsReplays, setAnalyticsReplays] = useState(() => {
+    const st = localStorage.getItem('analyticsReplays');
+    return st ? JSON.parse(st) : [];
+  });
+  useEffect(() => {
+    localStorage.setItem('analyticsReplays', JSON.stringify(analyticsReplays));
+  }, [analyticsReplays]);
 
   useEffect(() => {
     if (!currentUser) {
@@ -30,6 +41,14 @@ function SavedGamesPage() {
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   }, [currentUser]);
+
+  const handleToggleAnalytics = id => {
+    setAnalyticsReplays(prev =>
+      prev.includes(id)
+        ? prev.filter(x => x !== id)
+        : [...prev, id]
+    );
+  };
 
   if (!currentUser) {
     return (
@@ -113,8 +132,19 @@ function SavedGamesPage() {
           key={game.replay_id}
           game={game}
           showAnalyze
+          showAnalytics
+          onToggleAnalytics={handleToggleAnalytics}
+          isInAnalytics={analyticsReplays.includes(game.replay_id)}
         />
       ))}
+      <Button
+        variant="contained"
+        disabled={analyticsReplays.length < 2}
+        onClick={() => navigate('/battle-analytics')}
+        sx={{ mt: 2 }}
+      >
+        View Analytics ({analyticsReplays.length})
+      </Button>
     </Box>
   );
 }
