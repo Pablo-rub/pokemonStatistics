@@ -18,8 +18,8 @@ app.use(cors());
 // Enable parsing of JSON bodies
 app.use(express.json());
 
-const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
-//const keyFilename = "D:/tfg/pokemonStatistics/credentials.json";
+//const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
+const keyFilename = "D:/tfg/pokemonStatistics/credentials.json";
 
 // Initialize the BigQuery client
 const bigQuery = new BigQuery({keyFilename});
@@ -3650,47 +3650,91 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
       const yourTeam     = teams.p1 || [];
       const opponentTeam = teams.p2 || [];
 
-      // === prepare the TA request ===
-      const body = {
-        pokemonData,
-        battleConditions,
-        yourTeam,
-        opponentTeam,
+      // Prepare the body for P1 perspective
+      const bodyP1 = { pokemonData, battleConditions, yourTeam, opponentTeam };
+
+      // Also prepare a swapped version for P2 perspective
+      const swapSides = bc => ({
+        weather:            bc.weather,
+        weatherDuration:    bc.weatherDuration,
+        field:              bc.field,
+        fieldDuration:      bc.fieldDuration,
+        room:               bc.room,
+        roomDuration:       bc.roomDuration,
+        sideEffects: {
+          yourSide:         bc.sideEffects.opponentSide,
+          opponentSide:     bc.sideEffects.yourSide
+        },
+        sideEffectsDuration: {
+          yourSide:         bc.sideEffectsDuration.opponentSide,
+          opponentSide:     bc.sideEffectsDuration.yourSide
+        },
+        entryHazards:        { yourSide: bc.entryHazards.opponentSide,   opponentSide: bc.entryHazards.yourSide },
+        entryHazardsLevel:   { yourSide: bc.entryHazardsLevel.opponentSide, opponentSide: bc.entryHazardsLevel.yourSide },
+        entryHazardsDuration:{ yourSide: bc.entryHazardsDuration.opponentSide, opponentSide: bc.entryHazardsDuration.yourSide }
+      });
+
+      const bodyP2 = {
+        // swap the four slots so TA treats P2 as "your"
+        pokemonData: {
+          topLeft:    pokemonData.bottomLeft,
+          topRight:   pokemonData.bottomRight,
+          bottomLeft: pokemonData.topLeft,
+          bottomRight:pokemonData.topRight
+        },
+        battleConditions: swapSides(battleConditions),
+        yourTeam:        opponentTeam,
+        opponentTeam:    yourTeam
       };
 
       try {
-        // === call Turn-Assistant ===
-        const { data: ta } = await axios.post(
-          `http://localhost:${PORT}/api/turn-assistant/analyze`,
-          body
-        );
+        // llamamos a TA para P1 y P2
+        const [res1, res2] = await Promise.all([
+          axios.post(`http://localhost:${PORT}/api/turn-assistant/analyze`, bodyP1),
+          axios.post(`http://localhost:${PORT}/api/turn-assistant/analyze`, bodyP2)
+        ]);
 
-        const raw = ta.data?.winRate ?? 0;
+        const ta1 = res1.data;
+        const ta2 = res2.data;
+
+        // normaliza winRate de P1
+        const raw     = ta1.data?.winRate ?? 0;
         const winRate = raw > 1 ? raw / 100 : raw;
+        const hasData = ta1.matchingScenarios > 0;
+
+        // ← aquí: extrae allMoveOptions del objeto `data`
+        const opts1 = ta1.data?.allMoveOptions || {};
+        const opts2 = ta2.data?.allMoveOptions || {};
+        const allMoveOptions = { ...opts1, ...opts2 };
+
+        // opcional: log para verificar
+        console.log(`Turn ${turn.turn_number} opts1:`, Object.keys(opts1));
+        console.log(`Turn ${turn.turn_number} opts2:`, Object.keys(opts2));
+        console.log(`Turn ${turn.turn_number} merged:`, Object.keys(allMoveOptions));
 
         return {
-          turn_number:   turn.turn_number,
-          activePokemon: {
-            p1: [ activeP1Names[0] || null, activeP1Names[1] || null ],
-            p2: [ activeP2Names[0] || null, activeP2Names[1] || null ]
-          },
+          turn_number:    turn.turn_number,
+          activePokemon:  { p1: activeP1Names, p2: activeP2Names },
           moveUsedP1,
           moveUsedP2,
-          winProbP1:    ta.matchingScenarios ? winRate : 0,
-          winProbP2:    ta.matchingScenarios ? 1 - winRate : 0
+          winProbP1:      hasData ? winRate     : null,
+          winProbP2:      hasData ? 1 - winRate : null,
+          noData:         !hasData,
+          scenarioCount:  ta1.matchingScenarios || 0,
+          allMoveOptions
         };
       } catch (error) {
-        console.log(`Error analyzing turn ${turn.turn_number}:`, error.message);
+        console.error(`Error analyzing turn ${turn.turn_number}:`, error);
         return {
           turn_number:   turn.turn_number,
-          activePokemon: {
-            p1: [ activeP1Names[0] || null, activeP1Names[1] || null ],
-            p2: [ activeP2Names[0] || null, activeP2Names[1] || null ]
-          },
+          activePokemon: { p1: activeP1Names, p2: activeP2Names },
           moveUsedP1,
           moveUsedP2,
-          winProbP1: 0,
-          winProbP2: 0
+          winProbP1:    null,
+          winProbP2:    null,
+          noData:       true,
+          scenarioCount: 0,
+          allMoveOptions:{}
         };
       }
     }));
