@@ -9,6 +9,7 @@ import TurnAssistantPage from './Pages/TurnAssistantPage';
 import ForumPage from './Pages/ForumPage';
 import ProfilePage from './Pages/ProfilePage';
 import AnalyzeBattlePage from './Pages/AnalyzeBattlePage';
+import BattleAnalyticsPage from './Pages/BattleAnalyticsPage';
 
 function App() {
   return (
@@ -21,7 +22,9 @@ function App() {
         <Route path="turn-assistant" element={<TurnAssistantPage />} />
         <Route path="forum" element={<ForumPage />} />
         <Route path="profile" element={<ProfilePage />} />
-        <Route path="analyze-battle/:replayId" element={<AnalyzeBattlePage />} />
+        <Route path="analyze/:replayId" element={<AnalyzeBattlePage />} />
+        <Route path="battle-analytics" element={<BattleAnalyticsPage />} />
+        <Route path="*" element={<div>404 Not Found</div>} />
       </Route>
     </Routes>
   );
