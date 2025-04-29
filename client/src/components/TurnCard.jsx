@@ -196,13 +196,13 @@ const TurnCard = ({ turn }) => {
         <Collapse in={expanded} timeout="auto" unmountOnExit>
           <Box sx={{ mt: 1 }}>
             <Typography variant="body2" sx={{ color: theme.palette.primary.contrastText }}>
-              Weather: {turn.state?.weather?.condition || 'None'} ({turn.state?.weatherDuration || 0} turns)
+              Weather: {turn.state?.weather || 'None'} ({turn.state?.weatherDuration || 0} turns)
             </Typography>
             <Typography variant="body2" sx={{ color: theme.palette.primary.contrastText }}>
-              Field: {turn.state?.field?.terrain || 'None'} ({turn.state?.fieldDuration || 0} turns)
+              Field: {turn.state?.field || 'None'} ({turn.state?.fieldDuration || 0} turns)
             </Typography>
             <Typography variant="body2" sx={{ color: theme.palette.primary.contrastText }}>
-              Room: {turn.state?.room?.condition || 'None'} ({turn.state?.roomDuration || 0} turns)
+              Room: {turn.state?.room || 'None'} ({turn.state?.roomDuration || 0} turns)
             </Typography>
             <Typography variant="body2" sx={{ color: theme.palette.primary.contrastText, mt: 1 }}>
               Side Effects — You: Tailwind {turn.state?.sideEffects?.yourSide?.tailwind ? '✔' : '✘'}, Reflect {turn.state?.sideEffects?.yourSide?.reflect ? '✔' : '✘'}, Light Screen {turn.state?.sideEffects?.yourSide?.lightscreen ? '✔' : '✘'}, Aurora Veil {turn.state?.sideEffects?.yourSide?.auroraveil ? '✔' : '✘'}
