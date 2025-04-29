@@ -1,12 +1,14 @@
-import { Paper, Typography, Box, Grid, useTheme, useMediaQuery, IconButton } from "@mui/material";
+import { Paper, Typography, Box, Grid, useTheme, useMediaQuery, IconButton, Checkbox } from "@mui/material";
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
+import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import PokemonSprite from "./PokemonSprite";
-import { useAuth, useSavedReplays } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-const ReplayCard = ({ game, showAnalyze = false }) => {
+const ReplayCard = ({ game, showAnalyze = false, showAnalytics = false, onToggleAnalytics, isInAnalytics }) => {
   const { currentUser, savedReplaysIds, save, unsave } = useAuth();
   const theme = useTheme();
   const isXsScreen = useMediaQuery(theme.breakpoints.down('sm'));
@@ -250,6 +252,28 @@ const ReplayCard = ({ game, showAnalyze = false }) => {
         >
           {currentUser && (
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              {showAnalyze && showAnalytics && (
+                <IconButton
+                  onClick={() => onToggleAnalytics(game.replay_id)}
+                  title="Añadir a Battle Analytics"
+                  sx={{
+                    mr: 1,
+                    color: isInAnalytics
+                      ? theme.palette.success.main
+                      : 'rgba(255,255,255,0.5)',
+                    '&:hover': {
+                      color: isInAnalytics
+                        ? theme.palette.success.light
+                        : 'rgba(255,255,255,0.8)'
+                    }
+                  }}
+                >
+                  {isInAnalytics
+                    ? <BarChartIcon sx={{ fontSize: 32 }} />
+                    : <BarChartOutlinedIcon sx={{ fontSize: 32 }} />
+                  }
+                </IconButton>
+              )}
               {showAnalyze && (
                 <IconButton
                   onClick={handleAnalyze}
