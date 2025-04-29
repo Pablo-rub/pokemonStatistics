@@ -22,7 +22,7 @@ function App() {
         <Route path="turn-assistant" element={<TurnAssistantPage />} />
         <Route path="forum" element={<ForumPage />} />
         <Route path="profile" element={<ProfilePage />} />
-        <Route path="analyze-battle/:replayId" element={<AnalyzeBattlePage />} />
+        <Route path="analyze/:replayId" element={<AnalyzeBattlePage />} />
         <Route path="battle-analytics" element={<BattleAnalyticsPage />} />
         <Route path="*" element={<div>404 Not Found</div>} />
       </Route>
