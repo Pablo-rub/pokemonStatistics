@@ -19,6 +19,8 @@ import LoginIcon from '@mui/icons-material/Login';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import ForumIcon from '@mui/icons-material/Forum';
 import HelpIcon from '@mui/icons-material/Help';
+import PuzzleIcon from '@mui/icons-material/Extension';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import { useAuth } from '../contexts/AuthContext';
 import LoginDialog from './LoginDialog';
 
@@ -59,12 +61,13 @@ const Sidebar = () => {
 
   const menuItems = [
     { text: 'Home', path: '/', icon: <HomeIcon /> },
-    { text: 'Saved Games', path: '/saved-games', icon: <BookmarkIcon /> },
     { text: 'Public Games', path: '/public-games', icon: <PublicIcon /> },
+    { text: 'Saved Games', path: '/saved-games', icon: <BookmarkIcon /> },
+    { text: 'Battle Analytics', path: '/battle-analytics', icon: <BarChartIcon /> },
     { text: 'Rankings', path: '/rankings', icon: <LeaderboardIcon /> },
     { text: 'Turn Assistant', path: '/turn-assistant', icon: <AssistantIcon /> },
     { text: 'Forum', path: '/forum', icon: <ForumIcon /> },
-    { text: 'Contact / Help', path: '/contact', icon: <HelpIcon /> }, // Nuevo elemento del menú
+    { text: 'Contact / Help', path: '/contact', icon: <HelpIcon /> },
   ];
 
   return (
