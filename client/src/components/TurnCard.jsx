@@ -25,10 +25,15 @@ const TurnCard = ({ turn }) => {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
   const [showMoves, setShowMoves] = useState(false);
+  const [showScenarioText, setShowScenarioText] = useState(true);
 
   // Limpia comas iniciales en el texto de movimientos
   const formattedMoveP1 = turn.moveUsedP1?.replace(/^,\s*/, '').trim();
   const formattedMoveP2 = turn.moveUsedP2?.replace(/^,\s*/, '').trim();
+
+  // Calcula el total de opciones de movimientos
+  const totalMoveOptions = Object.values(turn.allMoveOptions || {})
+    .reduce((sum, arr) => sum + arr.length, 0);
 
   return (
     <Card
@@ -143,10 +148,31 @@ const TurnCard = ({ turn }) => {
               textAlign: 'center',
               mt: 1,
               mb: 1,
+              color: 'rgba(255,255,255,0.7)',
+              cursor: 'pointer'
+            }}
+            onClick={() => setShowScenarioText(!showScenarioText)}
+          >
+            {showScenarioText
+              ? `Based on ${turn.scenarioCount} similar scenarios`
+              : `Possible move options: ${totalMoveOptions}`}
+          </Typography>
+        )}
+
+        {/* Mostrar mensaje de insuficiencia de datos al mismo nivel */}
+        {turn.noData && (
+          <Typography
+            variant="caption"
+            sx={{
+              display: 'block',
+              textAlign: 'center',
+              mt: 1,
+              mb: 1,
+              fontStyle: 'italic',
               color: 'rgba(255,255,255,0.7)'
             }}
           >
-            Based on {turn.scenarioCount} similar scenarios
+            Insufficient data for win prediction
           </Typography>
         )}
 
@@ -185,39 +211,6 @@ const TurnCard = ({ turn }) => {
               Side Effects — Opponent: Tailwind {turn.state?.sideEffects?.opponentSide?.tailwind ? '✔' : '✘'}, Reflect {turn.state?.sideEffects?.opponentSide?.reflect ? '✔' : '✘'}, Light Screen {turn.state?.sideEffects?.opponentSide?.lightscreen ? '✔' : '✘'}, Aurora Veil {turn.state?.sideEffects?.opponentSide?.auroraveil ? '✔' : '✘'}
             </Typography>
           </Box>
-
-          {['P1','P2'].map(pl => {
-            const activeNames = pl === 'P1' ? turn.activePokemon.p1 : turn.activePokemon.p2;
-            return activeNames.map(name => {
-              const options = turn.allMoveOptions?.[name] || [];
-              if (options.length === 0) return null;
-              return (
-                <Box key={`${pl}-${name}`} sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" sx={{ color: 'white' }}>
-                    {pl} – {name}: Opciones de movimiento
-                  </Typography>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Movimiento</TableCell>
-                        <TableCell align="right">Win %</TableCell>
-                        <TableCell align="right">Partidas</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {options.map(opt => (
-                        <TableRow key={opt.move}>
-                          <TableCell>{opt.move}</TableCell>
-                          <TableCell align="right">{opt.winRate.toFixed(1)}%</TableCell>
-                          <TableCell align="right">{opt.total}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </Box>
-              );
-            });
-          })}
         </Collapse>
 
         <Box
@@ -238,37 +231,62 @@ const TurnCard = ({ turn }) => {
           </IconButton>
         </Box>
         <Collapse in={showMoves} timeout="auto" unmountOnExit>
-          <Box sx={{ mt: 1 }}>
-            {['p1','p2'].map(side => {
-              const active = side === 'p1'
-                ? turn.activePokemon.p1
-                : turn.activePokemon.p2;
-              return active.filter(Boolean).map(name => {
-                const opts = turn.allMoveOptions?.[name] || [];
-                if (!opts.length) return null;
-                return (
-                  <Box key={`${side}-${name}`} sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" sx={{ color: theme.palette.primary.contrastText }}>
-                      {side.toUpperCase()} – {name}
-                    </Typography>
-                    <Stack direction="row" spacing={1} flexWrap="wrap">
-                      {opts.map(opt => (
-                        <Chip
-                          key={opt.move}
-                          label={`${opt.move} (${(opt.winRate*100).toFixed(1)}%)`}
-                          size="small"
-                          sx={{
-                            bgcolor: 'rgba(255,255,255,0.1)',
-                            color: theme.palette.primary.contrastText,
-                          }}
-                        />
-                      ))}
-                    </Stack>
-                  </Box>
-                );
-              });
-            })}
-          </Box>
+          {totalMoveOptions > 0 ? (
+            <Box sx={{ mt: 1 }}>
+              {['p1','p2'].map(side => {
+                const active = side === 'p1'
+                  ? turn.activePokemon.p1
+                  : turn.activePokemon.p2;
+                return active.filter(Boolean).map(name => {
+                  const opts = turn.allMoveOptions?.[name] || [];
+                  if (!opts.length) return null;
+                  return (
+                    <Box key={`${side}-${name}`} sx={{ mb: 2 }}>
+                      <Typography variant="subtitle2" sx={{ color: theme.palette.primary.contrastText, mb: 1 }}>
+                        {side.toUpperCase()} – {name}
+                      </Typography>
+                      <Table size="small" aria-label={`possible-moves-${side}-${name}`}>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ color: theme.palette.primary.contrastText }}>Move</TableCell>
+                            <TableCell align="right" sx={{ color: theme.palette.primary.contrastText }}>Win %</TableCell>
+                            <TableCell align="right" sx={{ color: theme.palette.primary.contrastText }}>Games</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {opts.map(opt => (
+                            <TableRow key={opt.move}>
+                              <TableCell sx={{ color: theme.palette.primary.contrastText }}>
+                                {opt.move}
+                              </TableCell>
+                              <TableCell align="right" sx={{ color: theme.palette.primary.contrastText }}>
+                                {opt.winRate.toFixed(1)}%
+                              </TableCell>
+                              <TableCell align="right" sx={{ color: theme.palette.primary.contrastText }}>
+                                {opt.total}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </Box>
+                  );
+                });
+              })}
+            </Box>
+          ) : (
+            <Typography
+              variant="body2"
+              sx={{
+                color: theme.palette.primary.contrastText,
+                textAlign: 'center',
+                mt: 1,
+                fontStyle: 'italic'
+              }}
+            >
+              No move options available
+            </Typography>
+          )}
         </Collapse>
 
         {turn.pokemonData && (
@@ -291,21 +309,6 @@ const TurnCard = ({ turn }) => {
               )}
             </Grid>
           </Box>
-        )}
-
-        {turn.noData && (
-          <Typography
-            variant="caption"
-            sx={{
-              display: 'block',
-              textAlign: 'center',
-              mt: 1,
-              fontStyle: 'italic',
-              color: 'rgba(255,255,255,0.7)'
-            }}
-          >
-            Insufficient data for win prediction
-          </Typography>
         )}
       </CardContent>
     </Card>
