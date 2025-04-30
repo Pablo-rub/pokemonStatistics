@@ -3801,18 +3801,22 @@ app.post('/api/multistats', async (req, res) => {
 
     // 4) Contar cuántas partidas de las N en las que aparece cada pokémon del jugador común
     const usageCounts = {};
+    const rivalUsageCounts = {}; // Nuevo: contador para Pokémon de los rivales
+
     for (const row of dataRows) {
       // Determinar de qué lado jugó el jugador común en esta replay
       const meta = playerRows.find(r => r.replay_id === row.replay_id);
       const side = meta.player1 === player ? 'p1' : 'p2';
+      const rivalSide = side === 'p1' ? 'p2' : 'p1'; // El lado del rival
 
-      // Recoger en un Set los pokémon que realmente entraron en combate
+      // Sets para Pokémon vistos en esta replay (jugador común y rival)
       const seenThisReplay = new Set();
+      const rivalSeenThisReplay = new Set();
       
       // Recorre los turnos para buscar Pokémon que entraron en combate
       if (row.turns && Array.isArray(row.turns)) {
         for (const turn of row.turns) {
-          // Verificar Pokémon activos en starts_with (inicio de turno)
+          // Verificar Pokémon activos del jugador común
           if (turn.starts_with && turn.starts_with[side.replace('p', 'player')]) {
             const activeAtStart = turn.starts_with[side.replace('p', 'player')];
             for (const monName of activeAtStart) {
@@ -3822,7 +3826,17 @@ app.post('/api/multistats', async (req, res) => {
             }
           }
           
-          // Verificar en revealed_pokemon
+          // Verificar Pokémon activos del RIVAL
+          if (turn.starts_with && turn.starts_with[rivalSide.replace('p', 'player')]) {
+            const rivalActiveAtStart = turn.starts_with[rivalSide.replace('p', 'player')];
+            for (const monName of rivalActiveAtStart) {
+              if (monName && monName !== 'none' && typeof monName === 'string') {
+                rivalSeenThisReplay.add(monName);
+              }
+            }
+          }
+          
+          // Verificar en revealed_pokemon para jugador común
           if (turn.revealed_pokemon && turn.revealed_pokemon[side]) {
             for (const pokemon of turn.revealed_pokemon[side]) {
               if (pokemon && pokemon.name && pokemon.name !== 'none') {
@@ -3831,10 +3845,13 @@ app.post('/api/multistats', async (req, res) => {
             }
           }
           
-          // También revisar movimientos realizados como otra señal de actividad
-          if (turn.moves_done && turn.moves_done[side.replace('p', 'player')]) {
-            // Un Pokémon que usó un movimiento definitivamente estuvo activo
-            // Este caso ayuda cuando otros métodos fallan
+          // Verificar en revealed_pokemon para RIVAL
+          if (turn.revealed_pokemon && turn.revealed_pokemon[rivalSide]) {
+            for (const pokemon of turn.revealed_pokemon[rivalSide]) {
+              if (pokemon && pokemon.name && pokemon.name !== 'none') {
+                rivalSeenThisReplay.add(pokemon.name);
+              }
+            }
           }
         }
       }
@@ -3843,10 +3860,15 @@ app.post('/api/multistats', async (req, res) => {
       for (const mon of seenThisReplay) {
         usageCounts[mon] = (usageCounts[mon] || 0) + 1;
       }
+      
+      // Incrementar el contador de cada pokémon RIVAL visto en esta replay
+      for (const mon of rivalSeenThisReplay) {
+        rivalUsageCounts[mon] = (rivalUsageCounts[mon] || 0) + 1;
+      }
     }
 
-    // 5) Devolver el nombre del jugador común y los contadores
-    res.json({ player, usageCounts });
+    // 5) Devolver el nombre del jugador común, los contadores propios y de rivales
+    res.json({ player, usageCounts, rivalUsageCounts });
   }
   catch (err) {
     console.error('Error en /api/multistats:', err);
