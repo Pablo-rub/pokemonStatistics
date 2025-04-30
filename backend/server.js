@@ -3790,7 +3790,7 @@ app.post('/api/multistats', async (req, res) => {
 
     // 3) Obtener "teams" y "turns" de esas replays
     const dataQuery = `
-      SELECT replay_id, teams, turns
+      SELECT replay_id, teams, turns, winner, player1, player2
       FROM \`pokemon-statistics.pokemon_replays.replays\`
       WHERE replay_id IN UNNEST(@ids)
     `;
@@ -3800,14 +3800,19 @@ app.post('/api/multistats', async (req, res) => {
     });
 
     // 4) Contar cuántas partidas de las N en las que aparece cada pokémon del jugador común
-    const usageCounts = {};
-    const rivalUsageCounts = {}; // Nuevo: contador para Pokémon de los rivales
+    const usageCounts = {}; // Apariciones totales 
+    const winCounts = {};   // Victorias
+    const lossCounts = {};  // Derrotas
+    const rivalUsageCounts = {}; // Nuevo: apariciones de los Pokémon del rival
 
     for (const row of dataRows) {
       // Determinar de qué lado jugó el jugador común en esta replay
       const meta = playerRows.find(r => r.replay_id === row.replay_id);
       const side = meta.player1 === player ? 'p1' : 'p2';
-      const rivalSide = side === 'p1' ? 'p2' : 'p1'; // El lado del rival
+      const rivalSide = side === 'p1' ? 'p2' : 'p1';
+
+      // Determinar si el jugador común ganó esta partida
+      const isWin = row.winner === player; 
 
       // Sets para Pokémon vistos en esta replay (jugador común y rival)
       const seenThisReplay = new Set();
@@ -3859,6 +3864,13 @@ app.post('/api/multistats', async (req, res) => {
       // Incrementar el contador de cada pokémon visto en esta replay
       for (const mon of seenThisReplay) {
         usageCounts[mon] = (usageCounts[mon] || 0) + 1;
+        
+        // Incrementar contador de victorias o derrotas según corresponda
+        if (isWin) {
+          winCounts[mon] = (winCounts[mon] || 0) + 1;
+        } else {
+          lossCounts[mon] = (lossCounts[mon] || 0) + 1;
+        }
       }
       
       // Incrementar el contador de cada pokémon RIVAL visto en esta replay
@@ -3868,7 +3880,13 @@ app.post('/api/multistats', async (req, res) => {
     }
 
     // 5) Devolver el nombre del jugador común, los contadores propios y de rivales
-    res.json({ player, usageCounts, rivalUsageCounts });
+    res.json({ 
+      player, 
+      usageCounts, 
+      winCounts, 
+      lossCounts,
+      rivalUsageCounts 
+    });
   }
   catch (err) {
     console.error('Error en /api/multistats:', err);
