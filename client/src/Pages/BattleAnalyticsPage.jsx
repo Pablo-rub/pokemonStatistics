@@ -60,6 +60,9 @@ export default function BattleAnalyticsPage() {
 
       <Typography variant="h6" sx={{ mt:2 }}>Moves Usage:</Typography>
       <pre>{JSON.stringify(stats.moveUsage, null,2)}</pre>
+
+      <Typography variant="h6" sx={{ mt:2 }}>Team and Moves:</Typography>
+      <pre>{JSON.stringify(stats.teamAndMoves, null,2)}</pre>
     </Box>
   );
 }
