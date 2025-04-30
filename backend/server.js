@@ -3820,14 +3820,36 @@ app.post('/api/multistats', async (req, res) => {
     }
 
     const target = common[0];
-    const pokemonUsage = {}, moveUsage = {};
+    const pokemonUsage = {};
+    const opponentPokemonUsage = {};
+    const moveUsage = {};
     replays.forEach(r => {
-      const side = r.players[0] === target ? 'p1' : 'p2';
+      const side    = r.players[0] === target ? 'p1' : 'p2';
+      const oppSide = side === 'p1'  ? 'p2' : 'p1';
+
+      // Acumuladores por replay (Sets para no duplicar en la misma partida)
+      const used = new Set();
+      const usedOpp = new Set();
+
       r.log.forEach(line => {
+        // movimientos totales siguen sumándose normalmente
         const m = line.match(new RegExp(`\\|move\\|${side}[ab]?\\|(.+?)\\|`));
         if (m) moveUsage[m[1]] = (moveUsage[m[1]]||0) + 1;
-        const s = line.match(new RegExp(`\\|switch\\|${side}[ab]?:\\s(.+?)\\|`));
-        if (s) pokemonUsage[s[1]] = (pokemonUsage[s[1]]||0) + 1;
+
+        // switch del jugador
+        const ps = line.match(new RegExp(`\\|switch\\|${side}[ab]?:\\s([^,|]+)`));
+        if (ps) used.add(ps[1]);
+        // switch del oponente
+        const os = line.match(new RegExp(`\\|switch\\|${oppSide}[ab]?:\\s([^,|]+)`));
+        if (os) usedOpp.add(os[1]);
+      });
+
+      // Incrementa 1 por cada poke usado en esta replay
+      used.forEach(poke => {
+        pokemonUsage[poke] = (pokemonUsage[poke]||0) + 1;
+      });
+      usedOpp.forEach(poke => {
+        opponentPokemonUsage[poke] = (opponentPokemonUsage[poke]||0) + 1;
       });
     });
 
@@ -3879,6 +3901,7 @@ app.post('/api/multistats', async (req, res) => {
     return res.json({
       player: target,
       pokemonUsage,
+      opponentPokemonUsage,
       moveUsage,
       teamAndMoves
     });
