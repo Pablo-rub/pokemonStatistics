@@ -3831,7 +3831,57 @@ app.post('/api/multistats', async (req, res) => {
       });
     });
 
-    return res.json({ commonPlayers: common, pokemonUsage, moveUsage });
+    const teamAndMoves = replays.map(r => {
+      // 1) Saco el equipo inicial de cada lado
+      const teams = { p1: [], p2: [] };
+      for (const line of r.log) {
+        let m = line.match(/^\|poke\|(p[12])\|([^,|]+)/);
+        if (m) {
+          teams[m[1]].push(m[2]);
+        }
+        if (line.startsWith('|teampreview|')) break;
+      }
+
+      // 2) Registro movimientos por Pokémon
+      const movesByMon = {
+        p1: Object.fromEntries(teams.p1.map(p => [p, {}])),
+        p2: Object.fromEntries(teams.p2.map(p => [p, {}]))
+      };
+      // Hago seguimiento de quién está activo
+      const active = { p1: null, p2: null };
+
+      r.log.forEach(line => {
+        // Captura switch para saber cuál está activo
+        let sw = line.match(/^\|switch\|(p[12])[ab]?:\s([^,|]+)/);
+        if (sw) {
+          active[sw[1]] = sw[2];
+        }
+        // Captura move y lo asocio al activo
+        let mv = line.match(/^\|move\|(p[12])[ab]?\|([^|]+)\|([^|]+)/);
+        if (mv) {
+          const side = mv[1].startsWith('p1') ? 'p1' : 'p2';
+          const mon  = active[side];
+          const move = mv[3];
+          if (mon) {
+            movesByMon[side][mon] = movesByMon[side][mon] || {};
+            movesByMon[side][mon][move] = (movesByMon[side][mon][move]||0) + 1;
+          }
+        }
+      });
+
+      return {
+        replay_id: r.replay_id,
+        teams,          // { p1: [..6 mons], p2: [..6 mons] }
+        movesByMon      // { p1: { monName: { move: count, … } }, p2: { … } }
+      };
+    });
+
+    return res.json({
+      player: target,
+      pokemonUsage,
+      moveUsage,
+      teamAndMoves
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: error.message });
