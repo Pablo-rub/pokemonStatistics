@@ -3800,6 +3800,7 @@ app.post('/api/multistats', async (req, res) => {
     });
 
     // Inicializar contadores
+    const teraWinCounts     = {};    // NUEVO: Victorias tras terastallizar
     const usageCounts      = {};    // Apariciones totales  
     const winCounts        = {};    // Victorias  
     const lossCounts       = {};    // Derrotas  
@@ -3898,9 +3899,12 @@ app.post('/api/multistats', async (req, res) => {
         else         lossCounts[mon]  = (lossCounts[mon]  || 0) + 1;
       }
 
-      // CONTAR TERASTALIZACIONES
+      // CONTAR TERASTALIZACIONES y CUÁNTAS DE ESAS PARTIDAS SE GANARON
       for (const mon of teraPokemonThisReplay) {
         teraCount[mon] = (teraCount[mon] || 0) + 1;
+        if (isWin) {
+          teraWinCounts[mon] = (teraWinCounts[mon] || 0) + 1;
+        }
       }
 
       // Contar uso rival
@@ -3915,6 +3919,7 @@ app.post('/api/multistats', async (req, res) => {
       winCounts,
       lossCounts,
       teraCount,
+      teraWinCounts,      // <-- nuevo campo
       rivalUsageCounts,
       leadCounts,       // <--- Pokémon leads individuales
       leadPairCounts    // <--- Leads en pareja
