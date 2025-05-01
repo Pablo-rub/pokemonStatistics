@@ -15,7 +15,8 @@ import {
   Chip,
   Divider,
   Grid,
-  useTheme
+  useTheme,
+  Pagination
 } from '@mui/material';
 import { 
   ResponsiveContainer, 
@@ -31,6 +32,8 @@ export default function BattleAnalyticsPage() {
   const [stats, setStats]     = useState(null);
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(true);
+  const [rivalPage, setRivalPage] = useState(1);
+  const RIVAL_PAGE_SIZE = 10;
 
   const replayIds = JSON.parse(localStorage.getItem('analyticsReplays')) || [];
 
@@ -93,6 +96,13 @@ export default function BattleAnalyticsPage() {
       };
     })
     .sort((a,b) => b.teamAppeared - a.teamAppeared);
+
+  const rivalCount = rivalStats.length;
+  const rivalPages = Math.ceil(rivalCount / RIVAL_PAGE_SIZE);
+  const rivalPageData = rivalStats.slice(
+    (rivalPage - 1) * RIVAL_PAGE_SIZE,
+    rivalPage * RIVAL_PAGE_SIZE
+  );
 
   // Prepare move usage stats
   const moveStats = Object.entries(stats.moveCounts).map(([mon, moves]) => ({
@@ -188,7 +198,7 @@ export default function BattleAnalyticsPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {rivalStats.map(row => (
+                {rivalPageData.map(row => (
                   <TableRow key={row.name}>
                     <TableCell sx={{ color: theme.palette.common.white }}>{row.name}</TableCell>
                     <TableCell align="center" sx={{ color: theme.palette.common.white }}>{row.teamAppeared}</TableCell>
@@ -205,6 +215,19 @@ export default function BattleAnalyticsPage() {
               </TableBody>
             </Table>
           </TableContainer>
+
+          {/* Pagination controls */}
+          {rivalPages > 1 && (
+            <Box sx={{ display:'flex', justifyContent:'center', mt:2 }}>
+              <Pagination
+                count={rivalPages}
+                page={rivalPage}
+                onChange={(e, v) => setRivalPage(v)}
+                color="secondary"
+                size="small"
+              />
+            </Box>
+          )}
         </Grid>
       </Grid>
 
