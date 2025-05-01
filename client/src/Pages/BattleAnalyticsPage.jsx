@@ -16,7 +16,11 @@ import {
   Divider,
   Grid,
   useTheme,
-  Pagination
+  Pagination,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { 
   ResponsiveContainer, 
@@ -33,6 +37,7 @@ export default function BattleAnalyticsPage() {
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(true);
   const [rivalPage, setRivalPage] = useState(1);
+  const [rivalSortBy, setRivalSortBy] = useState('teamAppeared');
   const RIVAL_PAGE_SIZE = 10;
 
   const replayIds = JSON.parse(localStorage.getItem('analyticsReplays')) || [];
@@ -81,8 +86,8 @@ export default function BattleAnalyticsPage() {
     })
     .sort((a,b) => b.played - a.played);
 
-  // Prepare rival Pokémon stats
-  const rivalStats = Object.keys(stats.rivalTeamCounts)
+  // Prepare raw rival Pokémon stats
+  const rawRivalStats = Object.keys(stats.rivalTeamCounts)
     .filter(name => name !== 'none')
     .map(name => {
       const teamAppeared = stats.rivalTeamCounts[name] || 0;
@@ -94,8 +99,12 @@ export default function BattleAnalyticsPage() {
         usedInBattle,
         winRate: usedInBattle ? Math.round(wins / usedInBattle * 100) : 0
       };
-    })
-    .sort((a,b) => b.teamAppeared - a.teamAppeared);
+    });
+
+  // Sort by selected criterion, descending
+  const rivalStats = [...rawRivalStats].sort((a, b) =>
+    b[rivalSortBy] - a[rivalSortBy]
+  );
 
   const rivalCount = rivalStats.length;
   const rivalPages = Math.ceil(rivalCount / RIVAL_PAGE_SIZE);
@@ -181,9 +190,39 @@ export default function BattleAnalyticsPage() {
 
         {/* Rival Pokémon */}
         <Grid item xs={12} md={6}>
-          <Typography variant="h6" gutterBottom>
-            Rival Pokémon
-          </Typography>
+          {/* Sort control */}
+          <Box
+            sx={{
+              mb: 2,
+              display: 'flex',
+              justifyContent: 'space-between',  // texto a la izquierda, filtro a la derecha
+              alignItems: 'center'              // misma altura vertical
+            }}
+          >
+            <Typography variant="h6" gutterBottom>
+              Rival Pokémon
+            </Typography>
+
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel sx={{ color: 'white' }}>Sort by</InputLabel>
+              <Select
+                value={rivalSortBy}
+                label="Sort by"
+                onChange={e => setRivalSortBy(e.target.value)}
+                sx={{
+                  color: 'white',
+                  '.MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
+                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
+                  '.MuiSvgIcon-root': { color: 'white' }
+                }}
+              >
+                <MenuItem value="teamAppeared">In Team</MenuItem>
+                <MenuItem value="usedInBattle">Used</MenuItem>
+                <MenuItem value="winRate">Win %</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+
           <TableContainer
             component={Paper}
             sx={{ bgcolor: theme.palette.primary.dark }}
