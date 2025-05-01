@@ -17,6 +17,14 @@ import {
   Grid,
   useTheme
 } from '@mui/material';
+import { 
+  ResponsiveContainer, 
+  PieChart, 
+  Pie, 
+  Cell, 
+  Tooltip as RechartsTooltip, 
+  Legend as RechartsLegend 
+} from 'recharts';
 
 export default function BattleAnalyticsPage() {
   const theme = useTheme();
@@ -92,6 +100,9 @@ export default function BattleAnalyticsPage() {
       .map(([mv, count]) => ({ mv, count }))
       .sort((a,b) => b.count - a.count)
   }));
+
+  // Define a palette of colors to cycle through
+  const PIE_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#9966FF', '#4BC0C0', '#F49AC2'];
 
   return (
     <Box
@@ -199,38 +210,60 @@ export default function BattleAnalyticsPage() {
 
       <Divider sx={{ my:4, borderColor: theme.palette.primary.light }} />
 
-      {/* Move Usage Count */}
       <Typography variant="h6" gutterBottom>
-        Move Usage Count
+        Move Usage Distribution
       </Typography>
-      {moveStats.map(({ mon, moves }) => (
-        <Box key={mon} sx={{ mb:3 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            {mon}
-          </Typography>
-          <TableContainer
-            component={Paper}
-            sx={{ bgcolor: theme.palette.primary.dark }}
-          >
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ color: theme.palette.common.white }}>Move</TableCell>
-                  <TableCell align="center" sx={{ color: theme.palette.common.white }}>Times Used</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {moves.map(({ mv, count }) => (
-                  <TableRow key={mv}>
-                    <TableCell sx={{ color: theme.palette.common.white }}>{mv}</TableCell>
-                    <TableCell align="center" sx={{ color: theme.palette.common.white }}>{count}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Box>
-      ))}
+
+      <Grid container spacing={4}>
+        {moveStats.map(({ mon, moves }) => (
+          <Grid key={mon} item xs={12} sm={6} md={4}>
+            <Typography variant="subtitle1" gutterBottom>
+              {mon}
+            </Typography>
+            <Paper sx={{ p:2, bgcolor: theme.palette.primary.dark }}>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={moves}
+                    dataKey="count"
+                    nameKey="mv"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={70}
+                  >
+                    {moves.map((entry, idx) => (
+                      <Cell 
+                        key={`cell-${mon}-${idx}`} 
+                        fill={PIE_COLORS[idx % PIE_COLORS.length]} 
+                      />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip
+                    formatter={(value) => [value, '']} // formatter devuelve [value,''] para descartar el nombre
+                    labelFormatter={() => ''}         // sin etiqueta encima
+                    separator=""                      // sin separador “:”
+                    contentStyle={{
+                      backgroundColor: theme.palette.primary.main,
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '8px'
+                    }}
+                    itemStyle={{ color: theme.palette.common.white }}
+                  />
+                  <RechartsLegend 
+                    verticalAlign="bottom" 
+                    layout="horizontal"
+                    wrapperStyle={{ 
+                      color: theme.palette.common.white,
+                      paddingTop: 10
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
     </Box>
   );
 }
