@@ -4,7 +4,10 @@ import {
   Box,
   Typography,
   Alert,
-  CircularProgress
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemText
 } from '@mui/material';
 
 export default function BattleAnalyticsPage() {
@@ -51,15 +54,6 @@ export default function BattleAnalyticsPage() {
       <Typography variant="subtitle1" gutterBottom>
         Player: {stats.player}
       </Typography>
-
-      <Typography variant="h6">Pokémon Usage:</Typography>
-      <pre>{JSON.stringify(stats.pokemonUsage, null,2)}</pre>
-
-      <Typography variant="h6" sx={{ mt:2 }}>Opponent Pokémon Usage:</Typography>
-      <pre>{JSON.stringify(stats.opponentPokemonUsage, null,2)}</pre>
-
-      <Typography variant="h6" sx={{ mt:2 }}>Moves Usage:</Typography>
-      <pre>{JSON.stringify(stats.moveUsage, null,2)}</pre>
     </Box>
   );
 }
