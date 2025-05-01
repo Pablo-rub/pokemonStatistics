@@ -3799,6 +3799,26 @@ app.post('/api/multistats', async (req, res) => {
       params: { ids: replayIds }
     });
 
+    // 0) Determinar los movesets de los Pokémon del jugador común (suponiendo todas las replays comparten equipo)
+    const firstMeta = playerRows.find(r => r.replay_id === dataRows[0].replay_id);
+    const firstSide = firstMeta.player1 === player ? 'p1' : 'p2';
+    const firstTeam = dataRows[0].teams?.[firstSide] || [];
+    const teamMovesets = {};
+    for (const mon of firstTeam) {
+      if (mon.name && Array.isArray(mon.moves)) {
+        teamMovesets[mon.name] = mon.moves;
+      }
+    }
+
+    // 1) Inicializar contador de uso de cada movimiento por Pokémon
+    const moveCounts = {};
+    for (const [name, moves] of Object.entries(teamMovesets)) {
+      moveCounts[name] = {};
+      for (const mv of moves) {
+        moveCounts[name][mv] = 0;
+      }
+    }
+
     // Inicializar contadores
     const usageCounts        = {};
     const winCounts          = {};
@@ -3814,13 +3834,12 @@ app.post('/api/multistats', async (req, res) => {
     const leadPairWinCounts  = {};
 
     for (const row of dataRows) {
-      const meta           = playerRows.find(r => r.replay_id === row.replay_id);
-      const side           = meta.player1 === player ? 'p1' : 'p2';
-      const rivalSide      = side === 'p1' ? 'p2' : 'p1';
-      const isWin          = row.winner === player;
+      const meta      = playerRows.find(r => r.replay_id === row.replay_id);
+      const side      = meta.player1 === player ? 'p1' : 'p2';
+      const playerKey = side.replace('p','player');  // 'player1' o 'player2'
 
       // CONTAR EQUIPO RIVAL (independiente de combate)
-      const rivalTeamList = row.teams?.[rivalSide] || [];
+      const rivalTeamList = row.teams?.[side === 'p1' ? 'p2' : 'p1'] || [];
       const names = rivalTeamList
         .map(mon => mon.name)
         .filter(n => typeof n === 'string' && n !== 'none');
@@ -3831,14 +3850,14 @@ app.post('/api/multistats', async (req, res) => {
       // NUEVO: Contar leads de esta partida (turno 1)
       if (row.turns.length > 0) {
         const firstTurn = row.turns.find(t => t.turn_number === 1) || row.turns[0];
-        const leads = (firstTurn.starts_with?.[side.replace('p','player')] || [])
+        const leads = (firstTurn.starts_with?.[playerKey] || [])
           .filter(name => name && name !== 'none');
         const uniqueLeads = [...new Set(leads)];
 
         // Conteo individual y victorias tras lead
         uniqueLeads.forEach(mon => {
           leadCounts[mon] = (leadCounts[mon] || 0) + 1;
-          if (isWin) {
+          if (row.winner === player) {
             leadWinCounts[mon] = (leadWinCounts[mon] || 0) + 1;
           }
         });
@@ -3848,7 +3867,7 @@ app.post('/api/multistats', async (req, res) => {
           const [a, b] = uniqueLeads.sort();
           const key = `${a}|${b}`;
           leadPairCounts[key] = (leadPairCounts[key] || 0) + 1;
-          if (isWin) {
+          if (row.winner === player) {
             leadPairWinCounts[key] = (leadPairWinCounts[key] || 0) + 1;
           }
         }
@@ -3861,8 +3880,8 @@ app.post('/api/multistats', async (req, res) => {
       if (Array.isArray(row.turns)) {
         for (const turn of row.turns) {
           // Verificar Pokémon activos del jugador común
-          if (turn.starts_with && turn.starts_with[side.replace('p','player')]) {
-            const activeAtStart = turn.starts_with[side.replace('p','player')];
+          if (turn.starts_with && turn.starts_with[playerKey]) {
+            const activeAtStart = turn.starts_with[playerKey];
             for (const monName of activeAtStart) {
               if (monName && monName !== 'none' && typeof monName === 'string') {
                 seenThisReplay.add(monName);
@@ -3871,8 +3890,8 @@ app.post('/api/multistats', async (req, res) => {
           }
           
           // Verificar Pokémon activos del RIVAL
-          if (turn.starts_with && turn.starts_with[rivalSide.replace('p','player')]) {
-            const rivalActiveAtStart = turn.starts_with[rivalSide.replace('p','player')];
+          if (turn.starts_with && turn.starts_with[side === 'p1' ? 'player2' : 'player1']) {
+            const rivalActiveAtStart = turn.starts_with[side === 'p1' ? 'player2' : 'player1'];
             for (const monName of rivalActiveAtStart) {
               if (monName && monName !== 'none' && typeof monName === 'string') {
                 rivalSeenThisReplay.add(monName);
@@ -3881,8 +3900,8 @@ app.post('/api/multistats', async (req, res) => {
           }
           
           // Verificar en revealed_pokemon para jugador común y registrar terastalizaciones
-          if (turn.revealed_pokemon && turn.revealed_pokemon[side.replace('p','player')]) {
-            for (const pokemon of turn.revealed_pokemon[side.replace('p','player')]) {
+          if (turn.revealed_pokemon && turn.revealed_pokemon[playerKey]) {
+            for (const pokemon of turn.revealed_pokemon[playerKey]) {
               if (pokemon && pokemon.name && pokemon.name !== 'none') {
                 // Añadir a Pokémon vistos
                 seenThisReplay.add(pokemon.name);
@@ -3899,10 +3918,35 @@ app.post('/api/multistats', async (req, res) => {
           }
           
           // Verificar en revealed_pokemon para RIVAL
-          if (turn.revealed_pokemon && turn.revealed_pokemon[rivalSide.replace('p','player')]) {
-            for (const pokemon of turn.revealed_pokemon[rivalSide.replace('p','player')]) {
+          if (turn.revealed_pokemon && turn.revealed_pokemon[side === 'p1' ? 'player2' : 'player1']) {
+            for (const pokemon of turn.revealed_pokemon[side === 'p1' ? 'player2' : 'player1']) {
               if (pokemon && pokemon.name && pokemon.name !== 'none') {
                 rivalSeenThisReplay.add(pokemon.name);
+              }
+            }
+          }
+
+          // Contar movimientos usados por cada Pokémon
+          const actions = turn.moves_done?.[playerKey] || [];
+          for (const action of actions) {
+            // Normalizamos la descripción de la acción
+            const actNorm = action
+              .toLowerCase()
+              .replace(/\s+/g, '')
+              .replace(/[^a-z0-9]/g, '');
+
+            // Para cada Pokémon y sus movimientos
+            for (const [monName, moves] of Object.entries(teamMovesets)) {
+              for (const mv of moves) {
+                const mvNorm = mv
+                  .toLowerCase()
+                  .replace(/\s+/g, '')
+                  .replace(/[^a-z0-9]/g, '');
+
+                // Si aparece el nombre del movimiento, lo contamos
+                if (actNorm.includes(mvNorm)) {
+                  moveCounts[monName][mv] = (moveCounts[monName][mv] || 0) + 1;
+                }
               }
             }
           }
@@ -3912,14 +3956,14 @@ app.post('/api/multistats', async (req, res) => {
       // Contar apariciones, victorias y derrotas
       for (const mon of seenThisReplay) {
         usageCounts[mon] = (usageCounts[mon] || 0) + 1;
-        if (isWin)   winCounts[mon]   = (winCounts[mon]   || 0) + 1;
-        else         lossCounts[mon]  = (lossCounts[mon]  || 0) + 1;
+        if (row.winner === player)   winCounts[mon]   = (winCounts[mon]   || 0) + 1;
+        else                         lossCounts[mon]  = (lossCounts[mon]  || 0) + 1;
       }
 
       // CONTAR TERASTALIZACIONES y CUÁNTAS DE ESAS PARTIDAS SE GANARON
       for (const mon of teraPokemonThisReplay) {
         teraCount[mon] = (teraCount[mon] || 0) + 1;
-        if (isWin) {
+        if (row.winner === player) {
           teraWinCounts[mon] = (teraWinCounts[mon] || 0) + 1;
         }
       }
@@ -3927,7 +3971,7 @@ app.post('/api/multistats', async (req, res) => {
       // CONTAR uso rival en combate
       for (const mon of rivalSeenThisReplay) {
         rivalUsageCounts[mon] = (rivalUsageCounts[mon] || 0) + 1;
-        if (!isWin) {
+        if (row.winner !== player) {
           rivalWinCounts[mon] = (rivalWinCounts[mon] || 0) + 1;
         }
       }
@@ -3946,7 +3990,8 @@ app.post('/api/multistats', async (req, res) => {
       leadCounts,
       leadWinCounts,
       leadPairCounts,
-      leadPairWinCounts
+      leadPairWinCounts,
+      moveCounts    // <-- aquí están los conteos de cada movimiento
     });
   } catch (err) {
     console.error(err);
