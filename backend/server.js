@@ -3753,87 +3753,248 @@ app.post('/api/multistats', async (req, res) => {
   try {
     const { replayIds } = req.body;
     if (!Array.isArray(replayIds) || replayIds.length < 2) {
-      return res.status(400).json({ error: 'Se necesitan al menos 2 replay IDs' });
+      return res.status(400).json({ error: 'Necesitas al menos 2 replays' });
     }
 
-    // 1) Obtener el "baseId" (todo hasta -<timestamp>), para públicos y privados
-    const idMap = replayIds.map(id => {
-      const m = id.match(/^(.+-\d+)(?:-.+)?$/);
-      return { original: id, base: m?.[1] ?? id };
-    });
-    const uniqueBases = [...new Set(idMap.map(x => x.base))];
-
-    // 2) Query a BQ por esos baseIds
-    const list = uniqueBases.map(b => `'${b}'`).join(',');
-    const query = `
+    // 1) Obtener los jugadores de cada replay
+    const playerQuery = `
       SELECT replay_id, player1, player2
       FROM \`pokemon-statistics.pokemon_replays.replays\`
-      WHERE replay_id IN (${list})
+      WHERE replay_id IN UNNEST(@ids)
     `;
-    const [rows] = await bigQuery.query(query);
-    if (rows.length !== uniqueBases.length) {
-      const missing = uniqueBases.filter(b => !rows.find(r=>r.replay_id===b));
-      return res.status(404).json({ error: `Falta la baseId ${missing.join(', ')}` });
+    const [playerRows] = await bigQuery.query({
+      query: playerQuery,
+      params: { ids: replayIds }
+    });
+    if (playerRows.length !== replayIds.length) {
+      return res
+        .status(404)
+        .json({ error: 'Alguna de las replays no existe en la base de datos' });
     }
 
-    // 3) Fetch de todos los logs (usando original IDs)
-    const logsList = await Promise.all(
-      idMap.map(({ original }) =>
-        axios.get(`https://replay.pokemonshowdown.com/${original}.log`)
-             .then(r => r.data.split('\n'))
-      )
-    );
+    // 2) Calcular intersección para hallar el jugador común
+    let comunes = new Set([playerRows[0].player1, playerRows[0].player2]);
+    for (let i = 1; i < playerRows.length; i++) {
+      const { player1, player2 } = playerRows[i];
+      comunes = new Set(
+        [...comunes].filter(p => p === player1 || p === player2)
+      );
+      if (comunes.size === 0) break;
+    }
+    if (comunes.size !== 1) {
+      return res
+        .status(400)
+        .json({ error: 'No hay un único jugador común en todas las replays' });
+    }
+    const [player] = [...comunes];
 
-    // 4) Montar array de replays con jugadores y log[]
-    const replays = idMap.map(({ original, base }, i) => {
-      const row = rows.find(r => r.replay_id === base);
-      let players = [row.player1, row.player2];
+    // 3) Obtener "teams" y "turns" de esas replays
+    const dataQuery = `
+      SELECT replay_id, teams, turns, winner, player1, player2
+      FROM \`pokemon-statistics.pokemon_replays.replays\`
+      WHERE replay_id IN UNNEST(@ids)
+    `;
+    const [dataRows] = await bigQuery.query({
+      query: dataQuery,
+      params: { ids: replayIds }
+    });
 
-      // si era private (original !== base) extraemos de log
-      if (original !== base) {
-        const log = logsList[i];
-        players = log
-          .filter(l => l.startsWith('|player|'))
-          .slice(0, 2)
-          .map(l => l.split('|')[3]);
-        if (players.length < 2) {
-          throw new Error(`No pude extraer jugadores de la replay privada ${original}`);
+    // 0) Determinar los movesets de los Pokémon del jugador común (suponiendo todas las replays comparten equipo)
+    const firstMeta = playerRows.find(r => r.replay_id === dataRows[0].replay_id);
+    const firstSide = firstMeta.player1 === player ? 'p1' : 'p2';
+    const firstTeam = dataRows[0].teams?.[firstSide] || [];
+    const teamMovesets = {};
+    for (const mon of firstTeam) {
+      if (mon.name && Array.isArray(mon.moves)) {
+        teamMovesets[mon.name] = mon.moves;
+      }
+    }
+
+    // 1) Inicializar contador de uso de cada movimiento por Pokémon
+    const moveCounts = {};
+    for (const [name, moves] of Object.entries(teamMovesets)) {
+      moveCounts[name] = {};
+      for (const mv of moves) {
+        moveCounts[name][mv] = 0;
+      }
+    }
+
+    // Inicializar contadores
+    const usageCounts        = {};
+    const winCounts          = {};
+    const lossCounts         = {};
+    const teraCount          = {};
+    const teraWinCounts      = {};
+    const rivalUsageCounts   = {};
+    const rivalWinCounts     = {};
+    const rivalTeamCounts    = {};    // NUEVO: apariciones en equipo rival
+    const leadCounts         = {};
+    const leadWinCounts      = {};
+    const leadPairCounts     = {};
+    const leadPairWinCounts  = {};
+
+    for (const row of dataRows) {
+      const meta      = playerRows.find(r => r.replay_id === row.replay_id);
+      const side      = meta.player1 === player ? 'p1' : 'p2';
+      const playerKey = side.replace('p','player');  // 'player1' o 'player2'
+
+      // CONTAR EQUIPO RIVAL (independiente de combate)
+      const rivalTeamList = row.teams?.[side === 'p1' ? 'p2' : 'p1'] || [];
+      const names = rivalTeamList
+        .map(mon => mon.name)
+        .filter(n => typeof n === 'string' && n !== 'none');
+      for (const name of new Set(names)) {
+        rivalTeamCounts[name] = (rivalTeamCounts[name] || 0) + 1;
+      }
+
+      // NUEVO: Contar leads de esta partida (turno 1)
+      if (row.turns.length > 0) {
+        const firstTurn = row.turns.find(t => t.turn_number === 1) || row.turns[0];
+        const leads = (firstTurn.starts_with?.[playerKey] || [])
+          .filter(name => name && name !== 'none');
+        const uniqueLeads = [...new Set(leads)];
+
+        // Conteo individual y victorias tras lead
+        uniqueLeads.forEach(mon => {
+          leadCounts[mon] = (leadCounts[mon] || 0) + 1;
+          if (row.winner === player) {
+            leadWinCounts[mon] = (leadWinCounts[mon] || 0) + 1;
+          }
+        });
+
+        // Conteo de pareja y victorias tras esa pareja
+        if (uniqueLeads.length === 2) {
+          const [a, b] = uniqueLeads.sort();
+          const key = `${a}|${b}`;
+          leadPairCounts[key] = (leadPairCounts[key] || 0) + 1;
+          if (row.winner === player) {
+            leadPairWinCounts[key] = (leadPairWinCounts[key] || 0) + 1;
+          }
         }
       }
 
-      return {
-        replay_id: original,
-        players,
-        log: logsList[i]
-      };
-    });
+      const seenThisReplay      = new Set();
+      const rivalSeenThisReplay = new Set();
+      const teraPokemonThisReplay = new Set();
 
-    // 5) Intersección de common players
-    let common = replays[0].players;
-    for (let j = 1; j < replays.length; j++) {
-      common = common.filter(p => replays[j].players.includes(p));
-      if (!common.length) {
-        return res
-          .status(400)
-          .json({ error: `La replay ${replays[j].replay_id} no comparte jugador común` });
+      if (Array.isArray(row.turns)) {
+        for (const turn of row.turns) {
+          // Verificar Pokémon activos del jugador común
+          if (turn.starts_with && turn.starts_with[playerKey]) {
+            const activeAtStart = turn.starts_with[playerKey];
+            for (const monName of activeAtStart) {
+              if (monName && monName !== 'none' && typeof monName === 'string') {
+                seenThisReplay.add(monName);
+              }
+            }
+          }
+          
+          // Verificar Pokémon activos del RIVAL
+          if (turn.starts_with && turn.starts_with[side === 'p1' ? 'player2' : 'player1']) {
+            const rivalActiveAtStart = turn.starts_with[side === 'p1' ? 'player2' : 'player1'];
+            for (const monName of rivalActiveAtStart) {
+              if (monName && monName !== 'none' && typeof monName === 'string') {
+                rivalSeenThisReplay.add(monName);
+              }
+            }
+          }
+          
+          // Verificar en revealed_pokemon para jugador común y registrar terastalizaciones
+          if (turn.revealed_pokemon && turn.revealed_pokemon[playerKey]) {
+            for (const pokemon of turn.revealed_pokemon[playerKey]) {
+              if (pokemon && pokemon.name && pokemon.name !== 'none') {
+                // Añadir a Pokémon vistos
+                seenThisReplay.add(pokemon.name);
+                
+                // Verificar si el Pokémon ha terastalizado (condición más flexible)
+                if (pokemon.tera && 
+                   (pokemon.tera.active === true || 
+                    pokemon.tera.active === 'true' || 
+                    pokemon.tera.active === 1)) {
+                  teraPokemonThisReplay.add(pokemon.name);
+                }
+              }
+            }
+          }
+          
+          // Verificar en revealed_pokemon para RIVAL
+          if (turn.revealed_pokemon && turn.revealed_pokemon[side === 'p1' ? 'player2' : 'player1']) {
+            for (const pokemon of turn.revealed_pokemon[side === 'p1' ? 'player2' : 'player1']) {
+              if (pokemon && pokemon.name && pokemon.name !== 'none') {
+                rivalSeenThisReplay.add(pokemon.name);
+              }
+            }
+          }
+
+          // Contar movimientos usados por cada Pokémon
+          const actions = turn.moves_done?.[playerKey] || [];
+          for (const action of actions) {
+            // Normalizamos la descripción de la acción
+            const actNorm = action
+              .toLowerCase()
+              .replace(/\s+/g, '')
+              .replace(/[^a-z0-9]/g, '');
+
+            // Para cada Pokémon y sus movimientos
+            for (const [monName, moves] of Object.entries(teamMovesets)) {
+              for (const mv of moves) {
+                const mvNorm = mv
+                  .toLowerCase()
+                  .replace(/\s+/g, '')
+                  .replace(/[^a-z0-9]/g, '');
+
+                // Si aparece el nombre del movimiento, lo contamos
+                if (actNorm.includes(mvNorm)) {
+                  moveCounts[monName][mv] = (moveCounts[monName][mv] || 0) + 1;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Contar apariciones, victorias y derrotas
+      for (const mon of seenThisReplay) {
+        usageCounts[mon] = (usageCounts[mon] || 0) + 1;
+        if (row.winner === player)   winCounts[mon]   = (winCounts[mon]   || 0) + 1;
+        else                         lossCounts[mon]  = (lossCounts[mon]  || 0) + 1;
+      }
+
+      // CONTAR TERASTALIZACIONES y CUÁNTAS DE ESAS PARTIDAS SE GANARON
+      for (const mon of teraPokemonThisReplay) {
+        teraCount[mon] = (teraCount[mon] || 0) + 1;
+        if (row.winner === player) {
+          teraWinCounts[mon] = (teraWinCounts[mon] || 0) + 1;
+        }
+      }
+
+      // CONTAR uso rival en combate
+      for (const mon of rivalSeenThisReplay) {
+        rivalUsageCounts[mon] = (rivalUsageCounts[mon] || 0) + 1;
+        if (row.winner !== player) {
+          rivalWinCounts[mon] = (rivalWinCounts[mon] || 0) + 1;
+        }
       }
     }
 
-    const target = common[0];
-    const pokemonUsage = {}, moveUsage = {};
-    replays.forEach(r => {
-      const side = r.players[0] === target ? 'p1' : 'p2';
-      r.log.forEach(line => {
-        const m = line.match(new RegExp(`\\|move\\|${side}[ab]?\\|(.+?)\\|`));
-        if (m) moveUsage[m[1]] = (moveUsage[m[1]]||0) + 1;
-        const s = line.match(new RegExp(`\\|switch\\|${side}[ab]?:\\s(.+?)\\|`));
-        if (s) pokemonUsage[s[1]] = (pokemonUsage[s[1]]||0) + 1;
-      });
+    return res.json({
+      player,
+      usageCounts,
+      winCounts,
+      lossCounts,
+      teraCount,
+      teraWinCounts,
+      rivalUsageCounts,
+      rivalWinCounts,
+      rivalTeamCounts,      // <-- nuevo campo
+      leadCounts,
+      leadWinCounts,
+      leadPairCounts,
+      leadPairWinCounts,
+      moveCounts    // <-- aquí están los conteos de cada movimiento
     });
-
-    return res.json({ commonPlayers: common, pokemonUsage, moveUsage });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error interno' });
   }
 });
