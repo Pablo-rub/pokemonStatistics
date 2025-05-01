@@ -255,7 +255,7 @@ const ReplayCard = ({ game, showAnalyze = false, showAnalytics = false, onToggle
               {showAnalyze && showAnalytics && (
                 <IconButton
                   onClick={() => onToggleAnalytics(game.replay_id)}
-                  title="Añadir a Battle Analytics"
+                  title="Add to Battle Analytics"
                   sx={{
                     mr: 1,
                     color: isInAnalytics
@@ -278,7 +278,7 @@ const ReplayCard = ({ game, showAnalyze = false, showAnalytics = false, onToggle
                 <IconButton
                   onClick={handleAnalyze}
                   sx={{ mr: 1, color: 'white' }}
-                  title="Analizar"
+                  title="Analyze Battle"
                 >
                   <AnalyticsIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />
                 </IconButton>
@@ -290,6 +290,7 @@ const ReplayCard = ({ game, showAnalyze = false, showAnalytics = false, onToggle
                     ? theme.palette.error.main
                     : 'white'
                 }}
+                title={isSaved ? "Unsave Replay" : "Save Replay"}
               >
                 {isSaved
                   ? <FavoriteIcon sx={{ fontSize: { xs: 28, sm: 30, md: 32, lg: 34 } }} />
