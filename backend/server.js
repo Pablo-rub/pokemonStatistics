@@ -3799,31 +3799,30 @@ app.post('/api/multistats', async (req, res) => {
       params: { ids: replayIds }
     });
 
-    // 4) Contar cuántas partidas de las N en las que aparece cada pokémon del jugador común
-    const usageCounts = {}; // Apariciones totales 
-    const winCounts = {};   // Victorias
-    const lossCounts = {};  // Derrotas
-    const rivalUsageCounts = {}; // Nuevo: apariciones de los Pokémon del rival
+    const usageCounts      = {};    // Apariciones totales  
+    const winCounts        = {};    // Victorias  
+    const lossCounts       = {};    // Derrotas  
+    const teraCount        = {};    // NUEVO: Contador de terastalizaciones  
+    const rivalUsageCounts = {};    // Apariciones del rival  
 
     for (const row of dataRows) {
-      // Determinar de qué lado jugó el jugador común en esta replay
-      const meta = playerRows.find(r => r.replay_id === row.replay_id);
-      const side = meta.player1 === player ? 'p1' : 'p2';
-      const rivalSide = side === 'p1' ? 'p2' : 'p1';
+      const meta       = playerRows.find(r => r.replay_id === row.replay_id);
+      const side       = meta.player1 === player ? 'p1' : 'p2';
+      const rivalSide  = side === 'p1' ? 'p2' : 'p1';
+      const revealKey      = side.replace('p','player');      // 'player1' o 'player2'
+      const rivalRevealKey = rivalSide.replace('p','player');
 
-      // Determinar si el jugador común ganó esta partida
-      const isWin = row.winner === player; 
+      const isWin = row.winner === player;
 
-      // Sets para Pokémon vistos en esta replay (jugador común y rival)
-      const seenThisReplay = new Set();
+      const seenThisReplay      = new Set();
       const rivalSeenThisReplay = new Set();
-      
-      // Recorre los turnos para buscar Pokémon que entraron en combate
-      if (row.turns && Array.isArray(row.turns)) {
+      const teraPokemonThisReplay = new Set();
+
+      if (Array.isArray(row.turns)) {
         for (const turn of row.turns) {
           // Verificar Pokémon activos del jugador común
-          if (turn.starts_with && turn.starts_with[side.replace('p', 'player')]) {
-            const activeAtStart = turn.starts_with[side.replace('p', 'player')];
+          if (turn.starts_with && turn.starts_with[revealKey]) {
+            const activeAtStart = turn.starts_with[revealKey];
             for (const monName of activeAtStart) {
               if (monName && monName !== 'none' && typeof monName === 'string') {
                 seenThisReplay.add(monName);
@@ -3832,8 +3831,8 @@ app.post('/api/multistats', async (req, res) => {
           }
           
           // Verificar Pokémon activos del RIVAL
-          if (turn.starts_with && turn.starts_with[rivalSide.replace('p', 'player')]) {
-            const rivalActiveAtStart = turn.starts_with[rivalSide.replace('p', 'player')];
+          if (turn.starts_with && turn.starts_with[rivalRevealKey]) {
+            const rivalActiveAtStart = turn.starts_with[rivalRevealKey];
             for (const monName of rivalActiveAtStart) {
               if (monName && monName !== 'none' && typeof monName === 'string') {
                 rivalSeenThisReplay.add(monName);
@@ -3841,18 +3840,27 @@ app.post('/api/multistats', async (req, res) => {
             }
           }
           
-          // Verificar en revealed_pokemon para jugador común
-          if (turn.revealed_pokemon && turn.revealed_pokemon[side]) {
-            for (const pokemon of turn.revealed_pokemon[side]) {
+          // Verificar en revealed_pokemon para jugador común y registrar terastalizaciones
+          if (turn.revealed_pokemon && turn.revealed_pokemon[revealKey]) {
+            for (const pokemon of turn.revealed_pokemon[revealKey]) {
               if (pokemon && pokemon.name && pokemon.name !== 'none') {
+                // Añadir a Pokémon vistos
                 seenThisReplay.add(pokemon.name);
+                
+                // Verificar si el Pokémon ha terastalizado (condición más flexible)
+                if (pokemon.tera && 
+                   (pokemon.tera.active === true || 
+                    pokemon.tera.active === 'true' || 
+                    pokemon.tera.active === 1)) {
+                  teraPokemonThisReplay.add(pokemon.name);
+                }
               }
             }
           }
           
           // Verificar en revealed_pokemon para RIVAL
-          if (turn.revealed_pokemon && turn.revealed_pokemon[rivalSide]) {
-            for (const pokemon of turn.revealed_pokemon[rivalSide]) {
+          if (turn.revealed_pokemon && turn.revealed_pokemon[rivalRevealKey]) {
+            for (const pokemon of turn.revealed_pokemon[rivalRevealKey]) {
               if (pokemon && pokemon.name && pokemon.name !== 'none') {
                 rivalSeenThisReplay.add(pokemon.name);
               }
@@ -3861,35 +3869,34 @@ app.post('/api/multistats', async (req, res) => {
         }
       }
 
-      // Incrementar el contador de cada pokémon visto en esta replay
+      // Contar apariciones, victorias y derrotas
       for (const mon of seenThisReplay) {
         usageCounts[mon] = (usageCounts[mon] || 0) + 1;
-        
-        // Incrementar contador de victorias o derrotas según corresponda
-        if (isWin) {
-          winCounts[mon] = (winCounts[mon] || 0) + 1;
-        } else {
-          lossCounts[mon] = (lossCounts[mon] || 0) + 1;
-        }
+        if (isWin)   winCounts[mon]   = (winCounts[mon]   || 0) + 1;
+        else         lossCounts[mon]  = (lossCounts[mon]  || 0) + 1;
       }
-      
-      // Incrementar el contador de cada pokémon RIVAL visto en esta replay
+
+      // CONTAR TERASTALIZACIONES
+      for (const mon of teraPokemonThisReplay) {
+        teraCount[mon] = (teraCount[mon] || 0) + 1;
+      }
+
+      // Contar uso rival
       for (const mon of rivalSeenThisReplay) {
         rivalUsageCounts[mon] = (rivalUsageCounts[mon] || 0) + 1;
       }
     }
 
-    // 5) Devolver el nombre del jugador común, los contadores propios y de rivales
-    res.json({ 
-      player, 
-      usageCounts, 
-      winCounts, 
+    return res.json({
+      player,
+      usageCounts,
+      winCounts,
       lossCounts,
-      rivalUsageCounts 
+      teraCount,            // <-- ahora tendrá datos
+      rivalUsageCounts
     });
-  }
-  catch (err) {
-    console.error('Error en /api/multistats:', err);
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Error interno' });
   }
 });
