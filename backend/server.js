@@ -3806,8 +3806,10 @@ app.post('/api/multistats', async (req, res) => {
     const lossCounts       = {};    // Derrotas  
     const teraCount        = {};    // Contador de terastalizaciones  
     const rivalUsageCounts = {};    // Apariciones del rival  
-    const leadCounts       = {};    // NUEVO: Conteo de Pokémon que hacen de lead individuales
-    const leadPairCounts   = {};    // NUEVO: Conteo de parejas de leads
+    const leadCounts         = {};    // Conteo de leads individuales
+    const leadWinCounts      = {};    // Victorias tras lead individual
+    const leadPairCounts     = {};    // Conteo de parejas de leads
+    const leadPairWinCounts  = {};    // Victorias tras lead en pareja
 
     for (const row of dataRows) {
       const meta       = playerRows.find(r => r.replay_id === row.replay_id);
@@ -3830,15 +3832,23 @@ app.post('/api/multistats', async (req, res) => {
           const leads = (firstTurn.starts_with?.[revealKey] || [])
             .filter(name => name && name !== 'none');
           const uniqueLeads = [...new Set(leads)];
-          // Conteo individual
+
+          // Conteo individual y victorias tras lead
           uniqueLeads.forEach(mon => {
             leadCounts[mon] = (leadCounts[mon] || 0) + 1;
+            if (isWin) {
+              leadWinCounts[mon] = (leadWinCounts[mon] || 0) + 1;
+            }
           });
-          // Conteo de pareja (orden alfabético para clave única)
+
+          // Conteo de pareja y victorias tras esa pareja
           if (uniqueLeads.length === 2) {
             const [a, b] = uniqueLeads.sort();
             const key = `${a}|${b}`;
             leadPairCounts[key] = (leadPairCounts[key] || 0) + 1;
+            if (isWin) {
+              leadPairWinCounts[key] = (leadPairWinCounts[key] || 0) + 1;
+            }
           }
         }
 
@@ -3922,7 +3932,9 @@ app.post('/api/multistats', async (req, res) => {
       teraWinCounts,      // <-- nuevo campo
       rivalUsageCounts,
       leadCounts,       // <--- Pokémon leads individuales
-      leadPairCounts    // <--- Leads en pareja
+      leadWinCounts,        // <–– cuántas de esas leads terminaron en victoria
+      leadPairCounts,    // <--- Leads en pareja
+      leadPairWinCounts     // <–– cuántas victorias tras cada pareja de leads
     });
   } catch (err) {
     console.error(err);
