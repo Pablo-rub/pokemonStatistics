@@ -3782,9 +3782,7 @@ app.post('/api/multistats', async (req, res) => {
       if (comunes.size === 0) break;
     }
     if (comunes.size !== 1) {
-      return res
-        .status(400)
-        .json({ error: 'No hay un único jugador común en todas las replays' });
+      return res.status(400).json({ error: 'There is no single common player across all replays' });
     }
     const [player] = [...comunes];
 
@@ -3995,6 +3993,6 @@ app.post('/api/multistats', async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error interno' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
