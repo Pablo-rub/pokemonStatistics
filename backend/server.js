@@ -3800,63 +3800,69 @@ app.post('/api/multistats', async (req, res) => {
     });
 
     // Inicializar contadores
-    const teraWinCounts     = {};    // NUEVO: Victorias tras terastallizar
-    const usageCounts      = {};    // Apariciones totales  
-    const winCounts        = {};    // Victorias  
-    const lossCounts       = {};    // Derrotas  
-    const teraCount        = {};    // Contador de terastalizaciones  
-    const rivalUsageCounts = {};    // Apariciones del rival  
-    const rivalWinCounts   = {};    // NUEVO: Victorias de los Pokémon del rival
-    const leadCounts         = {};    // Conteo de leads individuales
-    const leadWinCounts      = {};    // Victorias tras lead individual
-    const leadPairCounts     = {};    // Conteo de parejas de leads
-    const leadPairWinCounts  = {};    // Victorias tras lead en pareja
+    const usageCounts        = {};
+    const winCounts          = {};
+    const lossCounts         = {};
+    const teraCount          = {};
+    const teraWinCounts      = {};
+    const rivalUsageCounts   = {};
+    const rivalWinCounts     = {};
+    const rivalTeamCounts    = {};    // NUEVO: apariciones en equipo rival
+    const leadCounts         = {};
+    const leadWinCounts      = {};
+    const leadPairCounts     = {};
+    const leadPairWinCounts  = {};
 
     for (const row of dataRows) {
-      const meta       = playerRows.find(r => r.replay_id === row.replay_id);
-      const side       = meta.player1 === player ? 'p1' : 'p2';
-      const revealKey  = side.replace('p','player');  // 'player1' o 'player2'
-      const rivalSide  = side === 'p1' ? 'p2' : 'p1';
-      const rivalRevealKey = rivalSide.replace('p','player');
+      const meta           = playerRows.find(r => r.replay_id === row.replay_id);
+      const side           = meta.player1 === player ? 'p1' : 'p2';
+      const rivalSide      = side === 'p1' ? 'p2' : 'p1';
+      const isWin          = row.winner === player;
 
-      const isWin = row.winner === player;
+      // CONTAR EQUIPO RIVAL (independiente de combate)
+      const rivalTeamList = row.teams?.[rivalSide] || [];
+      const names = rivalTeamList
+        .map(mon => mon.name)
+        .filter(n => typeof n === 'string' && n !== 'none');
+      for (const name of new Set(names)) {
+        rivalTeamCounts[name] = (rivalTeamCounts[name] || 0) + 1;
+      }
+
+      // NUEVO: Contar leads de esta partida (turno 1)
+      if (row.turns.length > 0) {
+        const firstTurn = row.turns.find(t => t.turn_number === 1) || row.turns[0];
+        const leads = (firstTurn.starts_with?.[side.replace('p','player')] || [])
+          .filter(name => name && name !== 'none');
+        const uniqueLeads = [...new Set(leads)];
+
+        // Conteo individual y victorias tras lead
+        uniqueLeads.forEach(mon => {
+          leadCounts[mon] = (leadCounts[mon] || 0) + 1;
+          if (isWin) {
+            leadWinCounts[mon] = (leadWinCounts[mon] || 0) + 1;
+          }
+        });
+
+        // Conteo de pareja y victorias tras esa pareja
+        if (uniqueLeads.length === 2) {
+          const [a, b] = uniqueLeads.sort();
+          const key = `${a}|${b}`;
+          leadPairCounts[key] = (leadPairCounts[key] || 0) + 1;
+          if (isWin) {
+            leadPairWinCounts[key] = (leadPairWinCounts[key] || 0) + 1;
+          }
+        }
+      }
 
       const seenThisReplay      = new Set();
       const rivalSeenThisReplay = new Set();
       const teraPokemonThisReplay = new Set();
 
       if (Array.isArray(row.turns)) {
-        // NUEVO: Contar leads de esta partida (turno 1)
-        if (row.turns.length > 0) {
-          // Usamos el turno con turn_number===1 o, si no existe, el primero
-          const firstTurn = row.turns.find(t => t.turn_number === 1) || row.turns[0];
-          const leads = (firstTurn.starts_with?.[revealKey] || [])
-            .filter(name => name && name !== 'none');
-          const uniqueLeads = [...new Set(leads)];
-
-          // Conteo individual y victorias tras lead
-          uniqueLeads.forEach(mon => {
-            leadCounts[mon] = (leadCounts[mon] || 0) + 1;
-            if (isWin) {
-              leadWinCounts[mon] = (leadWinCounts[mon] || 0) + 1;
-            }
-          });
-
-          // Conteo de pareja y victorias tras esa pareja
-          if (uniqueLeads.length === 2) {
-            const [a, b] = uniqueLeads.sort();
-            const key = `${a}|${b}`;
-            leadPairCounts[key] = (leadPairCounts[key] || 0) + 1;
-            if (isWin) {
-              leadPairWinCounts[key] = (leadPairWinCounts[key] || 0) + 1;
-            }
-          }
-        }
-
         for (const turn of row.turns) {
           // Verificar Pokémon activos del jugador común
-          if (turn.starts_with && turn.starts_with[revealKey]) {
-            const activeAtStart = turn.starts_with[revealKey];
+          if (turn.starts_with && turn.starts_with[side.replace('p','player')]) {
+            const activeAtStart = turn.starts_with[side.replace('p','player')];
             for (const monName of activeAtStart) {
               if (monName && monName !== 'none' && typeof monName === 'string') {
                 seenThisReplay.add(monName);
@@ -3865,8 +3871,8 @@ app.post('/api/multistats', async (req, res) => {
           }
           
           // Verificar Pokémon activos del RIVAL
-          if (turn.starts_with && turn.starts_with[rivalRevealKey]) {
-            const rivalActiveAtStart = turn.starts_with[rivalRevealKey];
+          if (turn.starts_with && turn.starts_with[rivalSide.replace('p','player')]) {
+            const rivalActiveAtStart = turn.starts_with[rivalSide.replace('p','player')];
             for (const monName of rivalActiveAtStart) {
               if (monName && monName !== 'none' && typeof monName === 'string') {
                 rivalSeenThisReplay.add(monName);
@@ -3875,8 +3881,8 @@ app.post('/api/multistats', async (req, res) => {
           }
           
           // Verificar en revealed_pokemon para jugador común y registrar terastalizaciones
-          if (turn.revealed_pokemon && turn.revealed_pokemon[revealKey]) {
-            for (const pokemon of turn.revealed_pokemon[revealKey]) {
+          if (turn.revealed_pokemon && turn.revealed_pokemon[side.replace('p','player')]) {
+            for (const pokemon of turn.revealed_pokemon[side.replace('p','player')]) {
               if (pokemon && pokemon.name && pokemon.name !== 'none') {
                 // Añadir a Pokémon vistos
                 seenThisReplay.add(pokemon.name);
@@ -3893,8 +3899,8 @@ app.post('/api/multistats', async (req, res) => {
           }
           
           // Verificar en revealed_pokemon para RIVAL
-          if (turn.revealed_pokemon && turn.revealed_pokemon[rivalRevealKey]) {
-            for (const pokemon of turn.revealed_pokemon[rivalRevealKey]) {
+          if (turn.revealed_pokemon && turn.revealed_pokemon[rivalSide.replace('p','player')]) {
+            for (const pokemon of turn.revealed_pokemon[rivalSide.replace('p','player')]) {
               if (pokemon && pokemon.name && pokemon.name !== 'none') {
                 rivalSeenThisReplay.add(pokemon.name);
               }
@@ -3918,10 +3924,9 @@ app.post('/api/multistats', async (req, res) => {
         }
       }
 
-      // Contar uso rival
+      // CONTAR uso rival en combate
       for (const mon of rivalSeenThisReplay) {
         rivalUsageCounts[mon] = (rivalUsageCounts[mon] || 0) + 1;
-        // Conteo de victorias del rival (cuando el jugador común pierde)
         if (!isWin) {
           rivalWinCounts[mon] = (rivalWinCounts[mon] || 0) + 1;
         }
@@ -3934,13 +3939,14 @@ app.post('/api/multistats', async (req, res) => {
       winCounts,
       lossCounts,
       teraCount,
-      teraWinCounts,      // <-- nuevo campo
+      teraWinCounts,
       rivalUsageCounts,
-      rivalWinCounts,      // <-- incluir aquí
-      leadCounts,       // <--- Pokémon leads individuales
-      leadWinCounts,        // <–– cuántas de esas leads terminaron en victoria
-      leadPairCounts,    // <--- Leads en pareja
-      leadPairWinCounts     // <–– cuántas victorias tras cada pareja de leads
+      rivalWinCounts,
+      rivalTeamCounts,      // <-- nuevo campo
+      leadCounts,
+      leadWinCounts,
+      leadPairCounts,
+      leadPairWinCounts
     });
   } catch (err) {
     console.error(err);
