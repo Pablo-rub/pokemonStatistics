@@ -3806,6 +3806,7 @@ app.post('/api/multistats', async (req, res) => {
     const lossCounts       = {};    // Derrotas  
     const teraCount        = {};    // Contador de terastalizaciones  
     const rivalUsageCounts = {};    // Apariciones del rival  
+    const rivalWinCounts   = {};    // NUEVO: Victorias de los Pokémon del rival
     const leadCounts         = {};    // Conteo de leads individuales
     const leadWinCounts      = {};    // Victorias tras lead individual
     const leadPairCounts     = {};    // Conteo de parejas de leads
@@ -3920,6 +3921,10 @@ app.post('/api/multistats', async (req, res) => {
       // Contar uso rival
       for (const mon of rivalSeenThisReplay) {
         rivalUsageCounts[mon] = (rivalUsageCounts[mon] || 0) + 1;
+        // Conteo de victorias del rival (cuando el jugador común pierde)
+        if (!isWin) {
+          rivalWinCounts[mon] = (rivalWinCounts[mon] || 0) + 1;
+        }
       }
     }
 
@@ -3931,6 +3936,7 @@ app.post('/api/multistats', async (req, res) => {
       teraCount,
       teraWinCounts,      // <-- nuevo campo
       rivalUsageCounts,
+      rivalWinCounts,      // <-- incluir aquí
       leadCounts,       // <--- Pokémon leads individuales
       leadWinCounts,        // <–– cuántas de esas leads terminaron en victoria
       leadPairCounts,    // <--- Leads en pareja
