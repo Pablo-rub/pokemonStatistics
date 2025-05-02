@@ -6,7 +6,11 @@ import {
   Button,
   TextField,
   Alert,
-  Pagination
+  Pagination,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import ReplayCard from "../components/ReplayCard";
@@ -15,6 +19,9 @@ import axios from 'axios';
 import LoginIcon from '@mui/icons-material/Login';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LoginDialog from "../components/LoginDialog";
+
+// todo
+// sort by date
 
 function SavedGamesPage() {
   const { currentUser, save } = useAuth();
@@ -30,6 +37,7 @@ function SavedGamesPage() {
   const [addError, setAddError] = useState('');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
+  const [sortBy, setSortBy] = useState("date DESC");
 
   useEffect(() => {
     localStorage.setItem('analyticsReplays', JSON.stringify(analyticsReplays));
@@ -41,10 +49,20 @@ function SavedGamesPage() {
       return;
     }
     axios.get(`/api/users/${currentUser.uid}/saved-replays`)
-      .then(res => setGames(res.data))
+      .then(res => {
+        const withTimestamps = res.data.map(game => ({
+          ...game,
+          ts: new Date(game.date).getTime()
+        }));
+        setGames(withTimestamps);
+      })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   }, [currentUser]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [sortBy]);
 
   const handleToggleAnalytics = id => {
     setAnalyticsReplays(prev =>
@@ -70,7 +88,14 @@ function SavedGamesPage() {
       setAddError('');
       const { data: game } = await axios.get(`/api/games/${id}`);
       await axios.post(`/api/users/${currentUser.uid}/saved-replays`, { replayId: id });
-      setGames(prev => [game, ...prev]);
+      
+      // Añadir timestamp al juego antes de guardarlo en el estado
+      const gameWithTimestamp = {
+        ...game,
+        ts: new Date(game.date).getTime()
+      };
+      
+      setGames(prev => [gameWithTimestamp, ...prev]);
       save(id);
       setPrivateReplayId('');
     } catch (err) {
@@ -82,6 +107,27 @@ function SavedGamesPage() {
       }
     }
   };
+
+  const sortedGames = [...games].sort((a, b) => {
+    switch (sortBy) {
+      case "date ASC":
+        return a.ts - b.ts;
+      case "date DESC":
+        return b.ts - a.ts;
+      case "rating ASC":
+        return (a.rating || 0) - (b.rating || 0);
+      case "rating DESC":
+        return (b.rating || 0) - (a.rating || 0);
+      default:
+        return 0;
+    }
+  });
+
+  const totalPages = Math.ceil(sortedGames.length / PAGE_SIZE);
+  const pageGames = sortedGames.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE
+  );
 
   if (!currentUser) {
     return (
@@ -151,12 +197,6 @@ function SavedGamesPage() {
     );
   }
 
-  const totalPages = Math.ceil(games.length / PAGE_SIZE);
-  const pageGames = games.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE
-  );
-
   return (
     <Box sx={{ padding: 2 }}>
       <Typography variant="h4" sx={{ marginBottom: 2 }}>
@@ -166,23 +206,55 @@ function SavedGamesPage() {
         Total Saved: {games.length}
       </Typography>
 
-      {/* Add Private Replay */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-        <TextField
-          label="Private Replay Url"
-          variant="outlined"
-          size="small"
-          fullWidth
-          value={privateReplayId}
-          onChange={e => setPrivateReplayId(e.target.value)}
-        />
-        <Button
-          variant="contained"
-          onClick={handleAddPrivateReplay}
-          disabled={!privateReplayId}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3
+        }}
+      >
+        {/* Add Private Replay (left side) */}
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            // Limita el ancho total del formulario de añadir replay
+            width: { xs: '100%', sm: '60%', md: '45%', lg: '35%' }
+          }}
         >
-          Add Replay
-        </Button>
+          <TextField
+            label="Private Replay Url"
+            variant="outlined"
+            size="small"
+            fullWidth
+            value={privateReplayId}
+            onChange={e => setPrivateReplayId(e.target.value)}
+          />
+          <Button
+            variant="contained"
+            onClick={handleAddPrivateReplay}
+            disabled={!privateReplayId}
+            sx={{ whiteSpace: 'nowrap' }}
+          >
+            Add Replay
+          </Button>
+        </Box>
+
+        {/* Sort control (right side) */}
+        <FormControl size="small" sx={{ minWidth: 160, ml: 2 }}>
+          <InputLabel>Sort by</InputLabel>
+          <Select
+            value={sortBy}
+            label="Sort by"
+            onChange={e => setSortBy(e.target.value)}
+          >
+            <MenuItem value="date DESC">Date ↓</MenuItem>
+            <MenuItem value="date ASC">Date ↑</MenuItem>
+            <MenuItem value="rating DESC">Rating ↓</MenuItem>
+            <MenuItem value="rating ASC">Rating ↑</MenuItem>
+          </Select>
+        </FormControl>
       </Box>
 
       {addError && (
