@@ -29,10 +29,11 @@ import LoginDialog from "../components/LoginDialog";
 // sort by date
 
 function SavedGamesPage() {
-  const { currentUser, save } = useAuth();
+  const { currentUser, save, unsave } = useAuth();
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [unsaving, setUnsaving] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [analyticsReplays, setAnalyticsReplays] = useState(() => {
     const st = localStorage.getItem('analyticsReplays');
@@ -117,13 +118,9 @@ function SavedGamesPage() {
   const handleUnsaveAll = async () => {
     if (!currentUser) return;
     try {
-      // delete each saved replay on the server
       await Promise.all(
-        games.map(g =>
-          axios.delete(`/api/users/${currentUser.uid}/saved-replays/${g.replay_id}`)
-        )
+        games.map(g => unsave(g.replay_id))
       );
-      // clear local state
       setGames([]);
       setAnalyticsReplays([]);
     } catch (err) {
@@ -131,9 +128,11 @@ function SavedGamesPage() {
     }
   };
 
-  const handleConfirmUnsaveAll = () => {
+  const handleConfirmUnsaveAll = async () => {
     setConfirmOpen(false);
-    handleUnsaveAll();
+    setUnsaving(true);
+    await handleUnsaveAll();
+    setUnsaving(false);
   };
 
   const sortedGames = [...games].sort((a, b) => {
@@ -156,6 +155,14 @@ function SavedGamesPage() {
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE
   );
+
+  if (unsaving) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "50vh" }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   if (!currentUser) {
     return (
