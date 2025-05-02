@@ -4,6 +4,9 @@ import {
   Box,
   CircularProgress,
   Button,
+  TextField,
+  Alert,
+  Pagination
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import ReplayCard from "../components/ReplayCard";
@@ -14,19 +17,20 @@ import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LoginDialog from "../components/LoginDialog";
 
 function SavedGamesPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, save } = useAuth();
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Añadir estado para controlar el diálogo de login
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
-
-  // Estado con persistencia en localStorage
   const [analyticsReplays, setAnalyticsReplays] = useState(() => {
     const st = localStorage.getItem('analyticsReplays');
     return st ? JSON.parse(st) : [];
   });
+  const [privateReplayId, setPrivateReplayId] = useState('');
+  const [addError, setAddError] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
+
   useEffect(() => {
     localStorage.setItem('analyticsReplays', JSON.stringify(analyticsReplays));
   }, [analyticsReplays]);
@@ -48,6 +52,35 @@ function SavedGamesPage() {
         ? prev.filter(x => x !== id)
         : [...prev, id]
     );
+  };
+
+  const handleAddPrivateReplay = async () => {
+    if (!privateReplayId) return;
+
+    // extract replay ID from full URL
+    const lastSegment = privateReplayId.trim().split('/').pop();
+    const id = lastSegment?.split('-').pop();
+
+    if (!id) {
+      setAddError('Invalid replay URL');
+      return;
+    }
+
+    try {
+      setAddError('');
+      const { data: game } = await axios.get(`/api/games/${id}`);
+      await axios.post(`/api/users/${currentUser.uid}/saved-replays`, { replayId: id });
+      setGames(prev => [game, ...prev]);
+      save(id);
+      setPrivateReplayId('');
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setAddError('Replay not found');
+      } else {
+        console.error(err);
+        setAddError('Error adding replay');
+      }
+    }
   };
 
   if (!currentUser) {
@@ -118,6 +151,12 @@ function SavedGamesPage() {
     );
   }
 
+  const totalPages = Math.ceil(games.length / PAGE_SIZE);
+  const pageGames = games.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE
+  );
+
   return (
     <Box sx={{ padding: 2 }}>
       <Typography variant="h4" sx={{ marginBottom: 2 }}>
@@ -127,7 +166,32 @@ function SavedGamesPage() {
         Total Saved: {games.length}
       </Typography>
 
-      {games.map((game, index) => (
+      {/* Add Private Replay */}
+      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+        <TextField
+          label="Private Replay Url"
+          variant="outlined"
+          size="small"
+          fullWidth
+          value={privateReplayId}
+          onChange={e => setPrivateReplayId(e.target.value)}
+        />
+        <Button
+          variant="contained"
+          onClick={handleAddPrivateReplay}
+          disabled={!privateReplayId}
+        >
+          Add Replay
+        </Button>
+      </Box>
+
+      {addError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {addError}
+        </Alert>
+      )}
+
+      {pageGames.map((game) => (
         <ReplayCard
           key={game.replay_id}
           game={game}
@@ -137,6 +201,19 @@ function SavedGamesPage() {
           isInAnalytics={analyticsReplays.includes(game.replay_id)}
         />
       ))}
+
+      {totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={(_, v) => setPage(v)}
+            color="secondary"
+            size="small"
+          />
+        </Box>
+      )}
+
       <Button
         variant="contained"
         disabled={analyticsReplays.length < 2}
