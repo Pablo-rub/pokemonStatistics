@@ -10,7 +10,12 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import ReplayCard from "../components/ReplayCard";
@@ -38,6 +43,7 @@ function SavedGamesPage() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
   const [sortBy, setSortBy] = useState("date DESC");
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('analyticsReplays', JSON.stringify(analyticsReplays));
@@ -106,6 +112,28 @@ function SavedGamesPage() {
         setAddError('Error adding replay');
       }
     }
+  };
+
+  const handleUnsaveAll = async () => {
+    if (!currentUser) return;
+    try {
+      // delete each saved replay on the server
+      await Promise.all(
+        games.map(g =>
+          axios.delete(`/api/users/${currentUser.uid}/saved-replays/${g.replay_id}`)
+        )
+      );
+      // clear local state
+      setGames([]);
+      setAnalyticsReplays([]);
+    } catch (err) {
+      console.error("Error unsaving all:", err);
+    }
+  };
+
+  const handleConfirmUnsaveAll = () => {
+    setConfirmOpen(false);
+    handleUnsaveAll();
   };
 
   const sortedGames = [...games].sort((a, b) => {
@@ -286,14 +314,50 @@ function SavedGamesPage() {
         </Box>
       )}
 
-      <Button
-        variant="contained"
-        disabled={analyticsReplays.length < 2}
-        onClick={() => navigate('/battle-analytics')}
-        sx={{ mt: 2 }}
+      <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+        <Button
+          variant="contained"
+          disabled={analyticsReplays.length < 2}
+          onClick={() => navigate('/battle-analytics')}
+        >
+          View Analytics ({analyticsReplays.length})
+        </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          disabled={games.length === 0}
+          onClick={() => setConfirmOpen(true)}
+        >
+          Unsave All
+        </Button>
+      </Box>
+
+      <Dialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
       >
-        View Analytics ({analyticsReplays.length})
-      </Button>
+        <DialogTitle>Confirm Unsave All</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to remove all saved replays? This cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            variant="outlined"
+            onClick={() => setConfirmOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirmUnsaveAll}
+          >
+            Unsave All
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
