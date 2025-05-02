@@ -4,6 +4,18 @@ import {
   Box,
   CircularProgress,
   Button,
+  TextField,
+  Alert,
+  Pagination,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import ReplayCard from "../components/ReplayCard";
@@ -13,20 +25,27 @@ import LoginIcon from '@mui/icons-material/Login';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LoginDialog from "../components/LoginDialog";
 
+// todo
+// sort by date
+
 function SavedGamesPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, save, unsave } = useAuth();
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Añadir estado para controlar el diálogo de login
+  const [unsaving, setUnsaving] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
-
-  // Estado con persistencia en localStorage
   const [analyticsReplays, setAnalyticsReplays] = useState(() => {
     const st = localStorage.getItem('analyticsReplays');
     return st ? JSON.parse(st) : [];
   });
+  const [privateReplayId, setPrivateReplayId] = useState('');
+  const [addError, setAddError] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
+  const [sortBy, setSortBy] = useState("date DESC");
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   useEffect(() => {
     localStorage.setItem('analyticsReplays', JSON.stringify(analyticsReplays));
   }, [analyticsReplays]);
@@ -37,10 +56,20 @@ function SavedGamesPage() {
       return;
     }
     axios.get(`/api/users/${currentUser.uid}/saved-replays`)
-      .then(res => setGames(res.data))
+      .then(res => {
+        const withTimestamps = res.data.map(game => ({
+          ...game,
+          ts: new Date(game.date).getTime()
+        }));
+        setGames(withTimestamps);
+      })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   }, [currentUser]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [sortBy]);
 
   const handleToggleAnalytics = id => {
     setAnalyticsReplays(prev =>
@@ -49,6 +78,91 @@ function SavedGamesPage() {
         : [...prev, id]
     );
   };
+
+  const handleAddPrivateReplay = async () => {
+    if (!privateReplayId) return;
+
+    // extract replay ID from full URL
+    const lastSegment = privateReplayId.trim().split('/').pop();
+    const id = lastSegment?.split('-').pop();
+
+    if (!id) {
+      setAddError('Invalid replay URL');
+      return;
+    }
+
+    try {
+      setAddError('');
+      const { data: game } = await axios.get(`/api/games/${id}`);
+      await axios.post(`/api/users/${currentUser.uid}/saved-replays`, { replayId: id });
+      
+      // Añadir timestamp al juego antes de guardarlo en el estado
+      const gameWithTimestamp = {
+        ...game,
+        ts: new Date(game.date).getTime()
+      };
+      
+      setGames(prev => [gameWithTimestamp, ...prev]);
+      save(id);
+      setPrivateReplayId('');
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setAddError('Replay not found');
+      } else {
+        console.error(err);
+        setAddError('Error adding replay');
+      }
+    }
+  };
+
+  const handleUnsaveAll = async () => {
+    if (!currentUser) return;
+    try {
+      await Promise.all(
+        games.map(g => unsave(g.replay_id))
+      );
+      setGames([]);
+      setAnalyticsReplays([]);
+    } catch (err) {
+      console.error("Error unsaving all:", err);
+    }
+  };
+
+  const handleConfirmUnsaveAll = async () => {
+    setConfirmOpen(false);
+    setUnsaving(true);
+    await handleUnsaveAll();
+    setUnsaving(false);
+  };
+
+  const sortedGames = [...games].sort((a, b) => {
+    switch (sortBy) {
+      case "date ASC":
+        return a.ts - b.ts;
+      case "date DESC":
+        return b.ts - a.ts;
+      case "rating ASC":
+        return (a.rating || 0) - (b.rating || 0);
+      case "rating DESC":
+        return (b.rating || 0) - (a.rating || 0);
+      default:
+        return 0;
+    }
+  });
+
+  const totalPages = Math.ceil(sortedGames.length / PAGE_SIZE);
+  const pageGames = sortedGames.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE
+  );
+
+  if (unsaving) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "50vh" }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   if (!currentUser) {
     return (
@@ -127,7 +241,64 @@ function SavedGamesPage() {
         Total Saved: {games.length}
       </Typography>
 
-      {games.map((game, index) => (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3
+        }}
+      >
+        {/* Add Private Replay (left side) */}
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            // Limita el ancho total del formulario de añadir replay
+            width: { xs: '100%', sm: '60%', md: '45%', lg: '35%' }
+          }}
+        >
+          <TextField
+            label="Private Replay Url"
+            variant="outlined"
+            size="small"
+            fullWidth
+            value={privateReplayId}
+            onChange={e => setPrivateReplayId(e.target.value)}
+          />
+          <Button
+            variant="contained"
+            onClick={handleAddPrivateReplay}
+            disabled={!privateReplayId}
+            sx={{ whiteSpace: 'nowrap' }}
+          >
+            Add Replay
+          </Button>
+        </Box>
+
+        {/* Sort control (right side) */}
+        <FormControl size="small" sx={{ minWidth: 160, ml: 2 }}>
+          <InputLabel>Sort by</InputLabel>
+          <Select
+            value={sortBy}
+            label="Sort by"
+            onChange={e => setSortBy(e.target.value)}
+          >
+            <MenuItem value="date DESC">Date ↓</MenuItem>
+            <MenuItem value="date ASC">Date ↑</MenuItem>
+            <MenuItem value="rating DESC">Rating ↓</MenuItem>
+            <MenuItem value="rating ASC">Rating ↑</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
+      {addError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {addError}
+        </Alert>
+      )}
+
+      {pageGames.map((game) => (
         <ReplayCard
           key={game.replay_id}
           game={game}
@@ -137,14 +308,63 @@ function SavedGamesPage() {
           isInAnalytics={analyticsReplays.includes(game.replay_id)}
         />
       ))}
-      <Button
-        variant="contained"
-        disabled={analyticsReplays.length < 2}
-        onClick={() => navigate('/battle-analytics')}
-        sx={{ mt: 2 }}
+
+      {totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={(_, v) => setPage(v)}
+            color="secondary"
+            size="small"
+          />
+        </Box>
+      )}
+
+      <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
+        <Button
+          variant="contained"
+          disabled={analyticsReplays.length < 2}
+          onClick={() => navigate('/battle-analytics')}
+        >
+          View Analytics ({analyticsReplays.length})
+        </Button>
+        <Button
+          variant="outlined"
+          color="secondary"
+          disabled={games.length === 0}
+          onClick={() => setConfirmOpen(true)}
+        >
+          Unsave All
+        </Button>
+      </Box>
+
+      <Dialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
       >
-        View Analytics ({analyticsReplays.length})
-      </Button>
+        <DialogTitle>Confirm Unsave All</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to remove all saved replays? This cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            variant="outlined"
+            onClick={() => setConfirmOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirmUnsaveAll}
+          >
+            Unsave All
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

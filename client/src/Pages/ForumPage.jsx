@@ -68,7 +68,7 @@ const ForumPage = () => {
           <Card 
             key={index} 
             component={Link} 
-            to={`/forum/${topic.title.replace(/\s+/g, '-').toLowerCase()}`}
+            to={`/forum/${topic.topic_id}`}
             sx={{ 
               mb: 2, 
               display: 'block', 
