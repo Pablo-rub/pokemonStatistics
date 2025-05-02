@@ -22,7 +22,7 @@ import { useAuth } from '../contexts/AuthContext';
 import LoginDialog from '../components/LoginDialog';
 import axios from 'axios';
 
-const ForumTopicPage = () => {
+export default function ForumTopicPage() {
   const { topicId } = useParams();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
@@ -37,27 +37,17 @@ const ForumTopicPage = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  // Fetch topic details and messages
   useEffect(() => {
-    const fetchTopicDetails = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(`http://localhost:5000/api/forum/topics/${topicId}`);
-        setTopic(response.data.topic);
-        setMessages(response.data.messages);
+    axios.get(`/api/forum/topics/${topicId}`)
+      .then(res => {
+        setTopic(res.data.topic);
+        setMessages(res.data.messages);
         setError(null);
-      } catch (err) {
-        console.error('Error fetching topic details:', err);
-        setError('Failed to load topic. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchTopicDetails();
+      })
+      .catch(() => setError('Failed to load topic. Please try again later.'))
+      .finally(() => setLoading(false));
   }, [topicId]);
   
-  // Scroll to bottom whenever messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -74,17 +64,14 @@ const ForumTopicPage = () => {
     
     try {
       setSendingMessage(true);
-      const response = await axios.post(`http://localhost:5000/api/forum/topics/${topicId}/messages`, {
+      const response = await axios.post(`/api/forum/topics/${topicId}/messages`, {
         content: newMessage,
         userId: currentUser.uid,
         userName: currentUser.displayName || 'Anonymous',
         userAvatar: currentUser.photoURL || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentUser.uid}`
       });
       
-      // Add the new message to the list
       setMessages(prevMessages => [...prevMessages, response.data]);
-      
-      // Clear the input
       setNewMessage('');
     } catch (err) {
       console.error('Error sending message:', err);
@@ -105,7 +92,6 @@ const ForumTopicPage = () => {
     });
   };
 
-  // Check if the message is from the current user
   const isCurrentUserMessage = (userId) => {
     return userId === currentUser?.uid;
   };
@@ -181,7 +167,7 @@ const ForumTopicPage = () => {
                       justifyContent: isMine ? 'flex-end' : 'flex-start',
                       padding: 0,
                       "&:hover": { 
-                        backgroundColor: "transparent" // Eliminar hover
+                        backgroundColor: "transparent"
                       }
                     }}
                   >
@@ -190,7 +176,7 @@ const ForumTopicPage = () => {
                       flexDirection: isMine ? 'row-reverse' : 'row',
                       alignItems: 'flex-start',
                       gap: 1,
-                      maxWidth: { xs: '90%', sm: '80%', md: '70%' } // Mayor ancho en móviles
+                      maxWidth: { xs: '90%', sm: '80%', md: '70%' }
                     }}>
                       <Avatar 
                         src={message.userAvatar} 
@@ -198,13 +184,12 @@ const ForumTopicPage = () => {
                         sx={{ 
                           width: { xs: 32, sm: 36 }, 
                           height: { xs: 32, sm: 36 },
-                          display: { xs: isMine ? 'none' : 'block', sm: 'block' } // Ocultar avatar propio en móvil
+                          display: { xs: isMine ? 'none' : 'block', sm: 'block' }
                         }}
                       />
                       <Box sx={{ 
                         maxWidth: 'calc(100% - 50px)'
                       }}>
-                        {/* Nombre y timestamp */}
                         <Box sx={{ 
                           display: 'flex', 
                           flexDirection: isMine ? 'row-reverse' : 'row',
@@ -217,7 +202,7 @@ const ForumTopicPage = () => {
                             variant="body2" 
                             sx={{ 
                               fontWeight: 'bold', 
-                              color: '#24CC9F', // Verde para mejor accesibilidad
+                              color: '#24CC9F',
                               fontSize: { xs: '0.75rem', sm: '0.875rem' }
                             }}
                           >
@@ -226,7 +211,7 @@ const ForumTopicPage = () => {
                           <Typography 
                             variant="caption" 
                             sx={{ 
-                              color: 'rgba(255, 255, 255, 0.7)', // Mejor contraste
+                              color: 'rgba(255, 255, 255, 0.7)',
                               ml: isMine ? 0 : 2, 
                               mr: isMine ? 2 : 0,
                               fontSize: { xs: '0.65rem', sm: '0.7rem' }
@@ -237,7 +222,7 @@ const ForumTopicPage = () => {
                         </Box>
 
                         <Box sx={{ 
-                          backgroundColor: isMine ? '#24CC9F' : 'rgba(255, 255, 255, 0.15)', // Mejor contraste
+                          backgroundColor: isMine ? '#24CC9F' : 'rgba(255, 255, 255, 0.15)',
                           color: isMine ? '#000000' : '#ffffff',
                           padding: { xs: '6px 12px', sm: '8px 16px' },
                           borderRadius: isMine 
@@ -268,7 +253,6 @@ const ForumTopicPage = () => {
             </List>
           </Box>
           
-          {/* Entrada de mensaje o botón de login */}
           {currentUser ? (
             <Paper
               component="form"
@@ -297,7 +281,7 @@ const ForumTopicPage = () => {
                     color: 'white',
                     p: 1,
                     '&::placeholder': {
-                      color: 'rgba(255, 255, 255, 0.7)' // Mejor contraste
+                      color: 'rgba(255, 255, 255, 0.7)'
                     }
                   }
                 }}
@@ -380,6 +364,4 @@ const ForumTopicPage = () => {
       />
     </Box>
   );
-};
-
-export default ForumTopicPage;
+}
