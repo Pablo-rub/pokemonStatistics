@@ -2606,10 +2606,10 @@ app.get('/api/forum/topics/:topicId', async (req, res) => {
 
 // Create a new topic
 app.post('/api/forum/topics', async (req, res) => {
-  const { title, description, icon, userId, userName } = req.body;
+  const { title, description, icon } = req.body;
   
-  if (!title || !userId || !userName) {
-    return res.status(400).send("Title, userId, and userName are required");
+  if (!title) {
+    return res.status(400).send("Title is required");
   }
   
   try {
@@ -2618,8 +2618,8 @@ app.post('/api/forum/topics', async (req, res) => {
     
     const insertTopicQuery = `
       INSERT INTO \`pokemon-statistics.pokemon_replays.forum_topics\`
-      (topic_id, title, description, icon, created_by, created_at, last_active, posts_count)
-      VALUES(@topicId, @title, @description, @icon, @userId, @now, @now, 0)
+      (topic_id, title, description, icon, created_at, last_active, posts_count)
+      VALUES(@topicId, @title, @description, @icon, @now, @now, 0)
     `;
     
     const params = {
@@ -2627,7 +2627,6 @@ app.post('/api/forum/topics', async (req, res) => {
       title,
       description: description || "",
       icon: icon || "",
-      userId,
       now
     };
     
@@ -2641,14 +2640,13 @@ app.post('/api/forum/topics', async (req, res) => {
       title,
       description,
       icon,
-      created_by: userId,
       created_at: now,
       last_active: now,
       posts_count: 0
     });
   } catch (error) {
     console.error("Error creating new topic:", error);
-    res.status(500).send("Error creating new topic");
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -2693,7 +2691,7 @@ app.post('/api/forum/topics/:topicId/messages', async (req, res) => {
       content,
       userId,
       userName,
-      userAvatar: userAvatar || null,
+      userAvatar: userAvatar || "",
       now
     };
     
@@ -2726,118 +2724,7 @@ app.post('/api/forum/topics/:topicId/messages', async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating new message:", error);
-    res.status(500).send("Error creating new message");
-  }
-});
-
-// Delete a message (optional)
-app.delete('/api/forum/messages/:messageId', async (req, res) => {
-  const { messageId } = req.params;
-  const { userId } = req.body; // Para verificar propiedad
-  
-  if (!userId) {
-    return res.status(400).send("User ID is required");
-  }
-  
-  try {
-    // Verificar si el mensaje existe y pertenece al usuario
-    const messageQuery = `
-      SELECT topic_id FROM \`pokemon-statistics.pokemon_replays.forum_messages\`
-      WHERE message_id = @messageId AND userId = @userId
-    `;
-    
-    const [messageRows] = await bigQuery.query({
-      query: messageQuery,
-      params: { messageId, userId }
-    });
-    
-    if (messageRows.length === 0) {
-      return res.status(404).send("Message not found or you don't have permission to delete it");
-    }
-    
-    const topicId = messageRows[0].topic_id;
-    
-    // Borrar el mensaje
-    const deleteQuery = `
-      DELETE FROM \`pokemon-statistics.pokemon_replays.forum_messages\`
-      WHERE message_id = @messageId
-    `;
-    
-    await bigQuery.query({
-      query: deleteQuery,
-      params: { messageId }
-    });
-    
-    // Decrementar conteo de posts
-    const updateTopicQuery = `
-      UPDATE \`pokemon-statistics.pokemon_replays.forum_topics\`
-      SET posts_count = posts_count - 1
-      WHERE topic_id = @topicId
-    `;
-    
-    await bigQuery.query({
-      query: updateTopicQuery,
-      params: { topicId }
-    });
-    
-    res.status(200).send("Message deleted successfully");
-  } catch (error) {
-    console.error("Error deleting message:", error);
-    res.status(500).send("Error deleting message");
-  }
-});
-
-// Delete a topic (optional)
-app.delete('/api/forum/topics/:topicId', async (req, res) => {
-  const { topicId } = req.params;
-  const { userId } = req.body; // To verify ownership
-  
-  if (!userId) {
-    return res.status(400).send("User ID is required");
-  }
-  
-  try {
-    // First check if topic exists and belongs to user
-    const topicQuery = `
-      SELECT * FROM \`pokemon-statistics.pokemon_replays.forum_topics\`
-      WHERE topic_id = @topicId AND created_by = @userId
-    `;
-    
-    const [topicRows] = await bigQuery.query({
-      query: topicQuery,
-      params: { topicId, userId }
-    });
-    
-    if (topicRows.length === 0) {
-      return res.status(404).send("Topic not found or you don't have permission to delete it");
-    }
-    
-    // Delete all messages in the topic
-    const deleteMessagesQuery = `
-      DELETE FROM \`pokemon-statistics.pokemon_replays.forum_messages\`
-      WHERE topic_id = @topicId
-    `;
-    
-    await bigQuery.query({
-      query: deleteMessagesQuery,
-      params: { topicId }
-    });
-    
-    // Delete the topic
-    const deleteTopicQuery = `
-      DELETE FROM \`pokemon-statistics.pokemon_replays.forum_topics\`
-      WHERE topic_id = @topicId
-    `;
-    
-    await bigQuery.query({
-      query: deleteTopicQuery,
-      params: { topicId }
-    });
-    
-    res.status(200).send("Topic and all its messages deleted successfully");
-  } catch (error) {
-    console.error("Error deleting topic:", error);
-    res.status(500).send("Error deleting topic");
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -2951,7 +2838,7 @@ app.get('/api/victories', async (req, res) => {
 // Endpoint: Win rate de HABILIDADES de un Pokémon agrupado por mes
 app.get('/api/victories/abilities', async (req, res) => {
   const { pokemon } = req.query;
-  if (!pokemon) return res.status(400).json({ error: "El parámetro 'pokemon' es obligatorio" });
+  if (!pokemon) return res.status(400).json({ error: "The 'pokemon' parameter is required" });
   try {
     // Total de partidos en que el Pokémon aparece con cada habilidad, agrupados por mes
     const totalQuery = `
@@ -3025,7 +2912,7 @@ app.get('/api/victories/abilities', async (req, res) => {
 // Endpoint: Win rate de OBJETOS de un Pokémon, agrupado por mes
 app.get('/api/victories/items', async (req, res) => {
   const { pokemon } = req.query;
-  if (!pokemon) return res.status(400).json({ error: "El parámetro 'pokemon' es obligatorio" });
+  if (!pokemon) return res.status(400).json({ error: "The 'pokemon' parameter is required" });
   try {
     const totalQuery = `
       SELECT month, item, SUM(cnt) AS total_games FROM (
@@ -3095,7 +2982,7 @@ app.get('/api/victories/items', async (req, res) => {
 // Endpoint: Win rate de MOVIMIENTOS de un Pokémon, agrupado por mes
 app.get('/api/victories/moves', async (req, res) => {
   const { pokemon } = req.query;
-  if (!pokemon) return res.status(400).json({ error: "El parámetro 'pokemon' es obligatorio" });
+  if (!pokemon) return res.status(400).json({ error: "The 'pokemon' parameter is required" });
   try {
     const totalQuery = `
       SELECT month, move, SUM(cnt) AS total_games FROM (
@@ -3169,7 +3056,7 @@ app.get('/api/victories/moves', async (req, res) => {
 // Endpoint: Win rate de TERA TYPES de un Pokémon, agrupado por mes
 app.get('/api/victories/tera', async (req, res) => {
   const { pokemon } = req.query;
-  if (!pokemon) return res.status(400).json({ error: "El parámetro 'pokemon' es obligatorio" });
+  if (!pokemon) return res.status(400).json({ error: "The 'pokemon' parameter is required" });
   try {
     const totalQuery = `
       SELECT month, tera_type, SUM(cnt) AS total_games FROM (
@@ -3237,7 +3124,7 @@ app.get('/api/victories/tera', async (req, res) => {
 // Endpoint: Win rate de TEAMMATES de un Pokémon
 app.get('/api/victories/teammates', async (req, res) => {
   const { pokemon } = req.query;
-  if (!pokemon) return res.status(400).json({ error: "El parámetro 'pokemon' es obligatorio" });
+  if (!pokemon) return res.status(400).json({ error: "The 'pokemon' parameter is required" });
   try {
     // Consulta TOTAL: agrupa por teammate en todos los partidos donde el Pokémon aparece
     const totalQuery = `
@@ -3753,7 +3640,7 @@ app.post('/api/multistats', async (req, res) => {
   try {
     const { replayIds } = req.body;
     if (!Array.isArray(replayIds) || replayIds.length < 2) {
-      return res.status(400).json({ error: 'Necesitas al menos 2 replays' });
+      return res.status(400).json({ error: 'At least two replay IDs are required' });
     }
 
     // 1) Obtener los jugadores de cada replay
@@ -3769,7 +3656,7 @@ app.post('/api/multistats', async (req, res) => {
     if (playerRows.length !== replayIds.length) {
       return res
         .status(404)
-        .json({ error: 'Alguna de las replays no existe en la base de datos' });
+        .json({ error: 'One or more replay IDs not found in the database' });
     }
 
     // 2) Calcular intersección para hallar el jugador común
@@ -3782,9 +3669,7 @@ app.post('/api/multistats', async (req, res) => {
       if (comunes.size === 0) break;
     }
     if (comunes.size !== 1) {
-      return res
-        .status(400)
-        .json({ error: 'No hay un único jugador común en todas las replays' });
+      return res.status(400).json({ error: 'There is no single common player across all replays' });
     }
     const [player] = [...comunes];
 
@@ -3995,6 +3880,6 @@ app.post('/api/multistats', async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error interno' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
