@@ -7,6 +7,7 @@ import PublicGamesPage from './Pages/PublicGamesPage';
 import RankingsPage from './Pages/RankingsPage';
 import TurnAssistantPage from './Pages/TurnAssistantPage';
 import ForumPage from './Pages/ForumPage';
+import ForumTopicPage from './Pages/ForumTopicPage';
 import ProfilePage from './Pages/ProfilePage';
 import AnalyzeBattlePage from './Pages/AnalyzeBattlePage';
 import BattleAnalyticsPage from './Pages/BattleAnalyticsPage';
@@ -21,6 +22,7 @@ function App() {
         <Route path="rankings" element={<RankingsPage />} />
         <Route path="turn-assistant" element={<TurnAssistantPage />} />
         <Route path="forum" element={<ForumPage />} />
+        <Route path="forum/:topicId" element={<ForumTopicPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="analyze-battle/:replayId" element={<AnalyzeBattlePage />} />
         <Route path="battle-analytics" element={<BattleAnalyticsPage />} />
