@@ -3495,11 +3495,8 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
       // battle conditions
       const battleConditions = {
         weather:    turn.weather?.condition || "",
-        weatherDuration: turn.weather?.duration  || 0,
         field:      turn.field?.terrain   || "",
-        fieldDuration: turn.field?.duration    || 0,
         room:       turn.room?.condition    || "",
-        roomDuration:  turn.room?.duration     || 0,
         sideEffects: {
         yourSide: {
           tailwind:  turn.tailwind?.player1  || false,
@@ -3514,23 +3511,7 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
           auroraveil:  turn.screens?.auroraveil?.player2  || false
         }
       },
-      sideEffectsDuration: {
-        yourSide: {
-          tailwind:  turn.tailwind?.duration1          || 0,
-          reflect:   turn.screens?.reflect?.duration1         || 0,
-          lightscreen: turn.screens?.lightscreen?.duration1    || 0,
-          auroraveil:  turn.screens?.auroraveil?.duration1     || 0
-        },
-        opponentSide: {
-          tailwind:  turn.tailwind?.duration2          || 0,
-          reflect:   turn.screens?.reflect?.duration2         || 0,
-          lightscreen: turn.screens?.lightscreen?.duration2    || 0,
-          auroraveil:  turn.screens?.auroraveil?.duration2     || 0
-        }
-      },
-      entryHazards:       { yourSide: {}, opponentSide: {} },
-      entryHazardsLevel:  { yourSide: {}, opponentSide: {} },
-      entryHazardsDuration:{ yourSide: {}, opponentSide: {} }
+      entryHazards:       { yourSide: {}, opponentSide: {} }
     };
 
       // teams
@@ -3543,22 +3524,13 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
       // Also prepare a swapped version for P2 perspective
       const swapSides = bc => ({
         weather:            bc.weather,
-        weatherDuration:    bc.weatherDuration,
         field:              bc.field,
-        fieldDuration:      bc.fieldDuration,
         room:               bc.room,
-        roomDuration:       bc.roomDuration,
         sideEffects: {
           yourSide:         bc.sideEffects.opponentSide,
           opponentSide:     bc.sideEffects.yourSide
         },
-        sideEffectsDuration: {
-          yourSide:         bc.sideEffectsDuration.opponentSide,
-          opponentSide:     bc.sideEffectsDuration.yourSide
-        },
-        entryHazards:        { yourSide: bc.entryHazards.opponentSide,   opponentSide: bc.entryHazards.yourSide },
-        entryHazardsLevel:   { yourSide: bc.entryHazardsLevel.opponentSide, opponentSide: bc.entryHazardsLevel.yourSide },
-        entryHazardsDuration:{ yourSide: bc.entryHazardsDuration.opponentSide, opponentSide: bc.entryHazardsDuration.yourSide }
+        entryHazards:        { yourSide: bc.entryHazards.opponentSide,   opponentSide: bc.entryHazards.yourSide }
       });
 
       const bodyP2 = {
