@@ -240,17 +240,43 @@ const TurnCard = ({ turn }) => {
                 return active.filter(Boolean).map(name => {
                   const opts = turn.allMoveOptions?.[name] || [];
                   if (!opts.length) return null;
+                  // calculamos total de partidas por Pokémon
+                  const totalGames = opts.reduce((sum, o) => sum + o.total, 0) || 1;
                   return (
                     <Box key={`${side}-${name}`} sx={{ mb: 2 }}>
-                      <Typography variant="subtitle2" sx={{ color: theme.palette.primary.contrastText, mb: 1 }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ color: theme.palette.primary.contrastText, mb: 1 }}
+                      >
                         {side.toUpperCase()} – {name}
                       </Typography>
-                      <Table size="small" aria-label={`possible-moves-${side}-${name}`}>
+                      <Table
+                        size="small"
+                        aria-label={`possible-moves-${side}-${name}`}
+                      >
                         <TableHead>
                           <TableRow>
-                            <TableCell sx={{ color: theme.palette.primary.contrastText }}>Move</TableCell>
-                            <TableCell align="right" sx={{ color: theme.palette.primary.contrastText }}>Win %</TableCell>
-                            <TableCell align="right" sx={{ color: theme.palette.primary.contrastText }}>Games</TableCell>
+                            <TableCell sx={{ color: theme.palette.primary.contrastText }}>
+                              Move
+                            </TableCell>
+                            <TableCell
+                              align="right"
+                              sx={{ color: theme.palette.primary.contrastText }}
+                            >
+                              Usage %
+                            </TableCell>
+                            <TableCell
+                              align="right"
+                              sx={{ color: theme.palette.primary.contrastText }}
+                            >
+                              Win %
+                            </TableCell>
+                            <TableCell
+                              align="right"
+                              sx={{ color: theme.palette.primary.contrastText }}
+                            >
+                              Games
+                            </TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -259,10 +285,22 @@ const TurnCard = ({ turn }) => {
                               <TableCell sx={{ color: theme.palette.primary.contrastText }}>
                                 {opt.move}
                               </TableCell>
-                              <TableCell align="right" sx={{ color: theme.palette.primary.contrastText }}>
+                              <TableCell
+                                align="right"
+                                sx={{ color: theme.palette.primary.contrastText }}
+                              >
+                                {((opt.total / totalGames) * 100).toFixed(1)}%
+                              </TableCell>
+                              <TableCell
+                                align="right"
+                                sx={{ color: theme.palette.primary.contrastText }}
+                              >
                                 {opt.winRate.toFixed(1)}%
                               </TableCell>
-                              <TableCell align="right" sx={{ color: theme.palette.primary.contrastText }}>
+                              <TableCell
+                                align="right"
+                                sx={{ color: theme.palette.primary.contrastText }}
+                              >
                                 {opt.total}
                               </TableCell>
                             </TableRow>
