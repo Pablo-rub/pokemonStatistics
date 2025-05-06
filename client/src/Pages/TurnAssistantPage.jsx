@@ -316,7 +316,7 @@ function TurnAssistantPage() {
     setError(null);
     
     try {
-      const response = await axios.post("http://localhost:5000/api/turn-assistant/analyze", {
+      const response = await axios.post("/api/turn-assistant/analyze", {
         pokemonData: selectedPokemon,
         battleConditions: battleConditions,
         yourTeam: yourTeam || [],
@@ -350,7 +350,7 @@ function TurnAssistantPage() {
     const fetchFormatsAndPokemon = async () => {
       try {
         // Get the most recent month first
-        const monthsResponse = await axios.get('http://localhost:5000/api/months');
+        const monthsResponse = await axios.get('/api/months');
         if (!monthsResponse.data || monthsResponse.data.length === 0) {
           console.error('No months available');
           return;
@@ -367,7 +367,7 @@ function TurnAssistantPage() {
         
         // Fetch formats for the latest month
         setIsLoadingFormats(true);
-        const formatsResponse = await axios.get(`http://localhost:5000/api/formats/${latestMonth}`);
+        const formatsResponse = await axios.get(`/api/formats/${latestMonth}`);
         
         if (formatsResponse.data && formatsResponse.data.length > 0) {
           // Filter for VGC formats from 2025 only and exclude BO3 formats
@@ -425,7 +425,7 @@ function TurnAssistantPage() {
     // Need to fetch the latest month again since we're not storing it
     const fetchLatestMonth = async () => {
       try {
-        const monthsResponse = await axios.get('http://localhost:5000/api/months');
+        const monthsResponse = await axios.get('/api/months');
         if (monthsResponse.data && monthsResponse.data.length > 0) {
           // Filter for 2025 months only
           const months2025 = monthsResponse.data.filter(month => month.startsWith('2025-'));
@@ -446,7 +446,7 @@ function TurnAssistantPage() {
   // Fetch Pokémon list for the selected format
   const fetchPokemonList = async (month, format) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/rankings`, {
+      const response = await axios.get("/api/rankings", {
         params: { month, format }
       });
       

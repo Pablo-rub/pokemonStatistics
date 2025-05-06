@@ -9,7 +9,7 @@ import axios from 'axios';
 import App from './App';
 import theme from './styles/theme';
 
-axios.defaults.baseURL = 'http://localhost:5000';
+axios.defaults.baseURL = process.env.REACT_APP_API_URL || ''; // URL vacía para rutas relativas
 
 const container = document.getElementById('root');
 const root = createRoot(container);
