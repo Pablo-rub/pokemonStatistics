@@ -21,7 +21,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
 import PublicIcon from '@mui/icons-material/Public';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
-import BarChartIcon from '@mui/icons-material/BarChart';
+import InsightsIcon from '@mui/icons-material/Insights';
 import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import AssistantIcon from '@mui/icons-material/Assistant';
 import ForumIcon from '@mui/icons-material/Forum';
@@ -73,8 +73,8 @@ const Sidebar = () => {
     { text: 'Home', path: '/', icon: <HomeIcon /> },
     { text: 'Public Games', path: '/public-games', icon: <PublicIcon /> },
     { text: 'Saved Games', path: '/saved-games', icon: <BookmarkIcon /> },
-    { text: 'Battle Analytics', path: '/battle-analytics', icon: <BarChartIcon /> },
-    { text: 'Rankings', path: '/rankings', icon: <LeaderboardIcon /> },
+    { text: 'Battle Analytics', path: '/battle-analytics', icon: <LeaderboardIcon /> },
+    { text: 'Rankings', path: '/rankings', icon: <InsightsIcon /> },
     { text: 'Turn Assistant', path: '/turn-assistant', icon: <AssistantIcon /> },
     { text: 'Forum', path: '/forum', icon: <ForumIcon /> },
     { text: 'Contact / Help', path: '/contact', icon: <HelpIcon /> },
