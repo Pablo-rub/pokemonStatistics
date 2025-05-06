@@ -1,0 +1,12 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/pokemon-statistics/pokemon-app:$COMMIT_SHA', '.']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/pokemon-statistics/pokemon-app:$COMMIT_SHA']
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args: ['run', 'deploy', 'pokemon-app', '--image', 'gcr.io/pokemon-statistics/pokemon-app:$COMMIT_SHA', '--region', 'us-central1']
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+serviceAccount: 'pokemon-statistics@pokemon-statistics.iam.gserviceaccount.com'
