@@ -1,329 +1,317 @@
-import React from "react";
+import React from 'react';
 import { 
   Box, 
-  Typography, 
   Container, 
   Grid, 
-  Card, 
-  CardContent, 
+  Typography, 
   Button, 
   useTheme, 
-  useMediaQuery
-} from "@mui/material";
-import { useNavigate } from "react-router-dom";
+  useMediaQuery, 
+  Card, 
+  CardContent,
+  Paper,
+  Divider,
+  alpha,
+  Fade
+} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import OndemandVideoIcon from '@mui/icons-material/OndemandVideo';
-import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
+import ExploreIcon from '@mui/icons-material/Explore';
+import PersonIcon from '@mui/icons-material/Person';
+import ForumIcon from '@mui/icons-material/Forum';
 
-// You'll need to import or create a background image
-// const HERO_IMAGE = '/images/competitive-pokemon-battle.jpg'; 
+export default function HomePage() {
+  const theme = useTheme();
+  const navigate = useNavigate();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
-function HomePage() {
-    const theme = useTheme();
-    const navigate = useNavigate();
-    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const features = [
+    {
+      icon: <BarChartIcon sx={{ fontSize: { xs: 40, md: 54 }, color: '#24CC9F' }} />,
+      title: "Comprehensive Rankings",
+      description:
+        "Explore detailed usage statistics and rankings for every Pokémon in the competitive scene. Track changes in the metagame over time with our historical data visualization."
+    },
+    {
+      icon: <AutoGraphIcon sx={{ fontSize: { xs: 40, md: 54 }, color: '#24CC9F' }} />,
+      title: "Deep Statistical Analysis",
+      description:
+        "Analyze win rates, common movesets, popular abilities, and team compositions. Get insights into the most successful strategies with our detailed breakdowns."
+    },
+    {
+      icon: <OndemandVideoIcon sx={{ fontSize: { xs: 40, md: 54 }, color: '#24CC9F' }} />,
+      title: "Battle Replays",
+      description:
+        "Watch and save high-level competitive matches. Study strategies from top players and improve your own gameplay with our curated collection of battle replays."
+    }
+  ];
 
-    const features = [
-      {
-        icon: <BarChartIcon sx={{ fontSize: 54, color: '#24CC9F' }} />,
-        title: "Comprehensive Rankings",
-        description: "Explore detailed usage statistics and rankings for every Pokémon in the competitive scene. Track changes in the metagame over time with our historical data visualization."
-      },
-      {
-        icon: <AutoGraphIcon sx={{ fontSize: 54, color: '#24CC9F' }} />,
-        title: "Deep Statistical Analysis",
-        description: "Analyze win rates, common movesets, popular abilities, and team compositions. Get insights into the most successful strategies with our detailed breakdowns."
-      },
-      {
-        icon: <OndemandVideoIcon sx={{ fontSize: 54, color: '#24CC9F' }} />,
-        title: "Battle Replays",
-        description: "Watch and save high-level competitive matches. Study strategies from top players and improve your own gameplay with our curated collection of battle replays."
-      }
-    ];
+  const quickLinks = [
+    { 
+      icon: <ExploreIcon />, 
+      title: "Public Games", 
+      description: "Browse and watch recent competitive matches",
+      path: "/public-games" 
+    },
+    { 
+      icon: <BarChartIcon />, 
+      title: "Rankings", 
+      description: "See which Pokémon are dominating the meta",
+      path: "/rankings" 
+    },
+    { 
+      icon: <ForumIcon />, 
+      title: "Forum", 
+      description: "Join the community discussion",
+      path: "/forum" 
+    }
+  ];
 
-    return (
-        <Box sx={{ minHeight: '100vh' }}>
-            {/* Hero Section */}
+  return (
+    <Box>
+      <Box
+        sx={{
+          position: 'relative',
+          height: { xs: '70vh', sm: '75vh', md: '85vh' },
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingX: { xs: 2, sm: 4, md: 6 }
+        }}
+      >
+        <Container maxWidth="md">
+          <Fade in={true} timeout={1000}>
             <Box
-                sx={{
-                    position: 'relative',
-                    height: { xs: '60vh', md: '70vh' },
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    backgroundColor: '#221FC7',
-                    color: 'white',
-                    // If you have a hero image:
-                    // backgroundImage: `linear-gradient(rgba(34, 31, 199, 0.85), rgba(34, 31, 199, 0.95)), url(${HERO_IMAGE})`,
-                    // backgroundSize: 'cover',
-                    // backgroundPosition: 'center',
-                    textAlign: 'center',
-                    p: { xs: 2, sm: 4, md: 6 },
-                    borderRadius: { xs: 0, md: '0 0 30px 30px' },
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
-                }}
+              sx={{
+                bgcolor: alpha('#000000', 0.6),
+                color: '#ffffff',
+                p: { xs: 3, sm: 4, md: 5 },
+                textAlign: 'center',
+                borderRadius: 2,
+                backdropFilter: 'blur(5px)',
+              }}
             >
-                <Box sx={{ 
-                    maxWidth: '800px',
-                    animation: 'fadeIn 1.2s ease-out',
-                    '@keyframes fadeIn': {
-                        '0%': { opacity: 0, transform: 'translateY(20px)' },
-                        '100%': { opacity: 1, transform: 'translateY(0)' }
-                    }
-                }}>
-                    <Typography 
-                        variant={isMobile ? "h4" : "h2"} 
-                        component="h1" 
-                        fontWeight="bold"
-                        sx={{ mb: 3 }}
-                    >
-                        Pokémon Battle Statistics
-                    </Typography>
-                    
-                    <Typography 
-                        variant={isMobile ? "body1" : "h6"} 
-                        sx={{ 
-                            mb: 4, 
-                            maxWidth: '800px', 
-                            mx: 'auto',
-                            opacity: 0.9
-                        }}
-                    >
-                        Your comprehensive resource for competitive Pokémon analysis, 
-                        featuring detailed usage statistics, win rates, and battle replays to 
-                        help you build better teams and improve your gameplay.
-                    </Typography>
-                    
-                    <Grid container spacing={2} justifyContent="center" sx={{ mt: 2 }}>
-                        <Grid item>
-                            <Button 
-                                variant="contained" 
-                                size="large"
-                                endIcon={<KeyboardArrowRightIcon />}
-                                onClick={() => navigate('/rankings')}
-                                sx={{ 
-                                    bgcolor: '#24CC9F',
-                                    borderRadius: '50px',
-                                    px: 4,
-                                    '&:hover': {
-                                        bgcolor: '#1FA082',
-                                        transform: 'translateY(-3px)',
-                                        boxShadow: '0 6px 15px rgba(36, 204, 159, 0.4)'
-                                    },
-                                    transition: 'all 0.3s ease'
-                                }}
-                            >
-                                Explore Rankings
-                            </Button>
-                        </Grid>
-                        <Grid item>
-                            <Button 
-                                variant="outlined" 
-                                size="large"
-                                endIcon={<KeyboardArrowRightIcon />}
-                                onClick={() => navigate('/public-games')} // Changed from '/replays' to '/public-games'
-                                sx={{ 
-                                    color: 'white',
-                                    borderColor: 'white',
-                                    borderRadius: '50px',
-                                    px: 4,
-                                    '&:hover': {
-                                        borderColor: 'white',
-                                        bgcolor: 'rgba(255,255,255,0.1)',
-                                    }
-                                }}
-                            >
-                                Watch Replays
-                            </Button>
-                        </Grid>
-                    </Grid>
-                </Box>
-            </Box>
-
-            {/* Main Features Section */}
-            <Container maxWidth="lg" sx={{ py: { xs: 6, md: 10 } }}>
-                <Typography 
-                    variant="h4" 
-                    component="h2" 
-                    textAlign="center"
-                    fontWeight="bold"
-                    color="white"
-                    sx={{ 
-                        mb: { xs: 4, md: 6 },
-                        position: 'relative',
-                        display: 'inline-block',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        '&:after': {
-                            content: '""',
-                            position: 'absolute',
-                            width: '60px',
-                            height: '4px',
-                            bgcolor: '#24CC9F',
-                            bottom: '-15px',
-                            left: '50%',
-                            transform: 'translateX(-50%)'
-                        }
-                    }}
+              <Typography 
+                variant={isMobile ? 'h4' : isTablet ? 'h3' : 'h2'} 
+                component="h1"
+                gutterBottom
+                sx={{ fontWeight: 'bold' }}
+              >
+                Competitive Pokémon Statistics
+              </Typography>
+              <Typography 
+                variant={isMobile ? 'body1' : 'h6'} 
+                sx={{ mb: { xs: 3, md: 4 }, maxWidth: '700px', mx: 'auto' }}
+              >
+                Dive into usage stats, battle replays, and deep analytics to improve your competitive gameplay.
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, justifyContent: 'center' }}>
+                <Button
+                  variant="contained"
+                  size={isMobile ? 'medium' : 'large'}
+                  startIcon={<ExploreIcon />}
+                  onClick={() => navigate('/public-games')}
+                  sx={{ 
+                    py: { xs: 1, md: 1.5 },
+                    px: { xs: 3, md: 4 },
+                    fontWeight: 'bold'
+                  }}
                 >
-                    Key Features
-                </Typography>
+                  Explore Games
+                </Button>
+                <Button
+                  variant="outlined"
+                  size={isMobile ? 'medium' : 'large'}
+                  color="secondary"
+                  onClick={() => navigate('/rankings')}
+                  sx={{ 
+                    py: { xs: 1, md: 1.5 },
+                    px: { xs: 3, md: 4 },
+                    borderColor: '#ffffff',
+                    color: '#ffffff',
+                    '&:hover': {
+                      borderColor: '#ffffff',
+                      backgroundColor: alpha('#ffffff', 0.1)
+                    }
+                  }}
+                >
+                  View Rankings
+                </Button>
+              </Box>
+            </Box>
+          </Fade>
+        </Container>
+      </Box>
 
-                <Grid container spacing={4}>
-                    {features.map((feature, index) => (
-                        <Grid 
-                            item 
-                            xs={12} 
-                            md={4} 
-                            key={index}
-                            sx={{
-                                animation: `fadeInUp ${0.3 + index * 0.2}s ease-out`,
-                                '@keyframes fadeInUp': {
-                                    '0%': { opacity: 0, transform: 'translateY(40px)' },
-                                    '100%': { opacity: 1, transform: 'translateY(0)' }
-                                }
-                            }}
-                        >
-                            <Card 
-                                elevation={4}
-                                sx={{ 
-                                    height: '100%', 
-                                    display: 'flex', 
-                                    flexDirection: 'column',
-                                    borderRadius: 3,
-                                    overflow: 'hidden',
-                                    bgcolor: '#221FC7',
-                                    transition: 'all 0.3s ease',
-                                    '&:hover': {
-                                        transform: 'translateY(-10px)',
-                                        boxShadow: '0 12px 25px rgba(0,0,0,0.3)'
-                                    }
-                                }}
-                            >
-                                <CardContent sx={{ 
-                                    flexGrow: 1, 
-                                    p: 4, 
-                                    display: 'flex', 
-                                    flexDirection: 'column', 
-                                    alignItems: 'center', 
-                                    textAlign: 'center' 
-                                }}>
-                                    <Box sx={{ mb: 2 }}>{feature.icon}</Box>
-                                    <Typography 
-                                        variant="h5" 
-                                        component="h3" 
-                                        fontWeight="bold"
-                                        color="white"
-                                        sx={{ mb: 2 }}
-                                    >
-                                        {feature.title}
-                                    </Typography>
-                                    <Typography color="white" sx={{ opacity: 0.8 }}>
-                                        {feature.description}
-                                    </Typography>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                    ))}
-                </Grid>
-            </Container>
+      {/* Key Features Section */}
+      <Box 
+        sx={{ 
+          py: { xs: 5, md: 8 }, 
+          px: { xs: 2, sm: 4, md: 6 },
+          backgroundColor: '#221FC7'
+        }}
+      >
+        <Container maxWidth="lg">
+          <Typography 
+            variant={isMobile ? 'h5' : 'h4'} 
+            component="h2"
+            align="center" 
+            gutterBottom
+            sx={{ color: '#ffffff', fontWeight: 'bold', mb: 4 }}
+          >
+            Key Features
+          </Typography>
+          
+          <Grid container spacing={{ xs: 3, md: 4 }} justifyContent="center">
+            {features.map((feature, idx) => (
+              <Grid key={idx} item xs={12} sm={6} md={4}>
+                <Card 
+                  sx={{ 
+                    height: '100%',
+                    backgroundColor: alpha('#ffffff', 0.1), 
+                    color: '#ffffff',
+                    transition: 'transform 0.3s, box-shadow 0.3s',
+                    '&:hover': {
+                      transform: 'translateY(-8px)',
+                      boxShadow: '0 12px 20px rgba(0, 0, 0, 0.2)'
+                    },
+                    borderRadius: 2
+                  }}
+                >
+                  <CardContent sx={{ textAlign: 'center', p: { xs: 3, md: 4 } }}>
+                    <Box sx={{ mb: 2 }}>
+                      {feature.icon}
+                    </Box>
+                    <Typography 
+                      variant="h6" 
+                      component="h3"
+                      sx={{ mb: 1.5, fontWeight: 'bold' }}
+                    >
+                      {feature.title}
+                    </Typography>
+                    <Typography variant="body2" color="rgba(255,255,255,0.8)">
+                      {feature.description}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
 
-            {/* Getting Started Section */}
-            <Box 
-                sx={{ 
-                    bgcolor: 'rgba(36, 204, 159, 0.1)', 
-                    py: { xs: 6, md: 10 },
-                    px: 3,
-                    borderTop: '1px solid rgba(36, 204, 159, 0.2)',
-                    borderBottom: '1px solid rgba(36, 204, 159, 0.2)'
-                }}
+      {/* Quick Links Section */}
+      <Box sx={{ py: { xs: 5, md: 8 }, px: { xs: 2, sm: 4, md: 6 } }}>
+        <Container maxWidth="lg">
+          <Typography 
+            variant={isMobile ? 'h5' : 'h4'} 
+            component="h2"
+            align="center" 
+            gutterBottom
+            sx={{ mb: 4, color: '#ffffff', fontWeight: 'bold' }}
+          >
+            Getting Started
+          </Typography>
+          
+          <Grid container spacing={3}>
+            {quickLinks.map((link, idx) => (
+              <Grid key={idx} item xs={12} sm={4}>
+                <Paper 
+                  elevation={3}
+                  sx={{ 
+                    p: 3, 
+                    height: '100%',
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s, background-color 0.2s',
+                    backgroundColor: '#221FC7',
+                    color: '#ffffff',
+                    '&:hover': {
+                      transform: 'scale(1.02)',
+                      backgroundColor: '#24CC9F'
+                    }
+                  }}
+                  onClick={() => navigate(link.path)}
+                  component="article"
+                  aria-label={`Navigate to ${link.title}`}
+                >
+                  <Box 
+                    sx={{ 
+                      p: 1.5, 
+                      borderRadius: '50%', 
+                      backgroundColor: alpha('#ffffff', 0.1),
+                      mb: 2
+                    }}
+                  >
+                    {link.icon}
+                  </Box>
+                  <Typography variant="h6" component="h3" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    {link.title}
+                  </Typography>
+                  <Typography variant="body2" color="rgba(255,255,255,0.8)">
+                    {link.description}
+                  </Typography>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* Call to Action Section */}
+      <Box 
+        sx={{ 
+          py: { xs: 6, md: 10 }, 
+          px: { xs: 2, sm: 4, md: 6 },
+          backgroundColor: alpha('#221FC7', 0.8),
+          position: 'relative'
+        }}
+      >
+        <Container maxWidth="md">
+          <Box
+            sx={{
+              textAlign: 'center',
+              color: '#ffffff',
+              p: { xs: 3, md: 5 },
+              borderRadius: 2
+            }}
+          >
+            <Typography 
+              variant={isMobile ? 'h5' : 'h4'} 
+              component="h2"
+              gutterBottom
+              sx={{ fontWeight: 'bold' }}
             >
-                <Container maxWidth="md">
-                    <Grid container spacing={4} alignItems="center">
-                        <Grid item xs={12} md={6}>
-                            <Typography 
-                                variant="h4" 
-                                component="h2" 
-                                fontWeight="bold" 
-                                color="white"
-                                sx={{ mb: 2 }}
-                            >
-                                Get Started Today
-                            </Typography>
-                            <Typography 
-                                color="white" 
-                                sx={{ mb: 4, opacity: 0.8 }}
-                            >
-                                Dive into the world of competitive Pokémon with our comprehensive statistics and analysis tools. Whether you're a seasoned player or just starting out, our platform offers valuable insights to help you build stronger teams and develop winning strategies.
-                            </Typography>
-                            <Button 
-                                variant="contained" 
-                                size="large"
-                                endIcon={<KeyboardArrowRightIcon />}
-                                onClick={() => navigate('/rankings')}
-                                sx={{ 
-                                    bgcolor: '#24CC9F',
-                                    borderRadius: '50px',
-                                    px: 4,
-                                    '&:hover': {
-                                        bgcolor: '#1FA082',
-                                        transform: 'translateY(-3px)',
-                                        boxShadow: '0 6px 15px rgba(36, 204, 159, 0.4)'
-                                    },
-                                    transition: 'all 0.3s ease'
-                                }}
-                            >
-                                Start Exploring
-                            </Button>
-                        </Grid>
-                        <Grid item xs={12} md={6} sx={{ textAlign: 'center' }}>
-                            {/* If you have an image for this section */}
-                            {/* <Box 
-                                component="img" 
-                                src="/images/pokemon-dashboard.png" 
-                                alt="Pokémon statistics dashboard" 
-                                sx={{ 
-                                    maxWidth: '100%', 
-                                    borderRadius: 3,
-                                    boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-                                    border: '4px solid white'
-                                }} 
-                            /> */}
-                            
-                            {/* Alternatively, some decorative element */}
-                            <Box sx={{ 
-                                height: 300, 
-                                borderRadius: 3,
-                                background: 'linear-gradient(135deg, #221FC7 0%, #1A1896 100%)',
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-                                border: '1px solid rgba(255,255,255,0.1)'
-                            }}>
-                                <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
-                                    Pokémon Statistics
-                                </Typography>
-                            </Box>
-                        </Grid>
-                    </Grid>
-                </Container>
-            </Box>
-
-            {/* Footer Section */}
-            <Box sx={{ py: 5, textAlign: 'center' }}>
-                <Typography color="white" sx={{ opacity: 0.7 }}>
-                    Designed for Pokémon trainers and competitive players.
-                </Typography>
-                <Typography variant="caption" color="white" sx={{ display: 'block', mt: 1, opacity: 0.5 }}>
-                    © {new Date().getFullYear()} Pokémon Statistics. All game-related content belongs to The Pokémon Company.
-                </Typography>
-            </Box>
-        </Box>
-    );
+              Talk with the Community
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 4, maxWidth: '600px', mx: 'auto' }}>
+              Connect with fellow trainers, share strategies, and stay updated on the latest competitive trends.
+            </Typography>
+            <Button
+              variant="contained"
+              size="large"
+              color="secondary"
+              startIcon={<PersonIcon />}
+              onClick={() => navigate('/forum')}
+              sx={{ 
+                py: 1.5, 
+                px: 4,
+                fontWeight: 'bold'
+              }}
+            >
+              Visit the Forum
+            </Button>
+          </Box>
+        </Container>
+      </Box>
+    </Box>
+  );
 }
-
-export default HomePage;
