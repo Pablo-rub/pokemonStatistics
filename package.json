@@ -15,6 +15,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "react-router-dom": "^6.27.0",
-    "styled-components": "^6.1.14"
+    "styled-components": "^6.1.14",
+    "axios": "^1.4.0"
   }
 }

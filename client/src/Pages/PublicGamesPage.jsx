@@ -48,7 +48,7 @@ function PublicGamesPage() {
     async (page, filters) => {
       try {
         setIsLoading(true);
-        const response = await axios.get("http://localhost:5000/api/games", {
+        const response = await axios.get("/api/games", {
           params: {
             page,
             limit: itemsPerPage,

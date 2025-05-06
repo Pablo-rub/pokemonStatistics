@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
 
   const createUserRecord = async (user) => {
     try {
-      await axios.post('http://localhost:5000/api/users/saved-replays', {
+      await axios.post('/api/users/saved-replays', {
         userId: user.uid,
       });
     } catch (error) {
@@ -47,7 +47,7 @@ export function AuthProvider({ children }) {
     try {
       const result = await signInWithPopup(auth, provider);
       try {
-        const response = await axios.get(`http://localhost:5000/api/users/${result.user.uid}/saved-replays`);
+        const response = await axios.get(`/api/users/${result.user.uid}/saved-replays`);
         if (!response.data || response.data.length === 0) {
           await createUserRecord(result.user);
         }
@@ -67,7 +67,7 @@ export function AuthProvider({ children }) {
   const signUpWithEmail = async (email, password, displayName) => {
     try {
       if (password.length < 6) {
-        throw { code: 'auth/weak-password' };
+        throw new Error('auth/weak-password');
       }
       const result = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(result.user, { displayName });
@@ -117,7 +117,7 @@ export function AuthProvider({ children }) {
         );
         await reauthenticateWithCredential(currentUser, credential);
       }
-      await axios.delete(`http://localhost:5000/api/users/${currentUser.uid}/saved-replays`);
+      await axios.delete(`/api/users/${currentUser.uid}/saved-replays`);
       await deleteUser(currentUser);
     } catch (error) {
       throw error;
