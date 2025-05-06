@@ -4,6 +4,7 @@ import {
   Box,
   Typography,
   Alert,
+  AlertTitle,
   CircularProgress,
   Table,
   TableBody,
@@ -20,8 +21,12 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Button
 } from '@mui/material';
+import { useNavigate } from "react-router-dom";
+import SaveIcon from '@mui/icons-material/Save';
+import InfoIcon from '@mui/icons-material/Info';
 import { 
   ResponsiveContainer, 
   PieChart, 
@@ -33,6 +38,7 @@ import {
 
 export default function BattleAnalyticsPage() {
   const theme = useTheme();
+  const navigate = useNavigate();
   const [stats, setStats]     = useState(null);
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(true);
@@ -44,7 +50,7 @@ export default function BattleAnalyticsPage() {
 
   useEffect(() => {
     if (replayIds.length < 2) {
-      setError('Necesitas al menos 2 replays para ver estadísticas');
+      setError('insufficient');
       setLoading(false);
       return;
     }
@@ -62,6 +68,71 @@ export default function BattleAnalyticsPage() {
     );
   }
   if (error) {
+    if (error === 'insufficient') {
+      return (
+        <Box sx={{ maxWidth: 800, mx: 'auto', mt: 4, p: 3 }}>
+          <Alert 
+            severity="info" 
+            sx={{ 
+              backgroundColor: 'rgba(25, 118, 210, 0.12)', 
+              color: '#ffffff',
+              border: '1px solid rgba(25, 118, 210, 0.5)',
+              mb: 4
+            }}
+          >
+            <AlertTitle sx={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
+              More Replays Needed
+            </AlertTitle>
+            <Typography sx={{ mb: 2 }}>
+              You need at least 2 replays to view battle statistics. Saved replays are used to analyze your battle patterns and provide insights about your gameplay.
+            </Typography>
+            <Box sx={{ mt: 3, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+              <Button 
+                variant="contained" 
+                color="primary"
+                startIcon={<SaveIcon />}
+                onClick={() => navigate('/saved-games')}
+              >
+                Go to Saved Games
+              </Button>
+              <Button 
+                variant="outlined" 
+                color="inherit"
+                startIcon={<InfoIcon />}
+                onClick={() => navigate('/public-games')}
+                sx={{ borderColor: '#ffffff', color: '#ffffff' }}
+              >
+                Find Public Games
+              </Button>
+            </Box>
+          </Alert>
+          
+          <Paper sx={{ p: 3, backgroundColor: '#221FC7', color: '#ffffff' }}>
+            <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
+              How Battle Analytics Works
+            </Typography>
+            <Typography paragraph>
+              Battle Analytics helps you understand your gameplay patterns by analyzing your saved replays. Here's how to get started:
+            </Typography>
+            <ol>
+              <Typography component="li" sx={{ mb: 1 }}>
+                Go to the "Public Games" section to find interesting matches
+              </Typography>
+              <Typography component="li" sx={{ mb: 1 }}>
+                Save the games you want to analyze by clicking the bookmark icon
+              </Typography>
+              <Typography component="li" sx={{ mb: 1 }}>
+                Return to "Saved Games" and mark the replays you want to analyze
+              </Typography>
+              <Typography component="li">
+                Come back to this page to see detailed statistics about your battles
+              </Typography>
+            </ol>
+          </Paper>
+        </Box>
+      );
+    }
+    
     return <Alert severity="error" sx={{ m:4 }}>{error}</Alert>;
   }
 
@@ -121,7 +192,7 @@ export default function BattleAnalyticsPage() {
   }));
 
   // Define a palette of colors to cycle through
-  const PIE_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#9966FF', '#4BC0C0', '#F49AC2'];
+const PIE_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#9966FF', '#4BC0C0', '#F49AC2'];
 
   return (
     <Box
