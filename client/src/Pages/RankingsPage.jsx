@@ -100,14 +100,14 @@ const PokemonUsage = () => {
             setIsLoadingInitial(true);
             try {
                 // 1. Get latest month
-                const monthsResponse = await axios.get('http://localhost:5000/api/months');
+                const monthsResponse = await axios.get('/api/months');
                 const months = monthsResponse.data;
                 
                 if (months.length > 0) {
                     const latestMonth = months[0];
                     
                     // 2. Get formats for latest month and filter VGC formats
-                    const formatsResponse = await axios.get(`http://localhost:5000/api/formats/${latestMonth}`);
+                    const formatsResponse = await axios.get(`/api/formats/${latestMonth}`);
                     const vgcFormats = formatsResponse.data
                         .filter(fmt => fmt.toLowerCase().includes('vgc'))
                         .sort((a, b) => b.localeCompare(a));
@@ -151,7 +151,7 @@ const PokemonUsage = () => {
             try {
                 const endpoint = victoryEndpoints[currentVictoryCategory];
                 console.log(`Fetching victory data for ${currentVictoryCategory}...`);
-                const response = await axios.get(`http://localhost:5000${endpoint}`, {
+                const response = await axios.get(endpoint, {
                     params: { pokemon: selectedPokemon.name }
                 });
                 console.log("Victory data response:", response.data);
@@ -240,7 +240,7 @@ const PokemonUsage = () => {
         try {
             if (rankingType === 'usage') {
                 // Lógica actual: consulta a /api/rankings
-                const monthsResponse = await axios.get('http://localhost:5000/api/months');
+                const monthsResponse = await axios.get('/api/months');
                 const months = monthsResponse.data.sort((a, b) => b.localeCompare(a));
                 const historicalDataObj = {};
                 let foundData = false;
@@ -251,7 +251,7 @@ const PokemonUsage = () => {
                 for (const month of months) {
                     if (monthsWithData >= MAX_MONTHS) break;
                     try {
-                        const response = await axios.get('http://localhost:5000/api/rankings', {
+                        const response = await axios.get('/api/rankings', {
                             params: { month, format: selectedFormat }
                         });
                         if (response.data && response.data.data && Object.keys(response.data.data).length > 0) {
@@ -282,7 +282,7 @@ const PokemonUsage = () => {
                 // rankingType === 'victories'
                 // Llamamos al endpoint /api/victories, pero NO actualizamos usageData,
                 // para mantener la misma lista de Pokémon que en el modo usage.
-                const response = await axios.get('http://localhost:5000/api/victories', {
+                const response = await axios.get('/api/victories', {
                     params: { format: selectedFormat }
                 });
                 const data = response.data;
@@ -341,7 +341,7 @@ const PokemonUsage = () => {
             
             console.log(`Fetching details for ${pokemonName} in ${format} (${latestMonth})`);
             
-            const response = await axios.get(`http://localhost:5000/api/rankings`, {
+            const response = await axios.get('/api/rankings', {
                 params: {
                     format: format,
                     month: latestMonth,

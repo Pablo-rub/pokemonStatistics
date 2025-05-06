@@ -69,19 +69,19 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
     // Obtener las listas al montar el componente
     useEffect(() => {
         // Items
-        fetch('http://localhost:5000/api/items')
+        fetch('/api/items')
             .then(res => res.json())
             .then(data => setItemsList(data))
             .catch(err => console.error("Error fetching items:", err));
         
         // Abilities
-        fetch('http://localhost:5000/api/abilities')
+        fetch('/api/abilities')
             .then(res => res.json())
             .then(data => setAbilitiesList(data))
             .catch(err => console.error("Error fetching abilities:", err));
         
         // Moves
-        fetch('http://localhost:5000/api/moves')
+        fetch('/api/moves')
             .then(res => res.json())
             .then(data => setMovesList(data))
             .catch(err => console.error("Error fetching moves:", err));

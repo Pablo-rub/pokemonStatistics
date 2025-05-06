@@ -2,23 +2,56 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const puppeteer = require('puppeteer');
 
+const API_URL = process.env.API_URL || `http://localhost:${process.env.PORT || 5000}`;
+
 // Set to true to process all replays, false to stop on first existing replay
 const CONTINUE_ON_EXISTING = true; 
+
+async function getMonthsDirectly() {
+  const response = await axios.get('https://www.smogon.com/stats/');
+  const $ = cheerio.load(response.data);
+  
+  const months = new Set();
+  $('a').each((index, element) => {
+    const href = $(element).attr('href');
+    if (href) {
+      const match = href.match(/(\d{4}-\d{2}(-DLC\d{1})?\/)/);
+      if (match) {
+        months.add(match[1].replace('/', ''));
+      }
+    }
+  });
+  
+  return Array.from(months).sort().reverse();
+}
+
+async function getFormatsDirectly(month) {
+  const response = await axios.get(`https://www.smogon.com/stats/${month}/`);
+  const $ = cheerio.load(response.data);
+  
+  const formats = [];
+  $('a').each((index, element) => {
+    const href = $(element).attr('href');
+    if (href && href.endsWith('.txt') && !href.endsWith('.txt.gz')) {
+      formats.push(href.replace('.txt', ''));
+    }
+  });
+  
+  return formats;
+}
 
 async function getLatestFormat() {
     // it should has vgc and bo3
     try {
-      // Get the list of months from the backend
-      const monthsRes = await axios.get("http://localhost:5000/api/months");
-      const months = monthsRes.data; // already sorted reverse (latest first)
+      // Get the list of months directly
+      const months = await getMonthsDirectly();
       if (!months.length) {
         throw new Error("No months available");
       }
       const latestMonth = months[0];
   
-      // Get the list of formats for the latest month
-      const formatsRes = await axios.get(`http://localhost:5000/api/formats/${latestMonth}`);
-      const formats = formatsRes.data;
+      // Get the list of formats directly for the latest month
+      const formats = await getFormatsDirectly(latestMonth);
       
       // Filter formats that include "vgc" and "bo3"
       const vgcBo3Formats = formats.filter(f => f.toLowerCase().includes("vgc") && f.toLowerCase().includes("bo3"));
@@ -215,33 +248,28 @@ async function processReplays(replayLinks) {
 
     for (const url of replayLinks) {
       const parts = url.split('/');
-      let replayId = parts[parts.length - 1].replace('.json', '');
+      const replayId = parts[parts.length - 1].replace('.json', '');
 
-      // Check if the replay already exists in the database
-      const checkResponse = await axios.get(`http://localhost:5000/api/games/${replayId}`);
+      // Usa la URL parametrizada en lugar de hardcodear localhost:5000
+      const checkResponse = await axios.get(`${API_URL}/api/games/${replayId}`);
       if (checkResponse.data.exists) {
         console.log(`Replay ${replayId} already exists in the database.`);
         if (!CONTINUE_ON_EXISTING) {
-          console.log("Stopping process as existing replay found (CONTINUE_ON_EXISTING is false)");
           foundExisting = true;
           break;
         }
-        console.log("Continuing to next replay (CONTINUE_ON_EXISTING is true)");
         continue;
       }
 
       try {
-        await axios.post("http://localhost:5000/api/replays", { url });
+        // Igual aquí
+        await axios.post(`${API_URL}/api/replays`, { url });
         console.log("Processing replay:", url);
       } catch (postError) {
         console.error(`Error processing replay ${replayId}:`, postError.message);
       }
     }
 
-    if (!foundExisting) {
-      console.log("Processed all replays in current page, continuing to next page...");
-    }
-    
     return foundExisting;
   } catch (error) {
     console.error("Error processing replays:", error);

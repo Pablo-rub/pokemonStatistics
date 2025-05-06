@@ -7,6 +7,12 @@ const obtainGameDataRouter = require('./obtainGameData');
 
 require('dotenv').config();
 
+const path = require('path');
+
+const API_URL = process.env.API_URL || `http://localhost:${process.env.PORT || 5000}`;
+const projectRoot = path.resolve(__dirname, '..');
+const publicPath = path.join(projectRoot, 'public');
+
 // Initialize express
 const app = express();
 app.use(cors());
@@ -18,21 +24,12 @@ app.use(cors());
 // Enable parsing of JSON bodies
 app.use(express.json());
 
-//const keyFilename = "C:/Users/pablo/Documents/pokemonStatistics/pokemonStatistics/credentials.json";
-const keyFilename = "D:/tfg/pokemonStatistics/credentials.json";
-
 // Initialize the BigQuery client
-const bigQuery = new BigQuery({keyFilename});
+const bigQuery = new BigQuery();
 
 // Show when server is running
-app.get('/', (req, res) => {
+app.get('/api/status', (req, res) => {
     res.send('Server running');
-});
-
-// Start the server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server listening in port number ${PORT}`);
 });
 
 // Endpoint to get the total number of games
@@ -3549,8 +3546,8 @@ app.get('/api/analyze-battle/:replayId', async (req, res) => {
       try {
         // llamamos a TA para P1 y P2
         const [res1, res2] = await Promise.all([
-          axios.post(`http://localhost:${PORT}/api/turn-assistant/analyze`, bodyP1),
-          axios.post(`http://localhost:${PORT}/api/turn-assistant/analyze`, bodyP2)
+          axios.post(`${API_URL}/api/turn-assistant/analyze`, bodyP1),
+          axios.post(`${API_URL}/api/turn-assistant/analyze`, bodyP2)
         ]);
 
         const ta1 = res1.data;
@@ -3854,4 +3851,21 @@ app.post('/api/multistats', async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+app.use(express.static(publicPath));
+
+// Si no encuentra una ruta API, devuelve el index.html (para React Router)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(publicPath, 'index.html'));
+});
+
+// Start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server listening on 0.0.0.0:${PORT}`);
+  console.log(`Public path: ${publicPath}`);
+}).on('error', (err) => {
+  console.error('Server failed to start:', err);
+  process.exit(1);
 });

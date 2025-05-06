@@ -23,7 +23,7 @@ const ForumPage = () => {
     const fetchTopics = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:5000/api/forum/topics');
+        const response = await axios.get('/api/forum/topics');
         setTopics(response.data);
         setError(null);
       } catch (err) {
