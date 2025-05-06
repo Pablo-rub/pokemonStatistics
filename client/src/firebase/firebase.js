@@ -25,9 +25,14 @@ const analytics = getAnalytics(app);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// URL de FinishSignIn configurable
+const finishSignInURL =
+  process.env.REACT_APP_FINISH_SIGNIN_URL ||
+  "http://localhost:3000/finishSignIn";
+
 // Configure auth settings for email link
 auth.settings = {
-  url: 'http://localhost:3000/finishSignIn', // Update this with your production URL later
+  url: finishSignInURL,
   handleCodeInApp: true,
 };
 
