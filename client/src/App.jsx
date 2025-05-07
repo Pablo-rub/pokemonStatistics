@@ -11,6 +11,7 @@ import ForumTopicPage from './Pages/ForumTopicPage';
 import ProfilePage from './Pages/ProfilePage';
 import AnalyzeBattlePage from './Pages/AnalyzeBattlePage';
 import BattleAnalyticsPage from './Pages/BattleAnalyticsPage';
+import ContactPage from './Pages/ContactPage';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Route path="profile" element={<ProfilePage />} />
         <Route path="analyze-battle/:replayId" element={<AnalyzeBattlePage />} />
         <Route path="battle-analytics" element={<BattleAnalyticsPage />} />
+        <Route path="contact" element={<ContactPage />} />
         <Route path="*" element={<div>404 Not Found</div>} />
       </Route>
     </Routes>
