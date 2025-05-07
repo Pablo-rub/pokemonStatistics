@@ -13,11 +13,11 @@ const PasswordStrengthBar = ({ password }) => {
   
   // Lista de criterios
   const criteria = [
-    { text: "Al menos 8 caracteres", fulfilled: hasMinLength },
-    { text: "Al menos una letra mayúscula (A-Z)", fulfilled: hasUppercase },
-    { text: "Al menos una letra minúscula (a-z)", fulfilled: hasLowercase },
-    { text: "Al menos un número (0-9)", fulfilled: hasNumbers },
-    { text: "Al menos un carácter especial (!@#$%^&*)", fulfilled: hasSpecialChars }
+    { text: "At least 8 characters", fulfilled: hasMinLength },
+    { text: "At least one uppercase letter (A-Z)", fulfilled: hasUppercase },
+    { text: "At least one lowercase letter (a-z)", fulfilled: hasLowercase },
+    { text: "At least one number (0-9)", fulfilled: hasNumbers },
+    { text: "At least one special character (!@#$%^&*)", fulfilled: hasSpecialChars }
   ];
   
   // Verificar si todos los criterios están cumplidos
@@ -28,7 +28,7 @@ const PasswordStrengthBar = ({ password }) => {
   
   if (allCriteriaFulfilled) {
     totalScore = 100;
-    feedback = "Fuerte";
+    feedback = "Strong";
     color = "#4caf50"; // Verde
   } else {
     // Calcular puntuación cuando no todos los criterios están cumplidos
@@ -44,16 +44,16 @@ const PasswordStrengthBar = ({ password }) => {
     
     // Determinar estado según puntaje
     if (totalScore < 30) {
-      feedback = "Muy débil";
+      feedback = "Too weak";
       color = "#f44336"; // Rojo
     } else if (totalScore < 50) {
-      feedback = "Débil";
+      feedback = "Weak";
       color = "#ff9800"; // Naranja
     } else if (totalScore < 75) {
-      feedback = "Buena";
+      feedback = "Good";
       color = "#ffc107"; // Amarillo
     } else {
-      feedback = "Fuerte";
+      feedback = "Strong";
       color = "#4caf50"; // Verde
     }
   }

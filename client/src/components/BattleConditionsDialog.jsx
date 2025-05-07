@@ -12,7 +12,6 @@ import {
   MenuItem,
   FormGroup,
   FormControlLabel,
-  Checkbox,
   Divider,
   Typography,
   Paper,
@@ -26,19 +25,11 @@ import {
   AccordionSummary,
   AccordionDetails
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
 import useDraggable from '../hooks/useDraggable';
 import TriStateCheckbox from './TriStateCheckBox';
 import CloseIcon from '@mui/icons-material/Close';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import InfoIcon from '@mui/icons-material/Info';
-
-const WhiteCheckbox = styled(Checkbox)(({ theme }) => ({
-  color: 'white',
-  '&.Mui-checked': {
-    color: 'white',
-  }
-}));
 
 function DraggablePaperComponent(props) {
   const { ref, style, handleMouseDown } = useDraggable({ resetOnClose: true, handleSelector: '#draggable-dialog-title' });
@@ -56,7 +47,6 @@ const menuPropsDown = {
 const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleConditions }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
 
   const handleSelectChange = (e, key) => {
     setBattleConditions(prev => ({ ...prev, [key]: e.target.value }));
@@ -179,7 +169,6 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
     
     // Limitar valores según el tipo, pero permitiendo 0 como mínimo para todos
     if (type === "weather" || type === "field" || type === "room") {
-      // Duración normal de efectos de campo: 0-8 turnos
       newValue = Math.max(0, Math.min(8, newValue));
       setBattleConditions(prev => ({ ...prev, [`${type}Duration`]: newValue }));
     } else if (type === "sideEffect") {
