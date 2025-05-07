@@ -66,18 +66,18 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
     // Validación básica del formato de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || !password) {
-      return setError('Por favor, introduce tanto el email como la contraseña.');
+      return setError('Please, include both email and password.');
     } else if (!emailRegex.test(email)) {
-      return setError('Por favor, introduce un email válido (nombre@dominio.com).');
+      return setError('Please, enter a valid email address.');
     }
 
     if (isSignUp && !displayName) {
-      return setError('Por favor, introduce un nombre de usuario.');
+      return setError('Please, enter a display name.');
     }
 
-    // Nueva validación: verificar longitud mínima de contraseña en registro
+    // verificar longitud mínima de contraseña en registro
     if (isSignUp && password.length < 8) {
-      return setError('La contraseña debe tener al menos 8 caracteres.');
+      return setError('The password must be at least 8 characters long.');
     }
 
     try {
@@ -151,7 +151,7 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
         }}
       >
         <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
-          {isSignUp ? 'Crear cuenta' : 'Iniciar sesión'}
+          {isSignUp ? 'Create Account' : 'Sign In'}
         </Typography>
         <IconButton 
           onClick={handleClose} 
@@ -324,7 +324,7 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
                 required
                 fullWidth
                 name="password"
-                label="Contraseña"
+                label="Password"
                 type={showPassword ? "text" : "password"}
                 id="password"
                 autoComplete={isSignUp ? 'new-password' : 'current-password'}
@@ -340,7 +340,7 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
-                        aria-label={showPassword ? "ocultar contraseña" : "mostrar contraseña"}
+                        aria-label={showPassword ? "hide password" : "show password"}
                         onClick={handleTogglePasswordVisibility}
                         edge="end"
                         sx={{ color: 'white' }}
@@ -411,7 +411,7 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
                 {loading ? (
                   <CircularProgress size={24} color="inherit" />
                 ) : (
-                  isSignUp ? 'Crear cuenta' : 'Iniciar sesión'
+                  isSignUp ? 'Create account' : 'Sign in'
                 )}
               </Button>
 
@@ -429,7 +429,7 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
                 startIcon={<GoogleIcon />}
                 onClick={handleGoogleLogin}
                 disabled={loading}
-                aria-label="Iniciar sesión con Google"
+                aria-label="Sign in with Google"
                 sx={{ 
                   py: 1.2,
                   color: 'white', 
@@ -444,7 +444,7 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
                   }
                 }}
               >
-                {isSignUp ? 'Registrarse con Google' : 'Iniciar sesión con Google'}
+                {isSignUp ? 'Sign up with Google' : 'Sign in with Google"'}
               </Button>
 
               <Box sx={{ mt: 1, textAlign: 'center' }}>
@@ -456,7 +456,7 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
                 >
                   {isSignUp ? (
                     <>
-                      ¿Ya tienes una cuenta?{' '}
+                      Already have an account?{' '}
                       <Link
                         component="button"
                         variant="body2"
@@ -481,12 +481,12 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
                           }
                         }}
                       >
-                        Inicia sesión
+                        Sign in
                       </Link>
                     </>
                   ) : (
                     <>
-                      ¿No tienes cuenta?{' '}
+                      Don't have an account?{' '}
                       <Link
                         component="button"
                         variant="body2"
@@ -511,7 +511,7 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
                           }
                         }}
                       >
-                        Regístrate
+                        Sign up
                       </Link>
                     </>
                   )}
