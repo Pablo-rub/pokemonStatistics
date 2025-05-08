@@ -138,8 +138,16 @@ function PublicGamesPage() {
           {/* Sort dropdown */}
           <Grid item xs={12} sm={6} md={4} lg={2}>
             <FormControl fullWidth size="small">
-              <InputLabel>Sort by</InputLabel>
+              <InputLabel 
+                id="sort-by-label" 
+                htmlFor="sort-by-select"
+              >
+                Sort by
+              </InputLabel>
               <Select
+                labelId="sort-by-label"
+                id="sort-by-select"
+                inputProps={{ 'aria-labelledby': 'sort-by-label' }}
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 label="Sort by"
@@ -166,8 +174,16 @@ function PublicGamesPage() {
           {/* Rating filter */}
           <Grid item xs={12} sm={6} md={4} lg={2}>
             <FormControl fullWidth size="small">
-              <InputLabel>Rating</InputLabel>
+              <InputLabel 
+                id="rating-filter-label" 
+                htmlFor="rating-filter-select"
+              >
+                Rating
+              </InputLabel>
               <Select
+                labelId="rating-filter-label"
+                id="rating-filter-select"
+                inputProps={{ 'aria-labelledby': 'rating-filter-label' }}
                 value={ratingFilter}
                 onChange={(e) => setRatingFilter(e.target.value)}
                 label="Rating"
@@ -184,8 +200,16 @@ function PublicGamesPage() {
           {/* Date filter */}
           <Grid item xs={12} sm={6} md={4} lg={2}>
             <FormControl fullWidth size="small">
-              <InputLabel>Date</InputLabel>
+              <InputLabel 
+                id="date-filter-label" 
+                htmlFor="date-filter-select"
+              >
+                Date
+              </InputLabel>
               <Select
+                labelId="date-filter-label"
+                id="date-filter-select"
+                inputProps={{ 'aria-labelledby': 'date-filter-label' }}
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
                 label="Date"
@@ -202,8 +226,10 @@ function PublicGamesPage() {
           {currentUser && (
             <Grid item xs={12} sm={6} md={4} lg={2}>
               <FormControl fullWidth size="small">
-                <InputLabel>Show</InputLabel>
+                <InputLabel id="show-saved-label">Show</InputLabel>
                 <Select
+                  labelId="show-saved-label"
+                  id="show-saved-select"
                   value={showSaved}
                   onChange={(e) => setShowSaved(e.target.value)}
                   label="Show"
