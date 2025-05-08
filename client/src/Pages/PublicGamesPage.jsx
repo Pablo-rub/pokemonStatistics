@@ -113,10 +113,10 @@ function PublicGamesPage() {
 
   return (
     <Box sx={{ padding: { xs: 1, sm: 2 } }}>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant="h4" component="h1" gutterBottom>
         Public Games
       </Typography>
-      <Typography variant="subtitle1" sx={{ marginBottom: 2 }}>
+      <Typography variant="subtitle1" component="p" sx={{ marginBottom: 2 }}>
         Total Replays:{" "}
         {isLoading ? (
           <CircularProgress size={20} sx={{ ml: 1 }} />
@@ -146,11 +146,10 @@ function PublicGamesPage() {
               </InputLabel>
               <Select
                 labelId="sort-by-label"
-                id="sort-by-select"
                 inputProps={{
-                  'aria-labelledby': 'sort-by-label',
-                  'aria-hidden': 'true',
-                  style: { display: 'none' }
+                  id: "sort-by-select",
+                  "aria-labelledby": "sort-by-label",
+                  style: { display: "none" }
                 }}
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -186,11 +185,10 @@ function PublicGamesPage() {
               </InputLabel>
               <Select
                 labelId="rating-filter-label"
-                id="rating-filter-select"
                 inputProps={{
-                  'aria-labelledby': 'rating-filter-label',
-                  'aria-hidden': 'true',
-                  style: { display: 'none' }
+                  id: "rating-filter-select",
+                  "aria-labelledby": "rating-filter-label",
+                  style: { display: "none" }
                 }}
                 value={ratingFilter}
                 onChange={(e) => setRatingFilter(e.target.value)}
@@ -216,11 +214,10 @@ function PublicGamesPage() {
               </InputLabel>
               <Select
                 labelId="date-filter-label"
-                id="date-filter-select"
                 inputProps={{
-                  'aria-labelledby': 'date-filter-label',
-                  'aria-hidden': 'true',
-                  style: { display: 'none' }
+                  id: "date-filter-select",
+                  "aria-labelledby": "date-filter-label",
+                  style: { display: "none" }
                 }}
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
