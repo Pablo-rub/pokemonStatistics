@@ -4,7 +4,6 @@ import {
   Typography,
   Avatar,
   Paper,
-  Divider,
   Button,
   Grid,
   Dialog,
@@ -17,8 +16,6 @@ import {
   Card,
   CardContent,
   Container,
-  useTheme,
-  useMediaQuery
 } from '@mui/material';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -33,7 +30,6 @@ import {
   Visibility, 
   VisibilityOff,
   DeleteForever,
-  EditOutlined,
   Badge,
   VerifiedUser
 } from '@mui/icons-material';
@@ -41,8 +37,6 @@ import {
 const ProfilePage = () => {
   const { currentUser, changePassword, deleteAccount, logout } = useAuth();
   const navigate = useNavigate();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [oldPassword, setOldPassword] = useState('');
@@ -212,8 +206,9 @@ const ProfilePage = () => {
   ];
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Container component="main" maxWidth="lg" sx={{ py: 4 }}>
       <Typography 
+        component="h1"
         variant="h4" 
         gutterBottom 
         sx={{ 
@@ -266,7 +261,8 @@ const ProfilePage = () => {
             textAlign: { xs: 'center', md: 'left' }
           }}>
             <Typography 
-              variant="h4" 
+              variant="h5"
+              component="h2"
               sx={{ 
                 color: 'white', 
                 fontWeight: 'bold',
@@ -316,7 +312,8 @@ const ProfilePage = () => {
         {/* User information cards */}
         <Box sx={{ p: { xs: 3, md: 5 } }}>
           <Typography 
-            variant="h6" 
+            variant="subtitle1" 
+            component="p"
             sx={{ 
               color: 'white', 
               mb: 3,
@@ -363,7 +360,6 @@ const ProfilePage = () => {
                         height: 50,
                         borderRadius: '50%',
                         backgroundColor: 'rgba(36, 204, 159, 0.1)',
-                        mb: 2
                       }}
                     >
                       {info.icon}
@@ -414,6 +410,7 @@ const ProfilePage = () => {
                 onClick={() => setPasswordDialogOpen(true)}
                 sx={{ 
                   backgroundColor: '#24CC9F',
+                  color: '#000',
                   '&:hover': {
                     backgroundColor: '#1FA082',
                   }
@@ -424,15 +421,14 @@ const ProfilePage = () => {
             )}
 
             <Button
-              variant="outlined"
+              variant="contained"
               startIcon={<DeleteForever />}
               onClick={() => setDeleteDialogOpen(true)}
               sx={{ 
-                color: '#FF6B6B', 
-                borderColor: '#FF6B6B',
+                backgroundColor: '#FF6B6B',
+                color: '#000',
                 '&:hover': {
-                  backgroundColor: 'rgba(255, 107, 107, 0.1)',
-                  borderColor: '#FF5252',
+                  backgroundColor: '#FF5252',
                 }
               }}
             >
