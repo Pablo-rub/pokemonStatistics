@@ -97,12 +97,9 @@ const ContactPage = () => {
                     color: '#24CC9F',
                     wordBreak: 'break-word'
                   }}
-                  component="p"
+                  component="h2"
                 >
                   support@pokemonstatistics.com
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 3, color: 'rgba(255,255,255,0.7)' }}>
-                  We aim to respond to all inquiries within 48 hours.
                 </Typography>
               </Box>
             </Box>

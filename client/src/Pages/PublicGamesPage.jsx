@@ -112,7 +112,7 @@ function PublicGamesPage() {
   const totalPages = Math.ceil((numGames || 0) / itemsPerPage);
 
   return (
-    <Box sx={{ padding: { xs: 1, sm: 2 } }}>
+    <Box component="main" sx={{ padding: { xs: 1, sm: 2 } }}>
       <Typography variant="h4" component="h1" gutterBottom>
         Public Games
       </Typography>
@@ -235,10 +235,19 @@ function PublicGamesPage() {
           {currentUser && (
             <Grid item xs={12} sm={6} md={4} lg={2}>
               <FormControl fullWidth size="small">
-                <InputLabel id="show-saved-label">Show</InputLabel>
+                <InputLabel
+                  id="show-saved-label"
+                  htmlFor="show-saved-select"
+                >
+                  Show
+                </InputLabel>
                 <Select
                   labelId="show-saved-label"
-                  id="show-saved-select"
+                  inputProps={{
+                    id: "show-saved-select",
+                    "aria-labelledby": "show-saved-label",
+                    style: { display: "none" }
+                  }}
                   value={showSaved}
                   onChange={(e) => setShowSaved(e.target.value)}
                   label="Show"

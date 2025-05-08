@@ -70,7 +70,17 @@ export default function BattleAnalyticsPage() {
   if (error) {
     if (error === 'insufficient') {
       return (
-        <Box sx={{ maxWidth: 800, mx: 'auto', mt: 4, p: 3 }}>
+        <Box
+          component="main"
+          sx={{ maxWidth: 800, mx: 'auto', mt: 4, p: 3 }}
+        >
+          <Typography
+            component="h1"
+            variant="h4"
+            gutterBottom
+          >
+            Battle Analytics
+          </Typography>
           <Alert 
             severity="info" 
             sx={{ 
@@ -108,7 +118,12 @@ export default function BattleAnalyticsPage() {
           </Alert>
           
           <Paper sx={{ p: 3, backgroundColor: '#221FC7', color: '#ffffff' }}>
-            <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold' }}>
+            <Typography
+              variant="subtitle1"
+              component="p"
+              gutterBottom
+              sx={{ fontWeight: 'bold' }}
+            >
               How Battle Analytics Works
             </Typography>
             <Typography paragraph>
@@ -192,211 +207,236 @@ export default function BattleAnalyticsPage() {
   }));
 
   // Define a palette of colors to cycle through
-const PIE_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#9966FF', '#4BC0C0', '#F49AC2'];
+const PIE_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
 
   return (
-    <Box
-      sx={{
-        p: { xs: 2, md: 4 },
-        bgcolor: theme.palette.primary.main,
-        color: theme.palette.common.white,
-        minHeight: '100vh'
-      }}
-    >
-      <Typography variant="h4" gutterBottom>
-        Analytics for {stats.player}
+    <Box component="main" sx={{ p: 2 }}>
+      <Typography 
+        component="h1"
+        variant="h4"
+        gutterBottom
+      >
+        Battle Analytics
       </Typography>
-      <Typography variant="subtitle2" gutterBottom>
-        Replays analyzed: {replayIds.length}
-      </Typography>
+      <Box
+        sx={{
+          p: { xs: 2, md: 4 },
+          bgcolor: theme.palette.primary.main,
+          color: theme.palette.common.white,
+          minHeight: '100vh'
+        }}
+      >
+        <Typography variant="h6" component="p" gutterBottom>
+          Analytics for {stats.player}
+        </Typography>
+        <Typography variant="body2" component="p" gutterBottom>
+          Replays analyzed: {replayIds.length}
+        </Typography>
 
-      <Divider sx={{ my:2, borderColor: theme.palette.primary.light }} />
+        <Divider sx={{ my:2, borderColor: theme.palette.primary.light }} />
 
-      <Grid container spacing={4}>
-        {/* Your Pokémon */}
-        <Grid item xs={12} md={6}>
-          <Typography variant="h6" gutterBottom>
-            Your Pokémon
-          </Typography>
-          <TableContainer
-            component={Paper}
-            sx={{ bgcolor: theme.palette.primary.dark }}
-          >
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ color: theme.palette.common.white }}>Pokémon</TableCell>
-                  <TableCell align="center" sx={{ color: theme.palette.common.white }}>Games</TableCell>
-                  <TableCell align="center" sx={{ color: theme.palette.common.white }}>Win %</TableCell>
-                  <TableCell align="center" sx={{ color: theme.palette.common.white }}>Tera Count</TableCell>
-                  <TableCell align="center" sx={{ color: theme.palette.common.white }}>Tera Win %</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {yourStats.map(row => (
-                  <TableRow key={row.name}>
-                    <TableCell sx={{ color: theme.palette.common.white }}>{row.name}</TableCell>
-                    <TableCell align="center" sx={{ color: theme.palette.common.white }}>{row.played}</TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        label={`${row.winRate}%`}
-                        color={row.winRate >= 50 ? 'success' : 'error'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell align="center" sx={{ color: theme.palette.common.white }}>{row.tera}</TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        label={`${row.teraWinRate}%`}
-                        color="primary"
-                        size="small"
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Grid>
-
-        {/* Rival Pokémon */}
-        <Grid item xs={12} md={6}>
-          {/* Sort control */}
-          <Box
-            sx={{
-              mb: 2,
-              display: 'flex',
-              justifyContent: 'space-between',  // texto a la izquierda, filtro a la derecha
-              alignItems: 'center'              // misma altura vertical
-            }}
-          >
-            <Typography variant="h6" gutterBottom>
-              Rival Pokémon
+        <Grid container spacing={4}>
+          {/* Your Pokémon */}
+          <Grid item xs={12} md={6}>
+            <Typography variant="h6" component="p" gutterBottom>
+              Your Pokémon
             </Typography>
-
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-              <InputLabel sx={{ color: 'white' }}>Sort by</InputLabel>
-              <Select
-                value={rivalSortBy}
-                label="Sort by"
-                onChange={e => setRivalSortBy(e.target.value)}
-                sx={{
-                  color: 'white',
-                  '.MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
-                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'white' },
-                  '.MuiSvgIcon-root': { color: 'white' }
-                }}
-              >
-                <MenuItem value="teamAppeared">In Team</MenuItem>
-                <MenuItem value="usedInBattle">Used</MenuItem>
-                <MenuItem value="winRate">Win %</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-
-          <TableContainer
-            component={Paper}
-            sx={{ bgcolor: theme.palette.primary.dark }}
-          >
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ color: theme.palette.common.white }}>Pokémon</TableCell>
-                  <TableCell align="center" sx={{ color: theme.palette.common.white }}>In Team</TableCell>
-                  <TableCell align="center" sx={{ color: theme.palette.common.white }}>Used</TableCell>
-                  <TableCell align="center" sx={{ color: theme.palette.common.white }}>Win %</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {rivalPageData.map(row => (
-                  <TableRow key={row.name}>
-                    <TableCell sx={{ color: theme.palette.common.white }}>{row.name}</TableCell>
-                    <TableCell align="center" sx={{ color: theme.palette.common.white }}>{row.teamAppeared}</TableCell>
-                    <TableCell align="center" sx={{ color: theme.palette.common.white }}>{row.usedInBattle}</TableCell>
-                    <TableCell align="center">
-                      <Chip
-                        label={`${row.winRate}%`}
-                        color={row.winRate >= 50 ? 'success' : 'error'}
-                        size="small"
-                      />
-                    </TableCell>
+            <TableContainer
+              component={Paper}
+              sx={{ bgcolor: theme.palette.primary.dark }}
+            >
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ color: theme.palette.common.white }}>Pokémon</TableCell>
+                    <TableCell align="center" sx={{ color: theme.palette.common.white }}>Games</TableCell>
+                    <TableCell align="center" sx={{ color: theme.palette.common.white }}>Win %</TableCell>
+                    <TableCell align="center" sx={{ color: theme.palette.common.white }}>Tera Count</TableCell>
+                    <TableCell align="center" sx={{ color: theme.palette.common.white }}>Tera Win %</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          {/* Pagination controls */}
-          {rivalPages > 1 && (
-            <Box sx={{ display:'flex', justifyContent:'center', mt:2 }}>
-              <Pagination
-                count={rivalPages}
-                page={rivalPage}
-                onChange={(e, v) => setRivalPage(v)}
-                color="secondary"
-                size="small"
-              />
-            </Box>
-          )}
-        </Grid>
-      </Grid>
-
-      <Divider sx={{ my:4, borderColor: theme.palette.primary.light }} />
-
-      <Typography variant="h6" gutterBottom>
-        Move Usage Distribution
-      </Typography>
-
-      <Grid container spacing={4}>
-        {moveStats.map(({ mon, moves }) => (
-          <Grid key={mon} item xs={12} sm={6} md={4}>
-            <Typography variant="subtitle1" gutterBottom>
-              {mon}
-            </Typography>
-            <Paper sx={{ p:2, bgcolor: theme.palette.primary.dark }}>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={moves}
-                    dataKey="count"
-                    nameKey="mv"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={70}
-                  >
-                    {moves.map((entry, idx) => (
-                      <Cell 
-                        key={`cell-${mon}-${idx}`} 
-                        fill={PIE_COLORS[idx % PIE_COLORS.length]} 
-                      />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip
-                    formatter={(value) => [value, '']} // formatter devuelve [value,''] para descartar el nombre
-                    labelFormatter={() => ''}         // sin etiqueta encima
-                    separator=""                      // sin separador “:”
-                    contentStyle={{
-                      backgroundColor: theme.palette.primary.main,
-                      border: 'none',
-                      borderRadius: 8,
-                      padding: '8px'
-                    }}
-                    itemStyle={{ color: theme.palette.common.white }}
-                  />
-                  <RechartsLegend 
-                    verticalAlign="bottom" 
-                    layout="horizontal"
-                    wrapperStyle={{ 
-                      color: theme.palette.common.white,
-                      paddingTop: 10
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </Paper>
+                </TableHead>
+                <TableBody>
+                  {yourStats.map(row => (
+                    <TableRow key={row.name}>
+                      <TableCell sx={{ color: theme.palette.common.white }}>{row.name}</TableCell>
+                      <TableCell align="center" sx={{ color: theme.palette.common.white }}>{row.played}</TableCell>
+                      <TableCell align="center">
+                        <Chip
+                          label={`${row.winRate}%`}
+                          color={row.winRate >= 50 ? 'success' : 'error'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell align="center" sx={{ color: theme.palette.common.white }}>{row.tera}</TableCell>
+                      <TableCell align="center">
+                        <Chip
+                          label={`${row.teraWinRate}%`}
+                          color="primary"
+                          size="small"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Grid>
-        ))}
-      </Grid>
+
+          {/* Rival Pokémon */}
+          <Grid item xs={12} md={6}>
+            {/* Sort control */}
+            <Box
+              sx={{
+                mb: 2,
+                display: 'flex',
+                justifyContent: 'space-between',  // texto a la izquierda, filtro a la derecha
+                alignItems: 'center'              // misma altura vertical
+              }}
+            >
+              <Typography variant="h6" component="p" gutterBottom>
+                Rival Pokémon
+              </Typography>
+
+              <FormControl size="small">
+                <InputLabel
+                  id="rival-sort-by-label"
+                  htmlFor="rival-sort-by-select"
+                >
+                  Sort by
+                </InputLabel>
+                <Select
+                  labelId="rival-sort-by-label"
+                  inputProps={{
+                    id: "rival-sort-by-select",
+                    'aria-labelledby': 'rival-sort-by-label',
+                    style: { display: 'none' }
+                  }}
+                  value={rivalSortBy}
+                  onChange={e => setRivalSortBy(e.target.value)}
+                  label="Sort by"
+                >
+                  <MenuItem value="teamAppeared">In Team</MenuItem>
+                  <MenuItem value="usedInBattle">Used</MenuItem>
+                  <MenuItem value="winRate">Win %</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+
+            <TableContainer
+              component={Paper}
+              sx={{ bgcolor: theme.palette.primary.dark }}
+            >
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ color: theme.palette.common.white }}>Pokémon</TableCell>
+                    <TableCell align="center" sx={{ color: theme.palette.common.white }}>In Team</TableCell>
+                    <TableCell align="center" sx={{ color: theme.palette.common.white }}>Used</TableCell>
+                    <TableCell align="center" sx={{ color: theme.palette.common.white }}>Win %</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {rivalPageData.map(row => (
+                    <TableRow key={row.name}>
+                      <TableCell sx={{ color: theme.palette.common.white }}>{row.name}</TableCell>
+                      <TableCell align="center" sx={{ color: theme.palette.common.white }}>{row.teamAppeared}</TableCell>
+                      <TableCell align="center" sx={{ color: theme.palette.common.white }}>{row.usedInBattle}</TableCell>
+                      <TableCell align="center">
+                        <Chip
+                          label={`${row.winRate}%`}
+                          color={row.winRate >= 50 ? 'success' : 'error'}
+                          size="small"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            {/* Pagination controls */}
+            {rivalPages > 1 && (
+              <Box sx={{ display:'flex', justifyContent:'center', mt:2 }}>
+                <Pagination
+                  count={rivalPages}
+                  page={rivalPage}
+                  onChange={(e, v) => setRivalPage(v)}
+                  color="secondary"
+                  size="small"
+                />
+              </Box>
+            )}
+          </Grid>
+        </Grid>
+
+        <Divider sx={{ my:4, borderColor: theme.palette.primary.light }} />
+
+        <Typography variant="h6" component="p" gutterBottom>
+          Move Usage Distribution
+        </Typography>
+
+        <Grid container spacing={4}>
+          {moveStats.map(({ mon, moves }) => (
+            <Grid key={mon} item xs={12} sm={6} md={4}>
+              <Typography
+                variant="body1"
+                component="p"
+                gutterBottom
+              >
+                Player 1 Team
+              </Typography>
+              <Paper sx={{ p:2, bgcolor: theme.palette.primary.dark }}>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={moves}
+                      dataKey="count"
+                      nameKey="mv"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={70}
+                    >
+                      {moves.map((entry, idx) => (
+                        <Cell 
+                          key={`cell-${mon}-${idx}`} 
+                          fill={PIE_COLORS[idx % PIE_COLORS.length]} 
+                        />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip
+                      formatter={(value) => [value, '']}
+                      labelFormatter={() => ''}
+                      separator=""
+                      contentStyle={{
+                        backgroundColor: theme.palette.primary.main,
+                        border: 'none',
+                        borderRadius: 8,
+                        padding: '8px'
+                      }}
+                      itemStyle={{ color: theme.palette.common.white }}
+                    />
+                    <RechartsLegend 
+                      verticalAlign="bottom" 
+                      layout="horizontal"
+                      wrapperStyle={{ 
+                        color: theme.palette.common.white,
+                        paddingTop: 10
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Paper>
+              <Typography
+                variant="body1"
+                component="p"
+                gutterBottom
+              >
+                Player 2 Team
+              </Typography>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
     </Box>
   );
 }

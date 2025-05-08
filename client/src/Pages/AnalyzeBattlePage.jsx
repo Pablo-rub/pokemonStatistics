@@ -15,7 +15,7 @@ import TurnCard from "../components/TurnCard";
 // todo
 // moves for p2
 
-const AnalyzeBattlePage = () => {
+export default function AnalyzeBattlePage() {
   const { replayId } = useParams();
   const [data, setData] = useState(null);
 
@@ -34,8 +34,13 @@ const AnalyzeBattlePage = () => {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
-      <Typography variant="h4" color="common.white" gutterBottom>
+    <Box component="main" sx={{ p: { xs: 2, md: 4 } }}>
+      <Typography 
+        component="h1"
+        variant="h4" 
+        color="common.white" 
+        gutterBottom
+      >
         Battle Analysis: {data.replayId}
       </Typography>
 
@@ -48,7 +53,12 @@ const AnalyzeBattlePage = () => {
       <Grid container spacing={4} sx={{ mb: 4 }}>
         {['p1','p2'].map((side, i) => (
           <Grid key={side} item xs={12} sm={6}>
-            <Typography variant="h6" color="common.white" gutterBottom>
+            <Typography
+              variant="body1"
+              component="p"
+              color="common.white"
+              gutterBottom
+            >
               Player {i+1} Team
             </Typography>
             <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
@@ -72,6 +82,4 @@ const AnalyzeBattlePage = () => {
       </Grid>
     </Box>
   );
-};
-
-export default AnalyzeBattlePage;
+}
