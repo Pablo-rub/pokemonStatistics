@@ -93,6 +93,7 @@ const Sidebar = () => {
           key={item.text}
           component={Link}
           to={item.path}
+          aria-label={item.text}
           onClick={isMobile ? handleDrawerToggle : undefined}
           sx={{ 
             py: 1.5,
@@ -119,7 +120,7 @@ const Sidebar = () => {
               handleAuth(false);
               if (isMobile) handleDrawerToggle();
             }}
-            className="auth-item"
+            aria-label="Sign In"
             sx={{ cursor: 'pointer', color: '#ffffff' }}
           >
             <ListItemIcon sx={{ 
@@ -136,7 +137,7 @@ const Sidebar = () => {
               handleAuth(true);
               if (isMobile) handleDrawerToggle();
             }}
-            className="auth-item"
+            aria-label="Sign Up"
             sx={{ cursor: 'pointer', color: '#ffffff' }}
           >
             <ListItemIcon sx={{ 
@@ -154,7 +155,7 @@ const Sidebar = () => {
             navigate('/profile');
             if (isMobile) handleDrawerToggle();
           }}
-          className="auth-item"
+          aria-label="View Profile"
           sx={{ cursor: 'pointer', color: '#ffffff' }}
         >
           {(!isMobile && isExpanded) || isMobile ? (
