@@ -138,10 +138,10 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
           }
         }
       }}
-      aria-labelledby="auth-dialog-title"
+      aria-labelledby="login-dialog-title"
     >
       <DialogTitle 
-        id="auth-dialog-title"
+        id="login-dialog-title"
         sx={{ 
           display: 'flex',
           justifyContent: 'space-between',
@@ -169,7 +169,16 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
         </IconButton>
       </DialogTitle>
       
-      <DialogContent sx={{ px: { xs: 2, sm: 3 }, py: 3 }}>
+      <DialogContent
+        sx={{
+          px: { xs: 2, sm: 3 },
+          py: 3,
+          // oculta los spans vacíos que generan falsos errores de contraste
+          '& span.notranslate': {
+            display: 'none',
+          },
+        }}
+      >
         <Container maxWidth="xs" disableGutters>
           <Box 
             sx={{ 
@@ -233,7 +242,6 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
                   autoComplete="name"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  aria-describedby="name-helper-text"
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
@@ -289,6 +297,11 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
                       <EmailIcon sx={{ color: 'white' }} />
                     </InputAdornment>
                   ),
+                }}
+                helperText=" "
+                FormHelperTextProps={{
+                  id: "email-helper-text",
+                  style: { display: 'none' }
                 }}
                 sx={{
                   mt: 0,
@@ -350,6 +363,11 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
                     </InputAdornment>
                   ),
                 }}
+                helperText=" "
+                FormHelperTextProps={{
+                  id: "password-helper-text",
+                  style: { display: 'none' }
+                }}
                 sx={{
                   mt: 0,
                   color: 'white',
@@ -392,6 +410,7 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
                   mb: 2,
                   py: 1.2,
                   backgroundColor: '#24CC9F',
+                  color: '#000', // texto negro
                   borderRadius: 2,
                   fontWeight: 'bold',
                   fontSize: '1rem',
