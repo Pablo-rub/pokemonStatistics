@@ -206,6 +206,7 @@ function SavedGamesPage() {
   if (games.length === 0) {
     return (
       <Box 
+        component="main"
         sx={{ 
           display: 'flex', 
           flexDirection: 'column',
@@ -216,10 +217,21 @@ function SavedGamesPage() {
         }}
       >
         <BookmarkBorderIcon sx={{ fontSize: 60, color: 'grey.500' }} />
-        <Typography variant="h5" align="center" color="text.secondary">
+        <Typography 
+          variant="h5" 
+          component="h1"
+          align="center" 
+          color="text.primary"
+          gutterBottom
+        >
           No saved replays yet
         </Typography>
-        <Typography variant="body1" align="center" color="text.secondary">
+        <Typography 
+          variant="body1" 
+          component="p"
+          align="center" 
+          color="text.primary"
+        >
           Start saving replays by clicking the heart icon on any replay in the Public Games section
         </Typography>
         <Button
@@ -233,11 +245,20 @@ function SavedGamesPage() {
   }
 
   return (
-    <Box sx={{ padding: 2 }}>
-      <Typography variant="h4" sx={{ marginBottom: 2 }}>
+    <Box component="main" sx={{ padding: 2 }}>
+      <Typography 
+        component="h1"
+        variant="h4" 
+        gutterBottom
+        sx={{ marginBottom: 2 }}
+      >
         Saved Replays
       </Typography>
-      <Typography variant="subtitle1" sx={{ marginBottom: 2 }}>
+      <Typography 
+        variant="subtitle1"
+        component="p"
+        sx={{ marginBottom: 2 }}
+      >
         Total Saved: {games.length}
       </Typography>
 
@@ -278,11 +299,22 @@ function SavedGamesPage() {
 
         {/* Sort control (right side) */}
         <FormControl size="small" sx={{ minWidth: 160, ml: 2 }}>
-          <InputLabel>Sort by</InputLabel>
+          <InputLabel
+            id="saved-sort-by-label"
+            htmlFor="saved-sort-by-select"
+          >
+            Sort by
+          </InputLabel>
           <Select
+            labelId="saved-sort-by-label"
+            inputProps={{
+              id: "saved-sort-by-select",
+              "aria-labelledby": "saved-sort-by-label",
+              style: { display: 'none' }
+            }}
             value={sortBy}
-            label="Sort by"
             onChange={e => setSortBy(e.target.value)}
+            label="Sort by"
           >
             <MenuItem value="date DESC">Date ↓</MenuItem>
             <MenuItem value="date ASC">Date ↑</MenuItem>

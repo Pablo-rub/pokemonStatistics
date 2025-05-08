@@ -51,8 +51,14 @@ const TurnCard = ({ turn }) => {
       <CardHeader
         id={`turn-${turn.turn_number}`}
         title={`Turn ${turn.turn_number}`}
+        titleTypographyProps={{
+          component: 'h2',      // ← second‐level heading under the page’s h1
+          variant: 'h6',
+          color: 'primary.contrastText'
+        }}
         subheader={
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            {/* P1 and P2 remain body2 (non‐heading) */}
             <Typography variant="body2" sx={{ color: theme.palette.primary.contrastText }}>
               P1: {formattedMoveP1 || '—'}
             </Typography>
@@ -61,12 +67,7 @@ const TurnCard = ({ turn }) => {
             </Typography>
           </Box>
         }
-        titleTypographyProps={{ variant: 'h6', color: 'primary.contrastText' }}
-        sx={{
-          '& .MuiCardHeader-action, & .MuiCardHeader-content': {
-            color: theme.palette.primary.contrastText
-          }
-        }}
+        sx={{ '& .MuiCardHeader-action, & .MuiCardHeader-content': { color: theme.palette.primary.contrastText } }}
       />
       <CardContent sx={{ flexGrow: 1 }}>
         <Stack direction="row" spacing={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
@@ -176,20 +177,22 @@ const TurnCard = ({ turn }) => {
           </Typography>
         )}
 
+        {/* Battle Conditions Details toggle */}
         <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            cursor: 'pointer',
-            mt: 2
-          }}
+          sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', mt: 2 }}
           onClick={() => setExpanded(!expanded)}
         >
-          <Typography variant="subtitle2" sx={{ color: theme.palette.primary.contrastText }}>
+          <Typography
+            variant="subtitle2"
+            component="div"             // ← no longer an <h6>
+            sx={{ color: theme.palette.primary.contrastText }}
+          >
             Battle Conditions Details
           </Typography>
-          <IconButton sx={{ color: 'white' }}>
+          <IconButton
+            sx={{ color: 'white' }}
+            aria-label={expanded ? 'Hide battle conditions details' : 'Show battle conditions details'}
+          >
             {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
           </IconButton>
         </Box>
@@ -213,20 +216,22 @@ const TurnCard = ({ turn }) => {
           </Box>
         </Collapse>
 
+        {/* Possible Moves toggle */}
         <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            cursor: 'pointer',
-            mt: 2
-          }}
+          sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', mt: 2 }}
           onClick={() => setShowMoves(!showMoves)}
         >
-          <Typography variant="subtitle2" sx={{ color: theme.palette.primary.contrastText }}>
+          <Typography
+            variant="subtitle2"
+            component="div"             // ← no longer an <h6>
+            sx={{ color: theme.palette.primary.contrastText }}
+          >
             Possible Moves
           </Typography>
-          <IconButton sx={{ color: 'white' }}>
+          <IconButton
+            sx={{ color: 'white' }}
+            aria-label={showMoves ? 'Hide possible moves' : 'Show possible moves'}
+          >
             {showMoves ? <ExpandLessIcon /> : <ExpandMoreIcon />}
           </IconButton>
         </Box>
@@ -246,6 +251,7 @@ const TurnCard = ({ turn }) => {
                     <Box key={`${side}-${name}`} sx={{ mb: 2 }}>
                       <Typography
                         variant="subtitle2"
+                        component="div"           // ← no longer an <h6>
                         sx={{ color: theme.palette.primary.contrastText, mb: 1 }}
                       >
                         {side.toUpperCase()} – {name}
@@ -327,9 +333,14 @@ const TurnCard = ({ turn }) => {
           )}
         </Collapse>
 
+        {/* Pokémon Details section */}
         {turn.pokemonData && (
           <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" sx={{ color: theme.palette.primary.contrastText, mb: 1 }}>
+            <Typography
+              variant="subtitle2"
+              component="div"             // ← no longer an <h6>
+              sx={{ color: theme.palette.primary.contrastText, mb: 1 }}
+            >
               Pokémon Details
             </Typography>
             <Grid container spacing={1}>
