@@ -147,7 +147,11 @@ function PublicGamesPage() {
               <Select
                 labelId="sort-by-label"
                 id="sort-by-select"
-                inputProps={{ 'aria-labelledby': 'sort-by-label' }}
+                inputProps={{
+                  'aria-labelledby': 'sort-by-label',
+                  'aria-hidden': 'true',
+                  style: { display: 'none' }
+                }}
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 label="Sort by"
@@ -183,7 +187,11 @@ function PublicGamesPage() {
               <Select
                 labelId="rating-filter-label"
                 id="rating-filter-select"
-                inputProps={{ 'aria-labelledby': 'rating-filter-label' }}
+                inputProps={{
+                  'aria-labelledby': 'rating-filter-label',
+                  'aria-hidden': 'true',
+                  style: { display: 'none' }
+                }}
                 value={ratingFilter}
                 onChange={(e) => setRatingFilter(e.target.value)}
                 label="Rating"
@@ -209,7 +217,11 @@ function PublicGamesPage() {
               <Select
                 labelId="date-filter-label"
                 id="date-filter-select"
-                inputProps={{ 'aria-labelledby': 'date-filter-label' }}
+                inputProps={{
+                  'aria-labelledby': 'date-filter-label',
+                  'aria-hidden': 'true',
+                  style: { display: 'none' }
+                }}
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
                 label="Date"
