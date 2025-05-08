@@ -1,4 +1,4 @@
-import { Paper, Typography, Box, Grid, useTheme, useMediaQuery, IconButton, Checkbox } from "@mui/material";
+import { Paper, Typography, Box, Grid, useTheme, useMediaQuery, IconButton } from "@mui/material";
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
@@ -122,7 +122,8 @@ const ReplayCard = ({ game, showAnalyze = false, showAnalytics = false, onToggle
           }}
         >
           <Typography 
-            variant={isXsScreen ? "h6" : "subtitle1"} 
+            variant="subtitle1"
+            component="p"
             color="white" 
             textAlign="center" 
             sx={{ 
@@ -141,6 +142,7 @@ const ReplayCard = ({ game, showAnalyze = false, showAnalytics = false, onToggle
           
           <Typography 
             variant="subtitle2" 
+            component="p" 
             color="white" 
             textAlign="center" 
             sx={{ 
@@ -159,6 +161,7 @@ const ReplayCard = ({ game, showAnalyze = false, showAnalytics = false, onToggle
           
           <Typography 
             variant="subtitle2" 
+            component="p" 
             color="white" 
             textAlign="center" 
             sx={{ 
