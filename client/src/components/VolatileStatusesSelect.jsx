@@ -19,7 +19,6 @@ const VolatileStatusesSelect = ({ options, selectedStatuses, setSelectedStatuses
           {...params}
           variant="outlined"
           label="Volatile Statuses"
-          placeholder={selectedStatuses.length > 0 ? "" : "Select volatile statuses"}
         />
       )}
       renderTags={(value, getTagProps) =>

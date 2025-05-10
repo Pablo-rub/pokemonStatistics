@@ -475,53 +475,18 @@ function TurnAssistantPage() {
   }, [opponentTeam]);
 
   return (
-    <Box sx={{ padding: 3 }}>
-      <Typography variant="h4" gutterBottom>
+    <Box
+      component="main"
+      role="main"
+      aria-label="Turn Assistant"
+      sx={{ padding: 3 }}
+    >
+      <Typography component="h1" variant="h4" gutterBottom>
         Turn Assistant
       </Typography>
-      <Typography variant="subtitle1" sx={{ mb: 2 }}>
-        Select a format and Pokémon to get strategic recommendations
+      <Typography component="p" variant="subtitle1" sx={{ mb: 2 }}>
+        Select Pokémon to get strategic recommendations
       </Typography>
-      
-      {/* Format selector */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-        <FormControl sx={{ minWidth: 250, flexGrow: 1 }}>
-          <InputLabel id="format-select-label" sx={{ color: 'white' }}>Format</InputLabel>
-          <Select
-            labelId="format-select-label"
-            value={selectedFormat}
-            onChange={(e) => handleFormatChange(e)}
-            label="Format"
-            disabled={isLoadingFormats}
-            sx={{
-              color: 'white',
-              '.MuiOutlinedInput-notchedOutline': {
-                borderColor: 'white',
-              },
-              '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'white',
-              },
-              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'white',
-              },
-              '& .MuiSvgIcon-root': {
-                color: 'white',
-              }
-            }}
-            MenuProps={{
-              anchorOrigin: { vertical: 'bottom', horizontal: 'left' },
-              transformOrigin: { vertical: 'top', horizontal: 'left' },
-              getContentAnchorEl: null
-            }}
-          >
-            {formats.map((format) => (
-              <MenuItem key={format.apiName} value={format.apiName}>
-                {format.displayName}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
       
       {isLoadingFormats ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', my: 3 }}>

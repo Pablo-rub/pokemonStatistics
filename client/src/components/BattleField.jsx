@@ -84,7 +84,7 @@ const BattleField = ({ onPokemonSelect, onTeamSelectYour, onTeamSelectOpponent, 
             )}
           </>
         ) : (
-          <Typography variant="subtitle1">{label}</Typography>
+          <Typography component="p" variant="subtitle1">{label}</Typography>
         )}
       </Paper>
     );
@@ -108,7 +108,7 @@ const BattleField = ({ onPokemonSelect, onTeamSelectYour, onTeamSelectOpponent, 
   return (
     <Box sx={{ width: '100%', maxWidth: 800, mx: 'auto' }}>
       {/* Your Team Section */}
-      <Typography variant="h6" align="center" sx={{ mb: 2 }}>
+      <Typography component="p" variant="h6" align="center" sx={{ mb: 2 }}>
         Your Team
       </Typography>
 
@@ -148,6 +148,7 @@ const BattleField = ({ onPokemonSelect, onTeamSelectYour, onTeamSelectOpponent, 
             pokemonList={pokemonList}
           />
         </Grid>
+
         <Grid item xs={6}>
           {renderPokemonSlot('topRight', 'Select Right Pokémon')}
           <PokemonDialog
@@ -172,9 +173,10 @@ const BattleField = ({ onPokemonSelect, onTeamSelectYour, onTeamSelectOpponent, 
       />
 
       {/* Opponent's Team Section */}
-      <Typography variant="h6" align="center" sx={{ mb: 2 }}>
+      <Typography component="p" variant="h6" align="center" sx={{ mb: 2 }}>
         Opponent's Team
       </Typography>
+
       <Grid container spacing={3} sx={{ mb: 2 }}>
         <Grid item xs={6}>
           {renderPokemonSlot('bottomLeft', 'Select Left Pokémon')}
@@ -186,6 +188,7 @@ const BattleField = ({ onPokemonSelect, onTeamSelectYour, onTeamSelectOpponent, 
             pokemonList={pokemonList}
           />
         </Grid>
+
         <Grid item xs={6}>
           {renderPokemonSlot('bottomRight', 'Select Right Pokémon')}
           <PokemonDialog
@@ -197,6 +200,7 @@ const BattleField = ({ onPokemonSelect, onTeamSelectYour, onTeamSelectOpponent, 
           />
         </Grid>
       </Grid>
+
       {opponentTeam.length === 6 ? (
         renderTeam(opponentTeam)
       ) : (

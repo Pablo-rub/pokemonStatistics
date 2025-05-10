@@ -166,31 +166,43 @@ function SavedGamesPage() {
 
   if (!currentUser) {
     return (
-      <Box 
-        sx={{ 
-          display: 'flex', 
-          flexDirection: 'column',
-          alignItems: 'center', 
-          justifyContent: 'center',
-          minHeight: '50vh',
-          gap: 3
-        }}
+      <Box
+        component="main"
+        sx={{ maxWidth: 800, mx: 'auto', mt: 8, p: 3 }}
       >
-        <Typography variant="h5" align="center">
-          Please sign in to see your saved replays
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<LoginIcon />}
-          onClick={() => setLoginDialogOpen(true)}
+        <Typography
+          component="h1"
+          variant="h"
+          gutterBottom
         >
-          Sign In
-        </Button>
-        <LoginDialog 
-          open={loginDialogOpen} 
-          onClose={() => setLoginDialogOpen(false)}
-          isSignUp={false}
-        />
+          Saved Games
+        </Typography>
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            justifyContent: 'center',
+            minHeight: '50vh',
+            gap: 3
+          }}
+        >
+          <Typography component="h2" variant="h5" align="center">
+            Please sign in to see your saved replays
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<LoginIcon />}
+            onClick={() => setLoginDialogOpen(true)}
+          >
+            Sign In
+          </Button>
+          <LoginDialog 
+            open={loginDialogOpen} 
+            onClose={() => setLoginDialogOpen(false)}
+            isSignUp={false}
+          />
+        </Box>
       </Box>
     );
   }

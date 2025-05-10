@@ -160,11 +160,19 @@ const Sidebar = () => {
         >
           {(!isMobile && isExpanded) || isMobile ? (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-              <Avatar src={currentUser.photoURL} sx={{ width: 32, height: 32 }} />
+              <Avatar
+                src={currentUser.photoURL}
+                alt={currentUser.displayName || 'User avatar'}
+                sx={{ width: 32, height: 32 }}
+              />
               <Typography noWrap>{currentUser.displayName}</Typography>
             </Box>
           ) : (
-            <Avatar src={currentUser.photoURL} sx={{ width: 32, height: 32 }} />
+            <Avatar
+              src={currentUser.photoURL}
+              alt={currentUser.displayName || 'User avatar'} // ← added alt text
+              sx={{ width: 32, height: 32 }}
+            />
           )}
         </ListItem>
       )}

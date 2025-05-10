@@ -178,7 +178,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
       <DialogTitle>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
           {positionName(position)}
-          <IconButton onClick={onClose} sx={{ color: 'white' }}>
+          <IconButton onClick={onClose} sx={{ color: 'white' }} aria-label="close dialog">
             <CloseIcon />
           </IconButton>
         </Box>
@@ -187,7 +187,7 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
         <Box sx={{ mt: 2 }}>
           {pokemonList.length === 0 ? (
             <Typography sx={{ color: 'white', textAlign: 'center' }}>
-              Please select a format to load Pokémon list
+              Error loading Pokémon list. Please try again later.
             </Typography>
           ) : (
             <>
@@ -333,10 +333,10 @@ const PokemonDialog = ({ open, onClose, position, onSelectPokemon, pokemonList =
                   </Box>
 
                   <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => setStatsExpanded(!statsExpanded)}>
-                    <Typography variant="h6" color="white" sx={{ flexGrow: 1 }}>
+                    <Typography component="p" variant="h6" color="white" sx={{ flexGrow: 1 }}>
                       Stats
                     </Typography>
-                    <IconButton sx={{ color: 'white', transform: statsExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                    <IconButton sx={{ color: 'white', transform: statsExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }} aria-label="expand stats">
                       <ExpandMoreIcon />
                     </IconButton>
                   </Box>
