@@ -24,8 +24,11 @@ app.use(cors());
 // Enable parsing of JSON bodies
 app.use(express.json());
 
-// Initialize the BigQuery client
-const bigQuery = new BigQuery();
+// Initialize the BigQuery client with explicit credentials
+// Make sure you have set GOOGLE_APPLICATION_CREDENTIALS to the path of your service-account JSON
+const bigQuery = new BigQuery({
+  keyFilename: "D:/tfg/pokemonStatistics/credentials.json",
+});
 
 // Show when server is running
 app.get('/api/status', (req, res) => {

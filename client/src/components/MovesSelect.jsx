@@ -18,8 +18,7 @@ const MovesSelect = ({ movesList, selectedMoves, setSelectedMoves }) => {
         <TextField 
           {...params} 
           label="Moves (max 4)" 
-          variant="outlined" 
-          InputLabelProps={{ style: { color: 'white' } }}
+          variant="outlined"
         />
       )}
       renderTags={(value, getTagProps) =>
@@ -27,21 +26,9 @@ const MovesSelect = ({ movesList, selectedMoves, setSelectedMoves }) => {
           <Chip
             label={typeof option === 'string' ? option : option.name}
             {...getTagProps({ index })}
-            sx={{ 
-              backgroundColor: '#24CC9F',
-              color: 'black',
-              '& .MuiChip-deleteIcon': {
-                color: 'black',
-                '&:hover': { color: 'darkred' }
-              }
-            }}
           />
         ))
       }
-      sx={{
-        '& .MuiOutlinedInput-root': { '& fieldset': { borderColor: 'white' } },
-        '& .MuiSvgIcon-root': { color: 'white' }
-      }}
     />
   );
 };

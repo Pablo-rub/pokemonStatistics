@@ -97,17 +97,20 @@ export default function ForumTopicPage() {
   };
 
   return (
-    <Box sx={{ 
-      p: { xs: 1, sm: 2, md: 3 }, 
-      maxWidth: '1200px', 
-      mx: 'auto',
-      backgroundColor: '#221FC7',
-      borderRadius: 2,
-      color: 'white',
-      minHeight: '80vh',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
+    <Box
+      component="main"
+      sx={{ 
+        p: { xs: 1, sm: 2, md: 3 }, 
+        maxWidth: '1200px', 
+        mx: 'auto',
+        backgroundColor: '#221FC7',
+        borderRadius: 2,
+        color: 'white',
+        minHeight: '80vh',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
       <Box sx={{ 
         mb: 2, 
         display: 'flex', 
@@ -180,7 +183,7 @@ export default function ForumTopicPage() {
                     }}>
                       <Avatar 
                         src={message.userAvatar} 
-                        alt={`${message.userName}'s avatar`}
+                        alt={`${message.userName}'s avatar`} 
                         sx={{ 
                           width: { xs: 32, sm: 36 }, 
                           height: { xs: 32, sm: 36 },
@@ -222,7 +225,7 @@ export default function ForumTopicPage() {
                         </Box>
 
                         <Box sx={{ 
-                          backgroundColor: isMine ? '#24CC9F' : 'rgba(255, 255, 255, 0.15)',
+                          backgroundColor: 'rgba(255, 255, 255, 0.15)',
                           color: isMine ? '#000000' : '#ffffff',
                           padding: { xs: '6px 12px', sm: '8px 16px' },
                           borderRadius: isMine 
@@ -268,13 +271,18 @@ export default function ForumTopicPage() {
             >
               <TextField
                 fullWidth
+                id="message-input"
+                aria-label="Message content"
                 placeholder="Write your message..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 variant="standard"
                 multiline
                 maxRows={4}
-                aria-label="Message content"
+                inputProps={{ 
+                  'aria-label': 'Message content',
+                  'aria-description': 'Type your message here'
+                }}
                 InputProps={{
                   disableUnderline: true,
                   sx: { 
