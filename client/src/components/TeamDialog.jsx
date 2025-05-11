@@ -9,9 +9,6 @@ import { styled } from '@mui/material/styles';
 import { createFilterOptions } from '@mui/material/Autocomplete';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
-import CheckBoxIcon from '@mui/icons-material/CheckBox';
-import DisabledByDefaultIcon from '@mui/icons-material/DisabledByDefault';
 import useDraggable from '../hooks/useDraggable';
 import TriStateCheckbox from '../components/TriStateCheckBox';
 
@@ -269,7 +266,8 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
     return (
         <Dialog 
             open={open} 
-            onClose={onClose} 
+            onClose={onClose}
+            aria-labelledby="draggable-dialog-title"
             fullWidth 
             maxWidth="md"
             PaperComponent={DraggablePaperComponent}
@@ -299,13 +297,18 @@ const TeamDialog = ({ open, onClose, onSelectTeam, pokemonList = [] }) => {
                                 }}
                             >
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                    <Typography variant="h6">Slot {index + 1}</Typography>
+                                    <Typography component='p' variant="h6">Slot {index + 1}</Typography>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <Typography variant="body2" sx={{ color: 'white' }}>
                                             {expandedDetails[index] ? 'Hide details' : 'More details'}
                                         </Typography>
-                                        <IconButton 
-                                            onClick={() => toggleDetails(index)} 
+                                        <IconButton
+                                            onClick={() => toggleDetails(index)}
+                                            aria-label={
+                                              expandedDetails[index] 
+                                                ? `Hide details for slot ${index + 1}` 
+                                                : `Show details for slot ${index + 1}`
+                                            }
                                             sx={{ color: 'white' }}
                                         >
                                             {expandedDetails[index] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
