@@ -24,20 +24,16 @@ import BattleField from "../components/BattleField";
 import BattleConditionsDialog from '../components/BattleConditionsDialog';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpDialog from '../components/HelpDialog';
 import useDraggable from "../hooks/useDraggable";
 import TeamDialog from "../components/TeamDialog";
 
 //todo
 //iu:
-//texto de ayuda
-//texto fecha inicio recoleccion
-//que los select se desplieguen para abajo
 //fix teras in moves text
-//fix clear team
-//reset no elimina los pokemon activos
 
 //backend:
-//new format replays (not yet, in april should be)
 //tris
 //any duration tw, screens
 //check moves miraidon discharge vs miraidon discharge
@@ -110,6 +106,9 @@ function TurnAssistantPage() {
   // Agrega estado para el diálogo de selección de equipo
   const [yourTeamDialogOpen, setyourTeamDialogOpen] = useState(false);
   const [teamDialogOpen, setTeamDialogOpen] = useState({ opponent: false });
+
+  // Agrega estado para el diálogo de ayuda
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Función para resetear todos los campos (sin resetear el formato)
   const handleResetData = () => {
@@ -503,6 +502,15 @@ function TurnAssistantPage() {
               {analyzing ? "Analyzing..." : "Analyze Battle"}
             </Button>
             <Button
+              variant="outlined"
+              color="info"
+              onClick={() => setHelpOpen(true)}
+              startIcon={<HelpOutlineIcon />}
+              sx={{ py: 1, px: 4, mt: 1 }}
+            >
+              Help
+            </Button>
+            <Button
               variant="containedCancel"
               color="error"
               onClick={() => setResetDialogOpen(true)}
@@ -580,6 +588,9 @@ function TurnAssistantPage() {
             }}
             pokemonList={pokemonList}
           />
+
+          {/* Diálogo de ayuda */}
+          <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
         </>
       )}
       
