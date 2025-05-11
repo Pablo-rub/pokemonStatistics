@@ -284,11 +284,10 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
           <Typography variant={isMobile ? "h6" : "h5"} component="div">
             Battle Conditions
           </Typography>
-          <IconButton 
-            onClick={onClose} 
-            sx={{ color: 'white' }}
-            aria-label="close"
-            size={isMobile ? "small" : "medium"}
+          <IconButton
+            onClick={onClose}
+            aria-label="Close battle conditions dialog"
+            sx={{ position: 'absolute', top: 8, right: 8, color: 'white' }}
           >
             <CloseIcon />
           </IconButton>
@@ -663,16 +662,22 @@ const FieldConditionControls = ({ battleConditions, handleSelectChange, handleDu
           flexDirection: { xs: 'column', sm: 'row' }
         }}>
           <Box sx={{ flex: { xs: '1', sm: '0.7' }, width: { xs: '100%', sm: 'auto' } }}>
-            <InputLabel id="weather-label" sx={{ color: 'inherit' }}>Weather</InputLabel>
+            <InputLabel
+              id="bc-weather-label"
+              sx={{ color: 'inherit' }}
+            >
+              Weather
+            </InputLabel>
             <Select
-              labelId="weather-label"
+              labelId="bc-weather-label"
+              id="bc-weather-select"
+              label="Weather"
+              aria-labelledby="bc-weather-label"
               value={battleConditions.weather}
               onChange={(e) => handleSelectChange(e, 'weather')}
-              label="Weather"
               sx={selectSx}
               MenuProps={menuPropsDown}
               fullWidth
-              aria-label="Select weather condition"
             >
               <MenuItem value="">Any</MenuItem>
               <MenuItem value="none">None</MenuItem>
@@ -712,16 +717,22 @@ const FieldConditionControls = ({ battleConditions, handleSelectChange, handleDu
           flexDirection: { xs: 'column', sm: 'row' }
         }}>
           <Box sx={{ flex: { xs: '1', sm: '0.7' }, width: { xs: '100%', sm: 'auto' } }}>
-            <InputLabel id="field-label" sx={{ color: 'inherit' }}>Terrain</InputLabel>
+            <InputLabel
+              id="bc-field-label"
+              sx={{ color: 'inherit' }}
+            >
+              Terrain
+            </InputLabel>
             <Select
-              labelId="field-label"
+              labelId="bc-field-label"
+              id="bc-field-select"
+              label="Terrain"
+              aria-labelledby="bc-field-label"
               value={battleConditions.field}
               onChange={(e) => handleSelectChange(e, 'field')}
-              label="Terrain"
               sx={selectSx}
               MenuProps={menuPropsDown}
               fullWidth
-              aria-label="Select terrain effect"
             >
               <MenuItem value="">Any</MenuItem>
               <MenuItem value="none">None</MenuItem>
@@ -761,16 +772,22 @@ const FieldConditionControls = ({ battleConditions, handleSelectChange, handleDu
           flexDirection: { xs: 'column', sm: 'row' }
         }}>
           <Box sx={{ flex: { xs: '1', sm: '0.7' }, width: { xs: '100%', sm: 'auto' } }}>
-            <InputLabel id="room-label" sx={{ color: 'inherit' }}>Room Effect</InputLabel>
+            <InputLabel
+              id="bc-room-label"
+              sx={{ color: 'inherit' }}
+            >
+              Room Effect
+            </InputLabel>
             <Select
-              labelId="room-label"
+              labelId="bc-room-label"
+              id="bc-room-select"
+              label="Room Effect"
+              aria-labelledby="bc-room-label"
               value={battleConditions.room}
               onChange={(e) => handleSelectChange(e, 'room')}
-              label="Room Effect"
               sx={selectSx}
               MenuProps={menuPropsDown}
               fullWidth
-              aria-label="Select room effect"
             >
               <MenuItem value="">Any</MenuItem>
               <MenuItem value="none">None</MenuItem>

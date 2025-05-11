@@ -279,7 +279,7 @@ export default function ForumTopicPage() {
                 variant="standard"
                 multiline
                 maxRows={4}
-                inputProps={{ 
+                inputProps={{
                   'aria-label': 'Message content',
                   'aria-description': 'Type your message here'
                 }}
