@@ -44,6 +44,36 @@ import TeamDialog from "../components/TeamDialog";
 //check screens and spikes
 //ver que hacer con el mirror
 
+// Estado inicial compartido para condiciones de batalla
+const defaultBattleConditions = {
+  weather: "",
+  weatherDuration: 0,
+  field: "",
+  fieldDuration: 0,
+  room: "",
+  roomDuration: 0,
+  sideEffects: {
+    yourSide: { tailwind: false },
+    opponentSide: { tailwind: false }
+  },
+  sideEffectsDuration: {
+    yourSide: { tailwind: 0 },
+    opponentSide: { tailwind: 0 }
+  },
+  entryHazards: {
+    yourSide: {},
+    opponentSide: {}
+  },
+  entryHazardsLevel: {
+    yourSide: {},
+    opponentSide: {}
+  },
+  entryHazardsDuration: {
+    yourSide: {},
+    opponentSide: {}
+  }
+};
+
 function TurnAssistantPage() {
   const [selectedPokemon, setSelectedPokemon] = useState({
     topLeft: null,
@@ -65,34 +95,7 @@ function TurnAssistantPage() {
   const [battleDialogOpen, setBattleDialogOpen] = useState(false);
 
   // Estado extendido para condiciones de batalla, incluyendo duraciones
-  const [battleConditions, setBattleConditions] = useState({
-    weather: "",
-    weatherDuration: 0,
-    field: "",
-    fieldDuration: 0,
-    room: "",
-    roomDuration: 0,
-    sideEffects: {
-      yourSide: { tailwind: false },
-      opponentSide: { tailwind: false }
-    },
-    sideEffectsDuration: {
-      yourSide: { tailwind: 0 },
-      opponentSide: { tailwind: 0 }
-    },
-    entryHazards: {
-      yourSide: {},
-      opponentSide: {}
-    },
-    entryHazardsLevel: {
-      yourSide: {},
-      opponentSide: {}
-    },
-    entryHazardsDuration: {
-      yourSide: {},
-      opponentSide: {}
-    }
-  });
+  const [battleConditions, setBattleConditions] = useState(defaultBattleConditions);
 
   // Agrega un estado para el diálogo de confirmación
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
@@ -116,34 +119,9 @@ function TurnAssistantPage() {
       bottomLeft: null,
       bottomRight: null
     });
-    setBattleConditions({
-      weather: "",
-      weatherDuration: 0,
-      field: "",
-      fieldDuration: 0,
-      room: "",
-      roomDuration: 0,
-      sideEffects: {
-        yourSide: {},
-        opponentSide: {}
-      },
-      sideEffectsDuration: {
-        yourSide: {},
-        opponentSide: {}
-      },
-      entryHazards: {
-        yourSide: {},
-        opponentSide: {}
-      },
-      entryHazardsLevel: {
-        yourSide: {},
-        opponentSide: {}
-      },
-      entryHazardsDuration: {
-        yourSide: {},
-        opponentSide: {}
-      }
-    });
+    setBattleConditions(defaultBattleConditions);
+    setyourTeam([]);
+    setopponentTeam([]);
     setAnalysisResults(null);
     setError(null);
     setResetDialogOpen(false);
@@ -472,6 +450,7 @@ function TurnAssistantPage() {
 
   return (
     <Box
+      key={resetKey}
       component="main"
       role="main"
       aria-label="Turn Assistant"
@@ -530,7 +509,7 @@ function TurnAssistantPage() {
               startIcon={<DeleteOutlineIcon />}
               sx={{ py: 1, px: 4, mt: 1 }}
             >
-              Reset
+              Reset All
             </Button>
 
             {error && (
@@ -541,8 +520,8 @@ function TurnAssistantPage() {
                   width: '100%',
                   maxWidth: '400px',
                   textAlign: 'center',
-                  backgroundColor: '#E9A5A5', // rojo (puedes ajustar al tono deseado)
-                  color: '#000000'            // texto negro
+                  backgroundColor: '#E9A5A5',
+                  color: '#000000'
                 }}
               >
                 {error}
