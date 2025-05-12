@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { Box, Paper, Typography, CircularProgress, Button, ButtonGroup } from '@mui/material';
+import { Box, Paper, Typography, CircularProgress, Button, ButtonGroup, Chip } from '@mui/material';
 import PokemonSprite from '../PokemonSprite';
 import MultiLineChart from './MultiLineChart';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import RemoveIcon from '@mui/icons-material/Remove';
 import SortIcon from '@mui/icons-material/Sort';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
@@ -39,7 +37,7 @@ const DetailsPane = ({
     } else {
       // Set new field with default direction
       setSortBy(field);
-      setSortDirection(field === 'label' ? 'asc' : 'desc'); // Default asc for names, desc for numbers
+      setSortDirection(field === 'label' ? 'asc' : 'desc');
     }
   };
 
@@ -105,11 +103,11 @@ const DetailsPane = ({
           >
             <PokemonSprite pokemon={{ name: selectedPokemon.name }} size={60} />
             <Box sx={{ ml: 2 }}>
-              <Typography variant="h5" sx={{ color: 'white' }}>
+              <Typography component="h2" variant="h5" sx={{ color: 'white' }}>
                 {selectedPokemon.name}
               </Typography>
               {rankingType === 'usage' && (
-                <Typography variant="subtitle1" sx={{ color: 'white' }}>
+                <Typography component="p" variant="subtitle1" sx={{ color: 'white' }}>
                   Rank #{selectedPokemon.rank} • Usage: {selectedPokemon.percentage}%
                 </Typography>
               )}
@@ -156,14 +154,14 @@ const DetailsPane = ({
                 </Typography>
               ) : (
                 <Box sx={{ height: '100%', overflow: 'auto', pr: 1 }}>
-                  <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                  <Typography component="h3" variant="h6" sx={{ color: 'white', mb: 2 }}>
                     {categories[currentCategory].name} Win Rates ({victoryData.length})
                   </Typography>
 
                   {/* Agregar el MultiLineChart para datos de victoria */}
                   {victoryData.length > 0 && (
                     <Box sx={{ height: 350, mb: 4 }}>
-                      <Typography variant="subtitle1" sx={{ color: 'white', mb: 1 }}>
+                      <Typography component="h4" variant="subtitle1" sx={{ color: 'white', mb: 1 }}>
                         Win Rate Trends
                       </Typography>
                       <MultiLineChart
@@ -266,10 +264,10 @@ const DetailsPane = ({
                             mb: 1,
                           }}
                         >
-                          <Typography variant="subtitle2" sx={{ color: 'white' }}>
+                          <Typography component="p" variant="subtitle2" sx={{ color: 'white' }}>
                             Stats of last month:
                           </Typography>
-                          <Typography variant="subtitle2" sx={{ color: 'white' }}>
+                          <Typography component="p" variant="subtitle2" sx={{ color: 'white' }}>
                             {totalWins} / {totalGames}{' '}
                             {getCategoryStatsLabel(categories[currentCategory].key)} ({displayMonth})
                           </Typography>
@@ -329,13 +327,13 @@ const DetailsPane = ({
                                           sortBy === 'total_games' ? a.total_games : 
                                           sortBy === 'win_rate' ? a.win_rate : 
                                           sortBy === 'change' ? (calculateVictoryMonthlyChange && 
-                                                               calculateVictoryMonthlyChange(victoryData, a[elementKey])?.change || 0) : 0;
+                                                               calculateVictoryMonthlyChange(victoryData, a[elementKey])?.change) : 0;
                             
                             const valueB = sortBy === 'label' ? b[elementKey] : 
                                           sortBy === 'total_games' ? b.total_games : 
                                           sortBy === 'win_rate' ? b.win_rate : 
                                           sortBy === 'change' ? (calculateVictoryMonthlyChange && 
-                                                               calculateVictoryMonthlyChange(victoryData, b[elementKey])?.change || 0) : 0;
+                                                               calculateVictoryMonthlyChange(victoryData, b[elementKey])?.change) : 0;
                             
                             // Apply sort direction
                             if (sortBy === 'label') {
@@ -360,11 +358,12 @@ const DetailsPane = ({
                               calculateVictoryMonthlyChange(victoryData, label);
 
                             return (
-                              <Box key={index} sx={{ mb: 2.5 }}>
+                              <Box key={index} sx={{ mb: 2 }}>
                                 <Box
                                   sx={{
                                     display: 'flex',
                                     justifyContent: 'space-between',
+                                    alignItems: 'center',
                                     mb: 0.5,
                                   }}
                                 >
@@ -381,32 +380,54 @@ const DetailsPane = ({
                                     {label}
                                   </Typography>
                                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <Typography variant="body2" sx={{ color: 'white' }}>
-                                      {item.win_rate.toFixed(2)}% ({item.wins}/{item.total_games})
-                                    </Typography>
+                                    {/* WIN RATE con fondo para mejorar contraste */}
+                                    <Chip
+                                      size="small"
+                                      label={`${item.win_rate.toFixed(2)}%`}
+                                      sx={{
+                                        backgroundColor: 'rgba(255,255,255,0.15)',
+                                        color: 'white',
+                                        fontSize: '0.75rem',
+                                        height: 20,
+                                        '& .MuiChip-label': {
+                                          px: 0.5,
+                                        },
+                                        mr: 1,
+                                      }}
+                                    />
+                                    {/* Badge de cambio mensual (ya existente) */}
                                     {monthlyChange && (
-                                      <Typography
-                                        variant="caption"
+                                      <Chip
+                                        size="small"
+                                        label={`${monthlyChange.change}%`}
+                                        icon={
+                                          monthlyChange.isPositive ? (
+                                            <ArrowDropUpIcon fontSize="small" />
+                                          ) : monthlyChange.isNeutral ? (
+                                            <RemoveIcon fontSize="small" />
+                                          ) : (
+                                            <ArrowDropDownIcon fontSize="small" />
+                                          )
+                                        }
                                         sx={{
-                                          ml: 1,
+                                          backgroundColor: 'rgba(255,255,255,0.15)',
                                           color: monthlyChange.isPositive
                                             ? '#4CAF50'
                                             : monthlyChange.isNeutral
                                             ? '#FFC107'
                                             : '#F44336',
-                                          display: 'flex',
-                                          alignItems: 'center',
+                                          '& .MuiChip-icon': {
+                                            color: monthlyChange.isPositive
+                                              ? '#4CAF50'
+                                              : monthlyChange.isNeutral
+                                              ? '#FFC107'
+                                              : '#F44336',
+                                          },
+                                          fontSize: '0.75rem',
+                                          height: 20,
+                                          '& .MuiChip-label': { px: 0.5 },
                                         }}
-                                      >
-                                        {monthlyChange.isPositive ? (
-                                          <ArrowUpwardIcon fontSize="inherit" sx={{ mr: 0.5 }} />
-                                        ) : monthlyChange.isNeutral ? (
-                                          <RemoveIcon fontSize="inherit" sx={{ mr: 0.5 }} />
-                                        ) : (
-                                          <ArrowDownwardIcon fontSize="inherit" sx={{ mr: 0.5 }} />
-                                        )}
-                                        {monthlyChange.change}%
-                                      </Typography>
+                                      />
                                     )}
                                   </Box>
                                 </Box>

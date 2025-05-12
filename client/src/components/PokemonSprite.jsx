@@ -81,7 +81,7 @@ const PokemonSprite = ({ pokemon }) => {
               const parent = e.target.parentNode;
               const textElement = document.createElement('span');
               textElement.textContent = pokemon.name;
-              textElement.style.fontSize = '10px';
+              textElement.style.fontSize = '12px'; // antes '10px'
               textElement.style.textAlign = 'center';
               textElement.style.wordBreak = 'break-word';
               parent.replaceChild(textElement, e.target);

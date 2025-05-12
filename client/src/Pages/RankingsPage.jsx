@@ -9,6 +9,7 @@ import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import RemoveIcon from '@mui/icons-material/Remove';
+import Chip from '@mui/material/Chip';
 import PokemonList from '../components/rankings/PokemonList';
 import DetailsPane from '../components/rankings/DetailsPane';
 import MultiLineChart from '../components/rankings/MultiLineChart';
@@ -17,6 +18,7 @@ import PokemonSprite from '../components/PokemonSprite';
 //todo
 // ocultar error raro
 // eliminar meses innecesarios
+// cambiar los ultimos 4 colores para el contraste
 
 const PokemonUsage = () => {
     const [formats, setFormats] = useState([]);
@@ -84,16 +86,6 @@ const PokemonUsage = () => {
         { name: "Tera Types", key: "teraTypes" },
         { name: "Teammates", key: "teammates" }
     ];
-
-    const handlePrevCategory = () => {
-        const navCategories = rankingType === 'usage' ? categories : victoryCategoryTitles;
-        setCurrentCategory(prev => (prev > 0 ? prev - 1 : navCategories.length - 1));
-    };
-
-    const handleNextCategory = () => {
-        const navCategories = rankingType === 'usage' ? categories : victoryCategoryTitles;
-        setCurrentCategory(prev => (prev < navCategories.length - 1 ? prev + 1 : 0));
-    };
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -437,17 +429,26 @@ const PokemonUsage = () => {
 
     // Add this function to render category navigation
     const renderCategoryNavigation = () => {
-        // Usa el mapeo correspondiente según el modo
-        const navCategories = rankingType === 'usage' ? categories : victoryCategoryTitles;
+        const list = rankingType === 'usage' ? categories : victoryCategoryTitles;
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <IconButton onClick={handlePrevCategory} sx={{ color: 'white' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+                <IconButton
+                    aria-label="Previous category"
+                    onClick={() => setCurrentCategory(c => Math.max(c - 1, 0))}
+                    disabled={currentCategory === 0}
+                    sx={{ color: 'white' }}
+                >
                     <NavigateBeforeIcon />
                 </IconButton>
-                <Typography variant="h6" sx={{ color: 'white' }}>
-                    {navCategories[currentCategory % navCategories.length].name}
+                <Typography component="h2" variant="h6" sx={{ color: 'white', mx: 2 }}>
+                    {list[currentCategory]?.name}
                 </Typography>
-                <IconButton onClick={handleNextCategory} sx={{ color: 'white' }}>
+                <IconButton
+                    aria-label="Next category"
+                    onClick={() => setCurrentCategory(c => Math.min(c + 1, list.length - 1))}
+                    disabled={currentCategory === list.length - 1}
+                    sx={{ color: 'white' }}
+                >
                     <NavigateNextIcon />
                 </IconButton>
             </Box>
@@ -772,14 +773,14 @@ const PokemonUsage = () => {
 
         return (
             <Box sx={{ height: '100%', overflow: 'auto', pr: 1 }}>
-                <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                <Typography component="h3" variant="h6" sx={{ color: 'white', mb: 2 }}>
                     {category.name} ({categoryData.length})
                 </Typography>
                 
                 {/* Combined chart for top elements in this category */}
                 {chartData.length > 1 && elements.length > 0 && (
                     <Box sx={{ mt: 3, mb: 4 }}>
-                        <Typography variant="subtitle1" sx={{ color: 'white', mb: 1 }}>
+                        <Typography component="h4" variant="subtitle1" sx={{ color: 'white', mb: 1 }}>
                             Top {elements.length} {category.name} 
                             {rankingType === 'usage' ? ' Usage Trends' : ' Winrate Trends'}
                         </Typography>
@@ -813,25 +814,36 @@ const PokemonUsage = () => {
                                         {parseFloat(item.percentage).toFixed(2)}%
                                     </Typography>
                                     {monthlyChange && (
-                                        <Typography 
-                                            variant="caption" 
-                                            sx={{ 
-                                                ml: 1, 
-                                                color: monthlyChange.isPositive ? '#4CAF50' : 
-                                                       monthlyChange.isNeutral ? '#FFC107' : '#F44336',
-                                                display: 'flex',
-                                                alignItems: 'center'
+                                        <Chip
+                                            size="small"
+                                            label={`${monthlyChange.change}%`}
+                                            icon={
+                                                monthlyChange.isPositive ? (
+                                                    <ArrowUpwardIcon fontSize="small" />
+                                                ) : monthlyChange.isNeutral ? (
+                                                    <RemoveIcon fontSize="small" />
+                                                ) : (
+                                                    <ArrowDownwardIcon fontSize="small" />
+                                                )
+                                            }
+                                            sx={{
+                                                ml: 1,
+                                                backgroundColor: 'rgba(255,255,255,0.15)',
+                                                color: monthlyChange.isPositive
+                                                    ? '#4CAF50'
+                                                    : monthlyChange.isNeutral
+                                                    ? '#FFC107'
+                                                    : '#F44336',
+                                                '& .MuiChip-icon': {
+                                                    color: monthlyChange.isPositive
+                                                        ? '#4CAF50'
+                                                        : monthlyChange.isNeutral
+                                                        ? '#FFC107'
+                                                        : '#F44336',
+                                                },
+                                                borderRadius: '4px'
                                             }}
-                                        >
-                                            {monthlyChange.isPositive ? (
-                                                <ArrowUpwardIcon fontSize="inherit" sx={{ mr: 0.5 }} />
-                                            ) : monthlyChange.isNeutral ? (
-                                                <RemoveIcon fontSize="inherit" sx={{ mr: 0.5 }} />
-                                            ) : (
-                                                <ArrowDownwardIcon fontSize="inherit" sx={{ mr: 0.5 }} />
-                                            )}
-                                            {monthlyChange.change}%
-                                        </Typography>
+                                        />
                                     )}
                                 </Box>
                             </Box>
@@ -882,7 +894,7 @@ const PokemonUsage = () => {
         
         return (
             <Box sx={{ height: '100%', overflow: 'auto', pr: 1 }}>
-                <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
+                <Typography component="h2" variant="h6" sx={{ color: 'white', mb: 2 }}>
                     {selectedPokemon.name} Historical {rankingType === 'victories' ? 'Winrate' : 'Usage'}
                 </Typography>
                 <Box sx={{ height: 400 }}>
@@ -996,7 +1008,7 @@ const PokemonUsage = () => {
         
         return (
             <Box sx={{ height: '100%', overflow: 'auto', pr: 1 }}>
-                <Typography variant="h6" sx={{ color: 'white', mb: 2, textAlign: 'center' }}>
+                <Typography component="h2" variant="h6" sx={{ color: 'white', mb: 2, textAlign: 'center' }}>
                     {selectedPokemon.name} Historical Winrate
                 </Typography>
                 <Box sx={{ height: 400 }}>
@@ -1135,8 +1147,8 @@ const PokemonUsage = () => {
     };
 
     return (
-        <Box sx={{ padding: 2 }}>
-            <Typography variant="h4" gutterBottom>
+        <Box component="main" sx={{ padding: 2 }}>
+            <Typography component="h1" variant="h4" gutterBottom>
                 Pokémon Usage Statistics
             </Typography>
 
@@ -1150,10 +1162,22 @@ const PokemonUsage = () => {
             }}>
                 {/* Selector de formato SIEMPRE primero */}
                 <FormControl sx={{ minWidth: 200, mr: 3 }}>
-                    <InputLabel>Format</InputLabel>
+                    <InputLabel 
+                      id="format-label" 
+                      htmlFor="format-select"
+                      sx={{ color: 'text.primary' }}
+                    >
+                      Format
+                    </InputLabel>
                     <Select
-                        value={format}
+                        labelId="format-label"
                         label="Format"
+                        inputProps={{
+                          id: 'format-select',
+                          'aria-labelledby': 'format-label',
+                          style: { display: 'none' }
+                        }}
+                        value={format}
                         onChange={(e) => {
                             handleFormatChange(e.target.value);
                         }}
@@ -1243,21 +1267,54 @@ const PokemonUsage = () => {
                         </Box>
                     ) : (
                         <>
+                            {/* Teams Ranking controls */}
                             <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
                                 <FormControl size="small">
-                                    <InputLabel>Ordenar por</InputLabel>
-                                    <Select value={teamsSortBy} label="Ordenar por" onChange={handleTeamsSortByChange}>
-                                        <MenuItem value="usage">Uso %</MenuItem>
-                                        <MenuItem value="total_games">Partidas</MenuItem>
+                                    <InputLabel id="teams-sort-by-label" htmlFor="teams-sort-by-select" sx={{ color: 'white' }}>
+                                        Sort by
+                                    </InputLabel>
+                                    <Select
+                                        labelId="teams-sort-by-label"
+                                        id="teams-sort-by-select"
+                                        label="Sort by"
+                                        inputProps={{
+                                            'aria-labelledby': 'teams-sort-by-label',
+                                        }}
+                                        value={teamsSortBy}
+                                        onChange={handleTeamsSortByChange}
+                                        sx={{
+                                            color: 'white',
+                                            '& .MuiSelect-icon': { color: 'white' },
+                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.5)' }
+                                        }}
+                                    >
+                                        <MenuItem value="usage">Usage %</MenuItem>
+                                        <MenuItem value="total_games">Battles</MenuItem>
                                     </Select>
                                 </FormControl>
                                 <FormControl size="small">
-                                  <InputLabel>Mes</InputLabel>
-                                  <Select value={teamsMonth} label="Mes" onChange={handleTeamsMonthChange}>
-                                    {teamsMonths.map(m => (
-                                      <MenuItem key={m} value={m}>{m}</MenuItem>
-                                    ))}
-                                  </Select>
+                                    <InputLabel id="teams-month-label" htmlFor="teams-month-label" sx={{ color: 'white' }}>
+                                        Month
+                                    </InputLabel>
+                                    <Select
+                                        labelId="teams-month-label"
+                                        id="teams-month-select"
+                                        label="Month"
+                                        inputProps={{
+                                            'aria-labelledby': 'teams-month-label',
+                                        }}
+                                        value={teamsMonth}
+                                        onChange={handleTeamsMonthChange}
+                                        sx={{
+                                            color: 'white',
+                                            '& .MuiSelect-icon': { color: 'white' },
+                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.5)' }
+                                        }}
+                                    >
+                                        {teamsMonths.map(m => (
+                                            <MenuItem key={m} value={m}>{m}</MenuItem>
+                                        ))}
+                                    </Select>
                                 </FormControl>
                             </Box>
                             <Grid container spacing={2} sx={{ mb: 2 }}>
@@ -1284,8 +1341,8 @@ const PokemonUsage = () => {
                                                     );
                                                 })}
                                             </Box>
-                                            <Typography variant="h5">{team.monthly_usage}%</Typography>
-                                            <Typography variant="caption">{team.monthly_total_games} games</Typography>
+                                            <Typography component="h2" variant="h5">{team.monthly_usage}%</Typography>
+                                            <Typography component="h2" variant="caption">{team.monthly_total_games} games</Typography>
                                         </Paper>
                                     </Grid>
                                 ))}
@@ -1308,18 +1365,55 @@ const PokemonUsage = () => {
                         </Box>
                     ) : (
                         <>
-                            <Box sx={{ display:'flex', gap:2, mb:2, alignItems:'center' }}>
+                            <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
                                 <FormControl size="small">
-                                    <InputLabel>Ordenar por</InputLabel>
-                                    <Select value={leadsSortBy} label="Ordenar por" onChange={e=>setLeadsSortBy(e.target.value)}>
-                                        <MenuItem value="win_rate">Win Rate %</MenuItem>
+                                    <InputLabel id="leads-sort-by-label" htmlFor="leads-sort-by-select" sx={{ color: 'white' }}>
+                                        Sort by
+                                    </InputLabel>
+                                    <Select
+                                        labelId="leads-sort-by-label"
+                                        id="leads-sort-by-select"
+                                        label="Sort by"
+                                        inputProps={{
+                                            'aria-labelledby': 'leads-sort-by-label',
+                                        }}
+                                        value={leadsSortBy}
+                                        onChange={e => setLeadsSortBy(e.target.value)}
+                                        sx={{
+                                            color: 'white',
+                                            backgroundColor: 'rgba(255,255,255,0.1)',
+                                            '& .MuiSelect-icon': { color: 'white' },
+                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.7)' }
+                                        }}
+                                    >
+                                        <MenuItem value="win_rate">Win Rate %</MenuItem>
                                         <MenuItem value="total_games">Games</MenuItem>
                                     </Select>
                                 </FormControl>
+
                                 <FormControl size="small">
-                                    <InputLabel>Mes</InputLabel>
-                                    <Select value={leadsMonth} label="Mes" onChange={e=>{setLeadsMonth(e.target.value); setLeadsPage(1);}}>
-                                        {teamsMonths.map(m => <MenuItem key={m} value={m}>{m}</MenuItem>)}
+                                    <InputLabel id="leads-month-label" htmlFor="leads-month-select" sx={{ color: 'white' }}>
+                                        Month
+                                    </InputLabel>
+                                    <Select
+                                        labelId="leads-month-label"
+                                        id="leads-month-select"
+                                        label="Month"
+                                        inputProps={{
+                                            'aria-labelledby': 'leads-month-label',
+                                        }}
+                                        value={leadsMonth}
+                                        onChange={e => { setLeadsMonth(e.target.value); setLeadsPage(1); }}
+                                        sx={{
+                                            color: 'white',
+                                            backgroundColor: 'rgba(255,255,255,0.1)',
+                                            '& .MuiSelect-icon': { color: 'white' },
+                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.7)' }
+                                        }}
+                                    >
+                                        {teamsMonths.map(m => (
+                                            <MenuItem key={m} value={m}>{m}</MenuItem>
+                                        ))}
                                     </Select>
                                 </FormControl>
                             </Box>
@@ -1332,8 +1426,8 @@ const PokemonUsage = () => {
                                                     <PokemonSprite key={idx} pokemon={{name:p}} size={28} />
                                                 ))}
                                             </Box>
-                                            <Typography variant="h5">{lead.monthly_usage}%</Typography>
-                                            <Typography variant="caption">{lead.monthly_total_games} games</Typography>
+                                            <Typography component="h2" variant="h5">{lead.monthly_usage}%</Typography>
+                                            <Typography component="h2" variant="caption">{lead.monthly_total_games} games</Typography>
                                         </Paper>
                                     </Grid>
                                 ))}
