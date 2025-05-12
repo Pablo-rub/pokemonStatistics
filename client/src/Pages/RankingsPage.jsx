@@ -1275,40 +1275,49 @@ const PokemonUsage = () => {
                                     </InputLabel>
                                     <Select
                                         labelId="teams-sort-by-label"
-                                        id="teams-sort-by-select"
                                         label="Sort by"
-                                        inputProps={{
-                                            'aria-labelledby': 'teams-sort-by-label',
-                                        }}
                                         value={teamsSortBy}
                                         onChange={handleTeamsSortByChange}
+                                        inputProps={{
+                                            id: "teams-sort-by-select",
+                                            'aria-labelledby': 'teams-sort-by-label',
+                                            style: { display: 'none' }               // oculta el select nativo
+                                        }}
                                         sx={{
                                             color: 'white',
+                                            backgroundColor: 'rgba(255,255,255,0.15)',
                                             '& .MuiSelect-icon': { color: 'white' },
-                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.5)' }
+                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: 'rgba(255,255,255,0.7)'
+                                            }
                                         }}
                                     >
                                         <MenuItem value="usage">Usage %</MenuItem>
                                         <MenuItem value="total_games">Battles</MenuItem>
                                     </Select>
                                 </FormControl>
+
                                 <FormControl size="small">
-                                    <InputLabel id="teams-month-label" htmlFor="teams-month-label" sx={{ color: 'white' }}>
+                                    <InputLabel id="teams-month-label" htmlFor="teams-month-select" sx={{ color: 'white' }}>
                                         Month
                                     </InputLabel>
                                     <Select
                                         labelId="teams-month-label"
-                                        id="teams-month-select"
                                         label="Month"
-                                        inputProps={{
-                                            'aria-labelledby': 'teams-month-label',
-                                        }}
                                         value={teamsMonth}
                                         onChange={handleTeamsMonthChange}
+                                        inputProps={{
+                                            id: "teams-month-select",
+                                            'aria-labelledby': 'teams-month-label',
+                                            style: { display: 'none' }               // oculta el select nativo
+                                        }}
                                         sx={{
                                             color: 'white',
+                                            backgroundColor: 'rgba(255,255,255,0.15)',
                                             '& .MuiSelect-icon': { color: 'white' },
-                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.5)' }
+                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: 'rgba(255,255,255,0.7)'
+                                            }
                                         }}
                                     >
                                         {teamsMonths.map(m => (
@@ -1365,6 +1374,7 @@ const PokemonUsage = () => {
                         </Box>
                     ) : (
                         <>
+                            {/* Leads Ranking controls */}
                             <Box sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'center' }}>
                                 <FormControl size="small">
                                     <InputLabel id="leads-sort-by-label" htmlFor="leads-sort-by-select" sx={{ color: 'white' }}>
@@ -1372,18 +1382,21 @@ const PokemonUsage = () => {
                                     </InputLabel>
                                     <Select
                                         labelId="leads-sort-by-label"
-                                        id="leads-sort-by-select"
                                         label="Sort by"
-                                        inputProps={{
-                                            'aria-labelledby': 'leads-sort-by-label',
-                                        }}
                                         value={leadsSortBy}
                                         onChange={e => setLeadsSortBy(e.target.value)}
+                                        inputProps={{
+                                            id: "leads-sort-by-select",
+                                            'aria-labelledby': 'leads-sort-by-label',
+                                            style: { display: 'none' }               // oculta el select nativo
+                                        }}
                                         sx={{
                                             color: 'white',
-                                            backgroundColor: 'rgba(255,255,255,0.1)',
+                                            backgroundColor: 'rgba(255,255,255,0.15)',
                                             '& .MuiSelect-icon': { color: 'white' },
-                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.7)' }
+                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: 'rgba(255,255,255,0.7)'
+                                            }
                                         }}
                                     >
                                         <MenuItem value="win_rate">Win Rate %</MenuItem>
@@ -1397,18 +1410,21 @@ const PokemonUsage = () => {
                                     </InputLabel>
                                     <Select
                                         labelId="leads-month-label"
-                                        id="leads-month-select"
                                         label="Month"
-                                        inputProps={{
-                                            'aria-labelledby': 'leads-month-label',
-                                        }}
                                         value={leadsMonth}
                                         onChange={e => { setLeadsMonth(e.target.value); setLeadsPage(1); }}
+                                        inputProps={{
+                                            id: "leads-month-select",
+                                            'aria-labelledby': 'leads-month-label',
+                                            style: { display: 'none' }               // oculta el select nativo
+                                        }}
                                         sx={{
                                             color: 'white',
-                                            backgroundColor: 'rgba(255,255,255,0.1)',
+                                            backgroundColor: 'rgba(255,255,255,0.15)',
                                             '& .MuiSelect-icon': { color: 'white' },
-                                            '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.7)' }
+                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: 'rgba(255,255,255,0.7)'
+                                            }
                                         }}
                                     >
                                         {teamsMonths.map(m => (
