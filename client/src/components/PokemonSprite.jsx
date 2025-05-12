@@ -60,17 +60,21 @@ const PokemonSprite = ({ pokemon }) => {
 
   return (
     <Tooltip title={pokemon?.name || "Unknown"} arrow>
-      <Box sx={{
-        width: 40,
-        height: 40,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
-        {pokemon?.name ? (
-          <img 
+      <Box
+        role="img"
+        aria-label={pokemon?.name || "Unknown Pokémon"}
+        sx={{
+          width: 40,
+          height: 40,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        {pokemon?.name && imgSrc ? (
+          <img
             src={imgSrc}
-            alt={pokemon.name}
+            alt=""
             style={{ width: '100%', height: '100%', objectFit: 'contain' }}
             onError={(e) => {
               e.target.onerror = null;

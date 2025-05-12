@@ -74,7 +74,7 @@ const BattleField = ({ onPokemonSelect, onTeamSelectYour, onTeamSelectOpponent, 
         {pokemon ? (
           <>
             <PokemonSprite pokemon={{ name: pokemon.name }} size={80} />
-            <Typography variant="subtitle1" sx={{ mt: 1 }}>
+            <Typography component="p" variant="subtitle1" sx={{ mt: 1 }}>
               {pokemon.name}
             </Typography>
             {pokemon.item && (
