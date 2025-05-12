@@ -34,10 +34,6 @@ import TeamDialog from "../components/TeamDialog";
 //fix teras in moves text
 
 //backend:
-//tris
-//any duration tw, screens
-//check moves miraidon discharge vs miraidon discharge
-//check screens and spikes
 //ver que hacer con el mirror
 
 // Estado inicial compartido para condiciones de batalla
@@ -597,7 +593,7 @@ function TurnAssistantPage() {
       {/* Analysis Results */}
       {analysisResults && (
         <Paper sx={{ mt: 5, p: 3, backgroundColor: '#221FC7' }}>
-          <Typography variant="h5" gutterBottom>
+          <Typography component="h1" variant="h5" gutterBottom>
             Analysis Results
           </Typography>
           
@@ -610,17 +606,29 @@ function TurnAssistantPage() {
           {/* Check that allMoveOptions exists before trying to render */}
           {analysisResults.allMoveOptions && selectedPokemon.topLeft && selectedPokemon.topRight && (
             <>
-              <Typography variant="h6" gutterBottom >
+              <Typography component="p" variant="h6" gutterBottom >
                 Move Options
               </Typography>
               
               <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, mb: 3 }}>
                 {/* First Pokémon's moves */}
                 <TableContainer component={Paper} sx={{ flex: 1, backgroundColor: '#221FC7' }}>
-                  <Typography variant="subtitle2" sx={{ p: 1 }}>
-                    {selectedPokemon.topLeft.name} {selectedPokemon.topLeft.item ? `(${selectedPokemon.topLeft.item})` : ''}
-                  </Typography>
-                  <Table size="small">
+                  <Table 
+                    size="small" 
+                    aria-label={`Move Options for ${selectedPokemon.topLeft.name}`} 
+                    sx={{ 
+                      captionSide: 'top',
+                      backgroundColor: '#221FC7'
+                    }}
+                  >
+                    <caption style={{
+                      padding: '8px',
+                      color: 'white',
+                      textAlign: 'left',
+                      fontSize: '0.875rem'
+                    }}>
+                      {selectedPokemon.topLeft.name} {selectedPokemon.topLeft.item ? `(${selectedPokemon.topLeft.item})` : ''}
+                    </caption>
                     <TableHead>
                       <TableRow>
                         <TableCell>Move</TableCell>
@@ -651,10 +659,19 @@ function TurnAssistantPage() {
                 
                 {/* Second Pokémon's moves */}
                 <TableContainer component={Paper} sx={{ flex: 1, backgroundColor: '#221FC7' }}>
-                  <Typography variant="subtitle2" sx={{ p: 1 }}>
-                    {selectedPokemon.topRight.name} {selectedPokemon.topRight.item ? `(${selectedPokemon.topRight.item})` : ''}
-                  </Typography>
-                  <Table size="small">
+                  <Table 
+                    size="small" 
+                    aria-label={`Move Options for ${selectedPokemon.topRight.name}`} 
+                    sx={{ captionSide: 'top', backgroundColor: '#221FC7' }}
+                  >
+                    <caption style={{
+                      padding: '8px',
+                      color: 'white',
+                      textAlign: 'left',
+                      fontSize: '0.875rem'
+                    }}>
+                      {selectedPokemon.topRight.name} {selectedPokemon.topRight.item ? `(${selectedPokemon.topRight.item})` : ''}
+                    </caption>
                     <TableHead>
                       <TableRow>
                         <TableCell>Move</TableCell>
@@ -684,7 +701,7 @@ function TurnAssistantPage() {
                 </TableContainer>
               </Box>
               
-              <Typography variant="h6" gutterBottom>
+              <Typography component="p" variant="h6" gutterBottom>
                 Best Combinations
               </Typography>
               
