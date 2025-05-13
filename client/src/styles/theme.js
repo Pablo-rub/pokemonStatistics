@@ -1,10 +1,6 @@
 import { createTheme } from "@mui/material/styles";
 
-//todo
-//eliminar sx
-//filters
-//change password
-//replaycard text white
+// ver si se puede pasar mas sx aqui
 
 const theme = createTheme({
   palette: {
@@ -28,13 +24,13 @@ const theme = createTheme({
       default: "#2B2828"
     },
     text: {
-      primary: "#ffffff", // Set the primary text color to white
-      secondary: "#000000", // Set the secondary text color to white
+      primary: "#ffffff",
+      secondary: "#000000",
     },
   },
   typography: {
     allVariants: {
-      color: "#ffffff", // Set the default text color to white
+      color: "#ffffff",
     },
   },
   components: {

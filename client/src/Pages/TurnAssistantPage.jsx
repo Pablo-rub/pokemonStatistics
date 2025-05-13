@@ -24,24 +24,16 @@ import BattleField from "../components/BattleField";
 import BattleConditionsDialog from '../components/BattleConditionsDialog';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import HelpDialog from '../components/HelpDialog';
 import useDraggable from "../hooks/useDraggable";
 import TeamDialog from "../components/TeamDialog";
 
 //todo
 //iu:
-//texto de ayuda
-//texto fecha inicio recoleccion
-//que los select se desplieguen para abajo
 //fix teras in moves text
-//fix clear team
-//reset no elimina los pokemon activos
 
 //backend:
-//new format replays (not yet, in april should be)
-//tris
-//any duration tw, screens
-//check moves miraidon discharge vs miraidon discharge
-//check screens and spikes
 //ver que hacer con el mirror
 
 // Estado inicial compartido para condiciones de batalla
@@ -110,6 +102,9 @@ function TurnAssistantPage() {
   // Agrega estado para el diálogo de selección de equipo
   const [yourTeamDialogOpen, setyourTeamDialogOpen] = useState(false);
   const [teamDialogOpen, setTeamDialogOpen] = useState({ opponent: false });
+
+  // Agrega estado para el diálogo de ayuda
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Función para resetear todos los campos (sin resetear el formato)
   const handleResetData = () => {
@@ -503,6 +498,15 @@ function TurnAssistantPage() {
               {analyzing ? "Analyzing..." : "Analyze Battle"}
             </Button>
             <Button
+              variant="outlined"
+              color="info"
+              onClick={() => setHelpOpen(true)}
+              startIcon={<HelpOutlineIcon />}
+              sx={{ py: 1, px: 4, mt: 1 }}
+            >
+              Help
+            </Button>
+            <Button
               variant="containedCancel"
               color="error"
               onClick={() => setResetDialogOpen(true)}
@@ -580,13 +584,16 @@ function TurnAssistantPage() {
             }}
             pokemonList={pokemonList}
           />
+
+          {/* Diálogo de ayuda */}
+          <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
         </>
       )}
       
       {/* Analysis Results */}
       {analysisResults && (
         <Paper sx={{ mt: 5, p: 3, backgroundColor: '#221FC7' }}>
-          <Typography variant="h5" gutterBottom>
+          <Typography component="h1" variant="h5" gutterBottom>
             Analysis Results
           </Typography>
           
@@ -599,17 +606,29 @@ function TurnAssistantPage() {
           {/* Check that allMoveOptions exists before trying to render */}
           {analysisResults.allMoveOptions && selectedPokemon.topLeft && selectedPokemon.topRight && (
             <>
-              <Typography variant="h6" gutterBottom >
+              <Typography component="p" variant="h6" gutterBottom >
                 Move Options
               </Typography>
               
               <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, mb: 3 }}>
                 {/* First Pokémon's moves */}
                 <TableContainer component={Paper} sx={{ flex: 1, backgroundColor: '#221FC7' }}>
-                  <Typography variant="subtitle2" sx={{ p: 1 }}>
-                    {selectedPokemon.topLeft.name} {selectedPokemon.topLeft.item ? `(${selectedPokemon.topLeft.item})` : ''}
-                  </Typography>
-                  <Table size="small">
+                  <Table 
+                    size="small" 
+                    aria-label={`Move Options for ${selectedPokemon.topLeft.name}`} 
+                    sx={{ 
+                      captionSide: 'top',
+                      backgroundColor: '#221FC7'
+                    }}
+                  >
+                    <caption style={{
+                      padding: '8px',
+                      color: 'white',
+                      textAlign: 'left',
+                      fontSize: '0.875rem'
+                    }}>
+                      {selectedPokemon.topLeft.name} {selectedPokemon.topLeft.item ? `(${selectedPokemon.topLeft.item})` : ''}
+                    </caption>
                     <TableHead>
                       <TableRow>
                         <TableCell>Move</TableCell>
@@ -640,10 +659,19 @@ function TurnAssistantPage() {
                 
                 {/* Second Pokémon's moves */}
                 <TableContainer component={Paper} sx={{ flex: 1, backgroundColor: '#221FC7' }}>
-                  <Typography variant="subtitle2" sx={{ p: 1 }}>
-                    {selectedPokemon.topRight.name} {selectedPokemon.topRight.item ? `(${selectedPokemon.topRight.item})` : ''}
-                  </Typography>
-                  <Table size="small">
+                  <Table 
+                    size="small" 
+                    aria-label={`Move Options for ${selectedPokemon.topRight.name}`} 
+                    sx={{ captionSide: 'top', backgroundColor: '#221FC7' }}
+                  >
+                    <caption style={{
+                      padding: '8px',
+                      color: 'white',
+                      textAlign: 'left',
+                      fontSize: '0.875rem'
+                    }}>
+                      {selectedPokemon.topRight.name} {selectedPokemon.topRight.item ? `(${selectedPokemon.topRight.item})` : ''}
+                    </caption>
                     <TableHead>
                       <TableRow>
                         <TableCell>Move</TableCell>
@@ -673,7 +701,7 @@ function TurnAssistantPage() {
                 </TableContainer>
               </Box>
               
-              <Typography variant="h6" gutterBottom>
+              <Typography component="p" variant="h6" gutterBottom>
                 Best Combinations
               </Typography>
               

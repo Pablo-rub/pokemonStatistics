@@ -63,6 +63,7 @@ const PokemonList = ({
           ))}
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, mt: 2 }}>
             <IconButton
+              aria-label="First page"
               onClick={() => onPageChange(null, 1)}
               disabled={page === 1}
               sx={{ color: 'white' }}
@@ -70,6 +71,7 @@ const PokemonList = ({
               <FirstPageIcon />
             </IconButton>
             <IconButton
+              aria-label="Previous page"
               onClick={() => onPageChange(null, page - 1)}
               disabled={page === 1}
               sx={{ color: 'white' }}
@@ -80,6 +82,7 @@ const PokemonList = ({
               {page}/{Math.ceil(totalItems / itemsPerPage)}
             </Typography>
             <IconButton
+              aria-label="Next page"
               onClick={() => onPageChange(null, page + 1)}
               disabled={page >= Math.ceil(totalItems / itemsPerPage)}
               sx={{ color: 'white' }}
@@ -87,6 +90,7 @@ const PokemonList = ({
               <NavigateNextIcon />
             </IconButton>
             <IconButton
+              aria-label="Last page"
               onClick={() => onPageChange(null, Math.ceil(totalItems / itemsPerPage))}
               disabled={page >= Math.ceil(totalItems / itemsPerPage)}
               sx={{ color: 'white' }}

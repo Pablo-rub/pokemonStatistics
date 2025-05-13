@@ -23,7 +23,8 @@ import {
   Tooltip,
   Accordion,
   AccordionSummary,
-  AccordionDetails
+  AccordionDetails,
+  FormLabel
 } from '@mui/material';
 import useDraggable from '../hooks/useDraggable';
 import TriStateCheckbox from './TriStateCheckBox';
@@ -649,297 +650,241 @@ const BattleConditionsDialog = ({ open, onClose, battleConditions, setBattleCond
 // Componente separado para los controles de Field Conditions
 const FieldConditionControls = ({ battleConditions, handleSelectChange, handleDurationChange, selectSx, isMobile }) => (
   <Grid container spacing={isMobile ? 1 : 2}>
-    <Grid item xs={12}>
-      <FormControl 
-        fullWidth 
-        sx={{ mb: 1 }}
-        size={isMobile ? "small" : "medium"}
-      >
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 1,
-          flexDirection: { xs: 'column', sm: 'row' }
-        }}>
-          <Box sx={{ flex: { xs: '1', sm: '0.7' }, width: { xs: '100%', sm: 'auto' } }}>
-            <InputLabel
-              id="bc-weather-label"
-              sx={{ color: 'inherit' }}
-            >
-              Weather
-            </InputLabel>
-            <Select
-              labelId="bc-weather-label"
-              id="bc-weather-select"
-              label="Weather"
-              aria-labelledby="bc-weather-label"
-              value={battleConditions.weather}
-              onChange={(e) => handleSelectChange(e, 'weather')}
-              sx={selectSx}
-              MenuProps={menuPropsDown}
-              fullWidth
-            >
-              <MenuItem value="">Any</MenuItem>
-              <MenuItem value="none">None</MenuItem>
-              <MenuItem value="RainDance">Rain Dance</MenuItem>
-              <MenuItem value="SunnyDay">Sunny Day</MenuItem>
-              <MenuItem value="Sandstorm">Sandstorm</MenuItem>
-              <MenuItem value="Hail">Hail</MenuItem>
-            </Select>
-          </Box>
-          <TextField
-            label="Turns"
-            type="number"
-            value={battleConditions.weatherDuration || 0}
-            onChange={(e) => handleDurationChange('weather', 'weather', e.target.value)}
-            inputProps={{ min: 0, max: 8, step: 1 }}
-            sx={{ 
-              width: { xs: '100%', sm: '80px' },
-              mt: { xs: 1, sm: 0 }
+    {/* Weather select */}
+    <Grid item xs={12} sx={{ mb: 1 }}>
+      <Box sx={{ display: 'flex', gap: 1, flexDirection: { xs: 'column', sm: 'row' } }}>
+        <FormControl
+          fullWidth
+          size={isMobile ? "small" : "medium"}
+          sx={{ ...selectSx, flex: { xs: '1', sm: '0.7' } }}
+        >
+          <InputLabel id="bc-weather-label" htmlFor="bc-weather-select">
+            Weather
+          </InputLabel>
+          <Select
+            labelId="bc-weather-label"
+            label="Weather"
+            inputProps={{
+              id: 'bc-weather-select',
+              'aria-labelledby': 'bc-weather-label',
+              style: { display: 'none' }
             }}
-            size={isMobile ? "small" : "medium"}
-            aria-label="Weather turns remaining"
-          />
-        </Box>
-      </FormControl>
+            value={battleConditions.weather}
+            onChange={(e) => handleSelectChange(e, 'weather')}
+            MenuProps={menuPropsDown}
+          >
+            <MenuItem value="">Any</MenuItem>
+            <MenuItem value="none">None</MenuItem>
+            <MenuItem value="RainDance">Rain Dance</MenuItem>
+            <MenuItem value="SunnyDay">Sunny Day</MenuItem>
+            <MenuItem value="Sandstorm">Sandstorm</MenuItem>
+            <MenuItem value="Hail">Hail</MenuItem>
+          </Select>
+        </FormControl>
+
+        <TextField
+          id="bc-weather-duration"
+          label="Turns"
+          type="number"
+          value={battleConditions.weatherDuration || 0}
+          onChange={(e) => handleDurationChange('weather', 'weather', e.target.value)}
+          inputProps={{ min: 0, max: 8, step: 1 }}
+          size={isMobile ? "small" : "medium"}
+          sx={{ width: { xs: '100%', sm: '80px' } }}
+        />
+      </Box>
     </Grid>
 
-    <Grid item xs={12}>
-      <FormControl 
-        fullWidth 
-        sx={{ mb: 1 }}
-        size={isMobile ? "small" : "medium"}
-      >
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 1,
-          flexDirection: { xs: 'column', sm: 'row' }
-        }}>
-          <Box sx={{ flex: { xs: '1', sm: '0.7' }, width: { xs: '100%', sm: 'auto' } }}>
-            <InputLabel
-              id="bc-field-label"
-              sx={{ color: 'inherit' }}
-            >
-              Terrain
-            </InputLabel>
-            <Select
-              labelId="bc-field-label"
-              id="bc-field-select"
-              label="Terrain"
-              aria-labelledby="bc-field-label"
-              value={battleConditions.field}
-              onChange={(e) => handleSelectChange(e, 'field')}
-              sx={selectSx}
-              MenuProps={menuPropsDown}
-              fullWidth
-            >
-              <MenuItem value="">Any</MenuItem>
-              <MenuItem value="none">None</MenuItem>
-              <MenuItem value="ElectricTerrain">Electric Terrain</MenuItem>
-              <MenuItem value="GrassyTerrain">Grassy Terrain</MenuItem>
-              <MenuItem value="MistyTerrain">Misty Terrain</MenuItem>
-              <MenuItem value="PsychicTerrain">Psychic Terrain</MenuItem>
-            </Select>
-          </Box>
-          <TextField
-            label="Turns"
-            type="number"
-            value={battleConditions.fieldDuration || 0}
-            onChange={(e) => handleDurationChange('field', 'field', e.target.value)}
-            inputProps={{ min: 0, max: 8, step: 1 }}
-            sx={{ 
-              width: { xs: '100%', sm: '80px' },
-              mt: { xs: 1, sm: 0 }
+    {/* Terrain select */}
+    <Grid item xs={12} sx={{ mb: 1 }}>
+      <Box sx={{ display: 'flex', gap: 1, flexDirection: { xs: 'column', sm: 'row' } }}>
+        <FormControl
+          fullWidth
+          size={isMobile ? "small" : "medium"}
+          sx={{ ...selectSx, flex: { xs: '1', sm: '0.7' } }}
+        >
+          <InputLabel id="bc-field-label" htmlFor="bc-field-select">Terrain</InputLabel>
+          <Select
+            labelId="bc-field-label"
+            label="Terrain"
+            inputProps={{
+              id: 'bc-field-select',
+              'aria-labelledby': 'bc-field-label',
+              style: { display: 'none' }
             }}
-            size={isMobile ? "small" : "medium"}
-            aria-label="Terrain turns remaining"
-          />
-        </Box>
-      </FormControl>
+            value={battleConditions.field}
+            onChange={(e) => handleSelectChange(e, 'field')}
+            MenuProps={menuPropsDown}
+          >
+            <MenuItem value="">Any</MenuItem>
+            <MenuItem value="none">None</MenuItem>
+            <MenuItem value="ElectricTerrain">Electric Terrain</MenuItem>
+            <MenuItem value="GrassyTerrain">Grassy Terrain</MenuItem>
+            <MenuItem value="MistyTerrain">Misty Terrain</MenuItem>
+            <MenuItem value="PsychicTerrain">Psychic Terrain</MenuItem>
+          </Select>
+        </FormControl>
+
+        <TextField
+          id="bc-field-duration"
+          label="Turns"
+          type="number"
+          value={battleConditions.fieldDuration || 0}
+          onChange={(e) => handleDurationChange('field', 'field', e.target.value)}
+          inputProps={{ min: 0, max: 8, step: 1 }}
+          size={isMobile ? "small" : "medium"}
+          sx={{ width: { xs: '100%', sm: '80px' } }}
+        />
+      </Box>
     </Grid>
 
+    {/* Room Effect select */}
     <Grid item xs={12}>
-      <FormControl 
-        fullWidth 
-        sx={{ mb: 0 }}
-        size={isMobile ? "small" : "medium"}
-      >
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 1,
-          flexDirection: { xs: 'column', sm: 'row' }
-        }}>
-          <Box sx={{ flex: { xs: '1', sm: '0.7' }, width: { xs: '100%', sm: 'auto' } }}>
-            <InputLabel
-              id="bc-room-label"
-              sx={{ color: 'inherit' }}
-            >
-              Room Effect
-            </InputLabel>
-            <Select
-              labelId="bc-room-label"
-              id="bc-room-select"
-              label="Room Effect"
-              aria-labelledby="bc-room-label"
-              value={battleConditions.room}
-              onChange={(e) => handleSelectChange(e, 'room')}
-              sx={selectSx}
-              MenuProps={menuPropsDown}
-              fullWidth
-            >
-              <MenuItem value="">Any</MenuItem>
-              <MenuItem value="none">None</MenuItem>
-              <MenuItem value="TrickRoom">Trick Room</MenuItem>
-              <MenuItem value="Gravity">Gravity</MenuItem>
-              <MenuItem value="MagicRoom">Magic Room</MenuItem>
-              <MenuItem value="WonderRoom">Wonder Room</MenuItem>
-            </Select>
-          </Box>
-          <TextField
-            label="Turns"
-            type="number"
-            value={battleConditions.roomDuration || 0}
-            onChange={(e) => handleDurationChange('room', 'room', e.target.value)}
-            inputProps={{ min: 0, max: 8, step: 1 }}
-            sx={{ 
-              width: { xs: '100%', sm: '80px' },
-              mt: { xs: 1, sm: 0 }
+      <Box sx={{ display: 'flex', gap: 1, flexDirection: { xs: 'column', sm: 'row' } }}>
+        <FormControl
+          fullWidth
+          size={isMobile ? "small" : "medium"}
+          sx={{ ...selectSx, flex: { xs: '1', sm: '0.7' } }}
+        >
+          <InputLabel id="bc-room-label" htmlFor="bc-room-select">Room Effect</InputLabel>
+          <Select
+            labelId="bc-room-label"
+            label="Room Effect"
+            inputProps={{
+              id: 'bc-room-select',
+              'aria-labelledby': 'bc-room-label',
+              style: { display: 'none' }
             }}
-            size={isMobile ? "small" : "medium"}
-            aria-label="Room effect turns remaining"
-          />
-        </Box>
-      </FormControl>
+            value={battleConditions.room}
+            onChange={(e) => handleSelectChange(e, 'room')}
+            MenuProps={menuPropsDown}
+          >
+            <MenuItem value="">Any</MenuItem>
+            <MenuItem value="none">None</MenuItem>
+            <MenuItem value="TrickRoom">Trick Room</MenuItem>
+            <MenuItem value="Gravity">Gravity</MenuItem>
+            <MenuItem value="MagicRoom">Magic Room</MenuItem>
+            <MenuItem value="WonderRoom">Wonder Room</MenuItem>
+          </Select>
+        </FormControl>
+
+        <TextField
+          id="bc-room-duration"
+          label="Turns"
+          type="number"
+          value={battleConditions.roomDuration || 0}
+          onChange={(e) => handleDurationChange('room', 'room', e.target.value)}
+          inputProps={{ min: 0, max: 8, step: 1 }}
+          size={isMobile ? "small" : "medium"}
+          sx={{ width: { xs: '100%', sm: '80px' } }}
+        />
+      </Box>
     </Grid>
   </Grid>
 );
 
 // Componente separado para los controles de Side Effects
-const SideEffectsControls = ({ side, battleConditions, handleSideEffectChange, handleDurationChange, sideEffectsList, isMobile }) => (
-  <FormGroup>
-    {sideEffectsList.map(effect => (
-      <Box 
-        key={effect} 
-        sx={{ 
-          display: 'flex', 
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          flexDirection: { xs: 'column', sm: 'row' }, 
-          gap: { xs: 1, sm: 2 }, 
-          mb: 1.5 
-        }}
-      >
-        <FormControlLabel
-          control={
-            <TriStateCheckbox
-              value={battleConditions.sideEffects?.[side]?.[effect]}
-              onChange={(newValue) => handleSideEffectChange(side, effect, newValue)}
-              sx={{ color: 'white' }}
-              size={isMobile ? "small" : "medium"}
+const SideEffectsControls = ({ side, battleConditions, handleSideEffectChange, handleDurationChange, sideEffectsList, isMobile }) => {
+  const legend = side === 'yourSide' ? 'Your Side Effects' : 'Opponent Side Effects';
+  return (
+    <FormControl component="fieldset" sx={{ mb: 2, borderColor: 'grey.700' }}>
+      <FormLabel component="legend" sx={{ color: 'white', mb: 1, fontSize: isMobile ? '0.875rem' : '1rem' }}>
+        {legend}
+      </FormLabel>
+      <FormGroup>
+        {sideEffectsList.map(effect => (
+          <Box key={effect} sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1, sm: 2 }, mb: 1.5 }}>
+            <FormControlLabel
+              control={
+                <TriStateCheckbox
+                  value={battleConditions.sideEffects?.[side]?.[effect]}
+                  onChange={(newValue) => handleSideEffectChange(side, effect, newValue)}
+                  sx={{ color: 'white' }}
+                  size={isMobile ? "small" : "medium"}
+                />
+              }
+              label={
+                <Tooltip title={getEffectDescription(effect)}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <span>{effect.charAt(0).toUpperCase() + effect.slice(1)}</span>
+                    <InfoIcon sx={{ fontSize: '0.875rem', color: 'white', opacity: 0.8 }} />
+                  </Box>
+                </Tooltip>
+              }
+              sx={{ color: 'white', margin: 0, minWidth: { xs: '140px', sm: '150px' } }}
             />
-          }
-          label={
-            <Tooltip title={getEffectDescription(effect)}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <span>{effect.charAt(0).toUpperCase() + effect.slice(1)}</span>
-                <InfoIcon sx={{ fontSize: '0.875rem', color: 'white', opacity: 0.8 }} />
-              </Box>
-            </Tooltip>
-          }
-          sx={{ 
-            color: 'white', 
-            margin: 0,
-            minWidth: { xs: '140px', sm: '150px' }
-          }}
-        />
-        <TextField
-          label="Turns"
-          type="number"
-          value={battleConditions.sideEffectsDuration?.[side]?.[effect] || 0}
-          onChange={(e) => handleDurationChange('sideEffect', `${side}.${effect}`, e.target.value)}
-          inputProps={{ 
-            min: 0, 
-            max: effect === "tailwind" ? 5 : 8, 
-            step: 1 
-          }}
-          sx={{ 
-            width: { xs: '100%', sm: '80px' }
-          }}
-          size={isMobile ? "small" : "medium"}
-          aria-label={`${effect} turns remaining`}
-        />
-      </Box>
-    ))}
-  </FormGroup>
-);
+            <TextField
+              label="Turns"
+              type="number"
+              value={battleConditions.sideEffectsDuration?.[side]?.[effect] || 0}
+              onChange={(e) => handleDurationChange('sideEffect', `${side}.${effect}`, e.target.value)}
+              inputProps={{ min: 0, max: effect === "tailwind" ? 5 : 8, step: 1 }}
+              sx={{ width: { xs: '100%', sm: '80px' } }}
+              size={isMobile ? "small" : "medium"}
+              aria-label={`${effect} turns remaining`}
+            />
+          </Box>
+        ))}
+      </FormGroup>
+    </FormControl>
+  );
+};
 
 // Componente separado para los controles de Hazards
-const HazardsControls = ({ side, battleConditions, handleHazardChange, handleDurationChange, hazardsList, isMobile }) => (
-  <FormGroup>
-    {hazardsList.map(hazard => (
-      <Box 
-        key={hazard} 
-        sx={{ 
-          display: 'flex', 
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 1, sm: 2 }, 
-          mb: 1.5 
-        }}
-      >
-        <FormControlLabel
-          control={
-            <TriStateCheckbox
-              value={battleConditions.entryHazards?.[side]?.[hazard] === false 
-                ? false 
-                : battleConditions.entryHazards?.[side]?.[hazard] === true 
-                  ? true 
-                  : null}
-              onChange={(newValue) => handleHazardChange(side, hazard)(newValue)}
-              name={hazard}
-              sx={{ color: 'white' }}
-              size={isMobile ? "small" : "medium"}
+const HazardsControls = ({ side, battleConditions, handleHazardChange, handleDurationChange, hazardsList, isMobile }) => {
+  const legend = side === 'yourSide' ? 'Your Entry Hazards' : 'Opponent Entry Hazards';
+  return (
+    <FormControl component="fieldset" sx={{ mb: 2, borderColor: 'grey.700' }}>
+      <FormLabel component="legend" sx={{ color: 'white', mb: 1, fontSize: isMobile ? '0.875rem' : '1rem' }}>
+        {legend}
+      </FormLabel>
+      <FormGroup>
+        {hazardsList.map(hazard => (
+          <Box key={hazard} sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 1, sm: 2 }, mb: 1.5 }}>
+            <FormControlLabel
+              control={
+                <TriStateCheckbox
+                  value={battleConditions.entryHazards?.[side]?.[hazard] === false 
+                    ? false 
+                    : battleConditions.entryHazards?.[side]?.[hazard] === true 
+                      ? true 
+                      : null}
+                  onChange={(newValue) => handleHazardChange(side, hazard)(newValue)}
+                  name={hazard}
+                  sx={{ color: 'white' }}
+                  size={isMobile ? "small" : "medium"}
+                />
+              }
+              label={
+                <Tooltip title={getHazardDescription(hazard)}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <span>{hazard}</span>
+                    <InfoIcon sx={{ fontSize: '0.875rem', color: 'white', opacity: 0.8 }} />
+                  </Box>
+                </Tooltip>
+              }
+              sx={{ color: 'white', margin: 0, minWidth: { xs: '140px', sm: '150px' } }}
             />
-          }
-          label={
-            <Tooltip title={getHazardDescription(hazard)}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <span>{hazard}</span>
-                <InfoIcon sx={{ fontSize: '0.875rem', color: 'white', opacity: 0.8 }} />
-              </Box>
-            </Tooltip>
-          }
-          sx={{ 
-            color: 'white', 
-            margin: 0,
-            minWidth: { xs: '140px', sm: '150px' }
-          }}
-        />
-        {(hazard === "Spikes" || hazard === "Toxic Spikes") ? (
-          <TextField
-            label="Level"
-            type="number"
-            value={battleConditions.entryHazardsLevel?.[side]?.[hazard] || 0}
-            onChange={(e) => handleDurationChange('hazardLevel', `${side}.${hazard}`, e.target.value)}
-            inputProps={{ 
-              min: 0, 
-              max: hazard === "Spikes" ? 3 : hazard === "Toxic Spikes" ? 2 : 8, 
-              step: 1 
-            }}
-            sx={{ 
-              width: { xs: '100%', sm: '80px' }
-            }}
-            size={isMobile ? "small" : "medium"}
-            aria-label={`${hazard} level`}
-          />
-        ) : (
-          <Box sx={{ width: { xs: '100%', sm: '80px' } }} />
-        )}
-      </Box>
-    ))}
-  </FormGroup>
-);
+            {(hazard === "Spikes" || hazard === "Toxic Spikes") ? (
+              <TextField
+                label="Level"
+                type="number"
+                value={battleConditions.entryHazardsLevel?.[side]?.[hazard] || 0}
+                onChange={(e) => handleDurationChange('hazardLevel', `${side}.${hazard}`, e.target.value)}
+                inputProps={{ min: 0, max: hazard === "Spikes" ? 3 : hazard === "Toxic Spikes" ? 2 : 8, step: 1 }}
+                sx={{ width: { xs: '100%', sm: '80px' } }}
+                size={isMobile ? "small" : "medium"}
+                aria-label={`${hazard} level`}
+              />
+            ) : (
+              <Box sx={{ width: { xs: '100%', sm: '80px' } }} />
+            )}
+          </Box>
+        ))}
+      </FormGroup>
+    </FormControl>
+  );
+};
 
 // Función auxiliar para obtener descripciones de los efectos
 function getEffectDescription(effect) {
