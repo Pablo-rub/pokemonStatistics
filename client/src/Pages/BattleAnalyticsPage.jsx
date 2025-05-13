@@ -44,6 +44,9 @@ export default function BattleAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [rivalPage, setRivalPage] = useState(1);
   const [rivalSortBy, setRivalSortBy] = useState('teamAppeared');
+  const [rivalSortDir, setRivalSortDir] = useState('desc');
+  const [yourSortBy, setYourSortBy] = useState('played');
+  const [yourSortDir, setYourSortDir] = useState('desc');
   const RIVAL_PAGE_SIZE = 10;
 
   const replayIds = JSON.parse(localStorage.getItem('analyticsReplays')) || [];
@@ -170,7 +173,11 @@ export default function BattleAnalyticsPage() {
         teraWinRate: tera ? Math.round(teraWins / tera * 100) : 0,
       };
     })
-    .sort((a,b) => b.played - a.played);
+    .sort((a, b) =>
+      yourSortDir === 'desc'
+        ? b[yourSortBy] - a[yourSortBy]
+        : a[yourSortBy] - b[yourSortBy]
+    );
 
   // Prepare raw rival Pokémon stats
   const rawRivalStats = Object.keys(stats.rivalTeamCounts)
@@ -187,9 +194,10 @@ export default function BattleAnalyticsPage() {
       };
     });
 
-  // Sort by selected criterion, descending
   const rivalStats = [...rawRivalStats].sort((a, b) =>
-    b[rivalSortBy] - a[rivalSortBy]
+    rivalSortDir === 'desc'
+      ? b[rivalSortBy] - a[rivalSortBy]
+      : a[rivalSortBy] - b[rivalSortBy]
   );
 
   const rivalCount = rivalStats.length;
@@ -234,6 +242,34 @@ const PIE_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
         </Typography>
 
         <Divider sx={{ my:2, borderColor: theme.palette.primary.light }} />
+
+        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+          <FormControl size="small">
+            <InputLabel>Your Sort By</InputLabel>
+            <Select
+              value={yourSortBy}
+              label="Your Sort By"
+              onChange={e => setYourSortBy(e.target.value)}
+            >
+              <MenuItem value="played">Games</MenuItem>
+              <MenuItem value="winRate">Win Rate</MenuItem>
+              <MenuItem value="tera">Tera Count</MenuItem>
+              <MenuItem value="teraWinRate">Tera Win Rate</MenuItem>
+            </Select>
+          </FormControl>
+
+          <FormControl size="small">
+            <InputLabel>Direction</InputLabel>
+            <Select
+              value={yourSortDir}
+              label="Direction"
+              onChange={e => setYourSortDir(e.target.value)}
+            >
+              <MenuItem value="desc">Desc</MenuItem>
+              <MenuItem value="asc">Asc</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
 
         <Grid container spacing={4}>
           {/* Your Pokémon */}
@@ -293,10 +329,11 @@ const PIE_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
                 alignItems: 'center'              // misma altura vertical
               }}
             >
-              <Typography variant="h6" component="p" gutterBottom>
-                Rival Pokémon
-              </Typography>
+            <Typography variant="h6" component="p" gutterBottom>
+              Rival Pokémon
+            </Typography>
 
+            <Box sx={{ display: 'flex', gap: 2 }}>
               <FormControl size="small">
                 <InputLabel
                   id="rival-sort-by-label"
@@ -320,6 +357,19 @@ const PIE_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
                   <MenuItem value="winRate">Win %</MenuItem>
                 </Select>
               </FormControl>
+
+              <FormControl size="small">
+                  <InputLabel>Direction</InputLabel>
+                  <Select
+                    value={rivalSortDir}
+                    onChange={e => setRivalSortDir(e.target.value)}
+                    label="Direction"
+                  >
+                    <MenuItem value="desc">Desc</MenuItem>
+                    <MenuItem value="asc">Asc</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
             </Box>
 
             <TableContainer
