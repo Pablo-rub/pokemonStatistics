@@ -24,9 +24,7 @@ import axios from 'axios';
 import LoginIcon from '@mui/icons-material/Login';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LoginDialog from "../components/LoginDialog";
-
-// todo
-// sort by date
+import { filterAndSortGames, ClearFiltersButton } from '../utils/gameFilters';
 
 function SavedGamesPage() {
   const { currentUser, save, unsave } = useAuth();
@@ -39,12 +37,23 @@ function SavedGamesPage() {
     const st = localStorage.getItem('analyticsReplays');
     return st ? JSON.parse(st) : [];
   });
-  const [privateReplayId, setPrivateReplayId] = useState('');
   const [addError, setAddError] = useState('');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
   const [sortBy, setSortBy] = useState("date DESC");
+  const [playerFilter, setPlayerFilter] = useState("");
+  const [ratingFilter, setRatingFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+  const [formatFilter, setFormatFilter] = useState("all");
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const resetFilters = () => {
+    setPlayerFilter('');
+    setRatingFilter('all');
+    setDateFilter('all');
+    setFormatFilter('all');
+    setPage(1);
+  };
 
   useEffect(() => {
     localStorage.setItem('analyticsReplays', JSON.stringify(analyticsReplays));
@@ -79,42 +88,6 @@ function SavedGamesPage() {
     );
   };
 
-  const handleAddPrivateReplay = async () => {
-    if (!privateReplayId) return;
-
-    // extract replay ID from full URL
-    const lastSegment = privateReplayId.trim().split('/').pop();
-    const id = lastSegment?.split('-').pop();
-
-    if (!id) {
-      setAddError('Invalid replay URL');
-      return;
-    }
-
-    try {
-      setAddError('');
-      const { data: game } = await axios.get(`/api/games/${id}`);
-      await axios.post(`/api/users/${currentUser.uid}/saved-replays`, { replayId: id });
-      
-      // Añadir timestamp al juego antes de guardarlo en el estado
-      const gameWithTimestamp = {
-        ...game,
-        ts: new Date(game.date).getTime()
-      };
-      
-      setGames(prev => [gameWithTimestamp, ...prev]);
-      save(id);
-      setPrivateReplayId('');
-    } catch (err) {
-      if (err.response?.status === 404) {
-        setAddError('Replay not found');
-      } else {
-        console.error(err);
-        setAddError('Error adding replay');
-      }
-    }
-  };
-
   const handleUnsaveAll = async () => {
     if (!currentUser) return;
     try {
@@ -135,19 +108,8 @@ function SavedGamesPage() {
     setUnsaving(false);
   };
 
-  const sortedGames = [...games].sort((a, b) => {
-    switch (sortBy) {
-      case "date ASC":
-        return a.ts - b.ts;
-      case "date DESC":
-        return b.ts - a.ts;
-      case "rating ASC":
-        return (a.rating || 0) - (b.rating || 0);
-      case "rating DESC":
-        return (b.rating || 0) - (a.rating || 0);
-      default:
-        return 0;
-    }
+  const sortedGames = filterAndSortGames(games, {
+    sortBy, playerFilter, ratingFilter, dateFilter, formatFilter
   });
 
   const totalPages = Math.ceil(sortedGames.length / PAGE_SIZE);
@@ -274,6 +236,8 @@ function SavedGamesPage() {
         Total Saved: {games.length}
       </Typography>
 
+      {/* Uncomment this section if you want to add a private replay URL input */}
+      {/*
       <Box
         sx={{
           display: 'flex',
@@ -282,7 +246,7 @@ function SavedGamesPage() {
           mb: 3
         }}
       >
-        {/* Add Private Replay (left side) */}
+        
         <Box
           sx={{
             display: 'flex',
@@ -308,32 +272,44 @@ function SavedGamesPage() {
             Add Replay
           </Button>
         </Box>
+      </Box>
+      */}
 
-        {/* Sort control (right side) */}
-        <FormControl size="small" sx={{ minWidth: 160, ml: 2 }}>
-          <InputLabel
-            id="saved-sort-by-label"
-            htmlFor="saved-sort-by-select"
-          >
-            Sort by
-          </InputLabel>
-          <Select
-            labelId="saved-sort-by-label"
-            inputProps={{
-              id: "saved-sort-by-select",
-              "aria-labelledby": "saved-sort-by-label",
-              style: { display: 'none' }
-            }}
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value)}
-            label="Sort by"
-          >
-            <MenuItem value="date DESC">Date ↓</MenuItem>
-            <MenuItem value="date ASC">Date ↑</MenuItem>
-            <MenuItem value="rating DESC">Rating ↓</MenuItem>
-            <MenuItem value="rating ASC">Rating ↑</MenuItem>
+      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+        <TextField
+          label="Player"
+          size="small"
+          value={playerFilter}
+          onChange={e => setPlayerFilter(e.target.value)}
+        />
+        <FormControl size="small">
+          <InputLabel>Rating</InputLabel>
+          <Select value={ratingFilter} onChange={e => setRatingFilter(e.target.value)} label="Rating">
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="unknown">Unknown</MenuItem>
+            <MenuItem value="1200+">&gt;1200</MenuItem>
+            <MenuItem value="1500+">&gt;1500</MenuItem>
+            <MenuItem value="1800+">&gt;1800</MenuItem>
           </Select>
         </FormControl>
+        <FormControl size="small">
+          <InputLabel>Date</InputLabel>
+          <Select value={dateFilter} onChange={e => setDateFilter(e.target.value)} label="Date">
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="week">Last Week</MenuItem>
+            <MenuItem value="month">Last Month</MenuItem>
+            <MenuItem value="year">Last Year</MenuItem>
+          </Select>
+        </FormControl>
+        <FormControl size="small">
+          <InputLabel>Format</InputLabel>
+          <Select value={formatFilter} onChange={e => setFormatFilter(e.target.value)} label="Format">
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="[Gen 9] VGC 2025 Reg G (Bo3)">Reg G</MenuItem>
+            <MenuItem value="[Gen 9] VGC 2025 Reg I (Bo3)">Reg I</MenuItem>
+          </Select>
+        </FormControl>
+        <ClearFiltersButton onClear={resetFilters} />
       </Box>
 
       {addError && (

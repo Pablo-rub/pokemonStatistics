@@ -13,6 +13,9 @@ const API_URL = process.env.API_URL || `http://localhost:${process.env.PORT || 5
 const projectRoot = path.resolve(__dirname, '..');
 const publicPath = path.join(projectRoot, 'public');
 
+// todo
+// comentar o quitar filtro de teams en analyze battle si fuese necesario
+
 // Initialize express
 const app = express();
 app.use(cors());
@@ -57,6 +60,7 @@ app.get('/api/games', async (req, res) => {
     const playerFilter = req.query.playerFilter || '';
     const ratingFilter = req.query.ratingFilter || 'all';
     const dateFilter = req.query.dateFilter || 'all';
+    const formatFilter = req.query.format || 'all';
     const userId = req.query.userId;
     const showSaved = req.query.showSaved || 'all';
     const offset = (page - 1) * limit;
@@ -132,6 +136,13 @@ app.get('/api/games', async (req, res) => {
       if (dateLimit) {
         whereClause.push(`date >= '${dateLimit.toISOString()}'`);
       }
+    }
+
+    // Format filter
+    if (formatFilter !== 'all') {
+      // escape single‐quotes in the incoming format string
+      const fmt = formatFilter.replace(/'/g, "\\'");
+      whereClause.push(`r.format = '${fmt}'`);
     }
 
     const whereClauseString = whereClause.length > 0 ? `WHERE ${whereClause.join(' AND ')}` : '';
