@@ -325,8 +325,8 @@ const PIE_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
               sx={{
                 mb: 2,
                 display: 'flex',
-                justifyContent: 'space-between',  // texto a la izquierda, filtro a la derecha
-                alignItems: 'center'              // misma altura vertical
+                justifyContent: 'space-between',
+                alignItems: 'center'
               }}
             >
             <Typography variant="h6" component="p" gutterBottom>

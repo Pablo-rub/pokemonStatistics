@@ -16,8 +16,6 @@ import {
 import ReplayCard from "../components/ReplayCard";
 import { useAuth } from "../contexts/AuthContext";
 
-//todo
-//filtrar por formato
 
 function PublicGamesPage() {
   // Estados actuales
@@ -33,6 +31,7 @@ function PublicGamesPage() {
   const [ratingFilter, setRatingFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
   const [showSaved, setShowSaved] = useState("all");
+  const [formatFilter, setFormatFilter] = useState("all");
   const { currentUser } = useAuth();
 
   // Estados para los filtros activos (los que realmente se aplican)
@@ -42,6 +41,7 @@ function PublicGamesPage() {
     ratingFilter: "all",
     dateFilter: "all",
     showSaved: "all",
+    formatFilter: "all",
   });
 
   const fetchPublicGames = useCallback(
@@ -52,9 +52,13 @@ function PublicGamesPage() {
           params: {
             page,
             limit: itemsPerPage,
-            ...filters,
-            userId: currentUser?.uid,
+            sortBy: filters.sortBy,
+            playerFilter: filters.playerFilter,
+            ratingFilter: filters.ratingFilter,
+            dateFilter: filters.dateFilter,
             showSaved: filters.showSaved,
+            format: filters.formatFilter,
+            userId: currentUser?.uid,
           },
         });
 
@@ -81,6 +85,7 @@ function PublicGamesPage() {
       ratingFilter,
       dateFilter,
       showSaved,
+      formatFilter,
     });
   };
 
@@ -90,6 +95,7 @@ function PublicGamesPage() {
     setRatingFilter("all");
     setDateFilter("all");
     setShowSaved("all");
+    setFormatFilter("all");
     setCurrentPage(1);
     setActiveFilters({
       sortBy: "date DESC",
@@ -97,6 +103,7 @@ function PublicGamesPage() {
       ratingFilter: "all",
       dateFilter: "all",
       showSaved: "all",
+      formatFilter: "all",
     });
   };
 
@@ -227,6 +234,26 @@ function PublicGamesPage() {
                 <MenuItem value="week">Last Week</MenuItem>
                 <MenuItem value="month">Last Month</MenuItem>
                 <MenuItem value="year">Last Year</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* Format filter */}
+          <Grid item xs={12} sm={6} md={4} lg={2}>
+            <FormControl size="small" fullWidth>
+              <InputLabel>Format</InputLabel>
+              <Select
+                value={formatFilter}
+                label="Format"
+                onChange={(e) => setFormatFilter(e.target.value)}
+              >
+                <MenuItem value="all">All</MenuItem>
+                <MenuItem value="[Gen 9] VGC 2025 Reg G (Bo3)">
+                  Reg G
+                </MenuItem>
+                <MenuItem value="[Gen 9] VGC 2025 Reg I (Bo3)">
+                  Reg I
+                </MenuItem>
               </Select>
             </FormControl>
           </Grid>
