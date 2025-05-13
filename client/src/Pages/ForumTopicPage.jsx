@@ -149,7 +149,8 @@ export default function ForumTopicPage() {
               overflow: 'auto',
               bgcolor: 'rgba(0, 0, 0, 0.2)',
               borderRadius: 1,
-              p: { xs: 1, sm: 2 }
+              p: { xs: 1, sm: 2 },
+              maxHeight: '60vh'
             }}
             role="log"
             aria-label="Forum messages"
