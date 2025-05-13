@@ -37,7 +37,6 @@ function SavedGamesPage() {
     const st = localStorage.getItem('analyticsReplays');
     return st ? JSON.parse(st) : [];
   });
-  const [privateReplayId, setPrivateReplayId] = useState('');
   const [addError, setAddError] = useState('');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
@@ -87,42 +86,6 @@ function SavedGamesPage() {
         ? prev.filter(x => x !== id)
         : [...prev, id]
     );
-  };
-
-  const handleAddPrivateReplay = async () => {
-    if (!privateReplayId) return;
-
-    // extract replay ID from full URL
-    const lastSegment = privateReplayId.trim().split('/').pop();
-    const id = lastSegment?.split('-').pop();
-
-    if (!id) {
-      setAddError('Invalid replay URL');
-      return;
-    }
-
-    try {
-      setAddError('');
-      const { data: game } = await axios.get(`/api/games/${id}`);
-      await axios.post(`/api/users/${currentUser.uid}/saved-replays`, { replayId: id });
-      
-      // Añadir timestamp al juego antes de guardarlo en el estado
-      const gameWithTimestamp = {
-        ...game,
-        ts: new Date(game.date).getTime()
-      };
-      
-      setGames(prev => [gameWithTimestamp, ...prev]);
-      save(id);
-      setPrivateReplayId('');
-    } catch (err) {
-      if (err.response?.status === 404) {
-        setAddError('Replay not found');
-      } else {
-        console.error(err);
-        setAddError('Error adding replay');
-      }
-    }
   };
 
   const handleUnsaveAll = async () => {

@@ -58,6 +58,7 @@ const PokemonUsage = () => {
     const [leadsMonth, setLeadsMonth] = useState('');
 
     // Mapeo de endpoints para cada categoría (excepto historicalUsage)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const victoryEndpoints = {
         historicalWinrate: '/api/victories',
         abilities: '/api/victories/abilities',
@@ -78,6 +79,7 @@ const PokemonUsage = () => {
     ];
 
     // Para el modo 'victories', define títulos ajustados
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const victoryCategoryTitles = [
         { name: "Historical Winrate", key: "historicalWinrate" },
         { name: "Abilities", key: "abilities" },
@@ -157,7 +159,7 @@ const PokemonUsage = () => {
         };
 
         fetchVictoryData();
-    }, [rankingType, currentCategory, selectedPokemon]);
+    }, [rankingType, currentCategory, selectedPokemon, victoryCategoryTitles, victoryEndpoints]);
 
     useEffect(() => {
         if (rankingType !== 'teams' || !format) return;
