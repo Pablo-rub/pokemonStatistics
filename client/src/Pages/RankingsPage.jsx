@@ -16,7 +16,7 @@ import MultiLineChart from '../components/rankings/MultiLineChart';
 import PokemonSprite from '../components/PokemonSprite';
 
 //todo
-// ocultar error raro
+// ocultar error raro (localhost only)
 // eliminar meses innecesarios
 // cambiar los ultimos 4 colores para el contraste
 
