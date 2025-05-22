@@ -142,6 +142,7 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
     >
       <DialogTitle 
         id="login-dialog-title"
+        component='div'
         sx={{ 
           display: 'flex',
           justifyContent: 'space-between',
@@ -150,9 +151,10 @@ export default function LoginDialog({ open, onClose, isSignUp: initialIsSignUp =
           mb: 0
         }}
       >
-        <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
+        <Typography variant='h5' component="h2" sx={{ fontWeight: 600 }}>
           {isSignUp ? 'Create Account' : 'Sign In'}
         </Typography>
+        
         <IconButton 
           onClick={handleClose} 
           aria-label="cerrar" 
