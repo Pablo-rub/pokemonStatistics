@@ -67,7 +67,9 @@ export function AuthProvider({ children }) {
   const signUpWithEmail = async (email, password, displayName) => {
     try {
       if (password.length < 6) {
-        throw new Error('auth/weak-password');
+        // replicamos la forma de Firebase para que getAuthErrorMessage lo coja
+        // eslint-disable-next-line no-throw-literal
+        throw { code: 'auth/weak-password' };
       }
       const result = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(result.user, { displayName });
@@ -75,8 +77,10 @@ export function AuthProvider({ children }) {
       setAuthError(null);
       return result;
     } catch (error) {
-      setAuthError(getAuthErrorMessage(error));
-      throw error;
+      const msg = getAuthErrorMessage(error);
+      setAuthError(msg);
+      // relanzamos un Error con nuestro mensaje en lugar del original
+      throw new Error(msg);
     }
   };
 

@@ -28,8 +28,9 @@ app.use(cors());
 app.use(express.json());
 
 // Initialize the BigQuery client with explicit credentials
-// Make sure you have set GOOGLE_APPLICATION_CREDENTIALS to the path of your service-account JSON
-const bigQuery = new BigQuery({});
+const bigQuery = new BigQuery({
+  //keyFilename: "D:/tfg/pokemonStatistics/credentials.json",
+});
 
 // Show when server is running
 app.get('/api/status', (req, res) => {
@@ -620,6 +621,24 @@ app.get('/api/users/:userId/saved-replays', async (req, res) => {
   } catch (error) {
     console.error('Error fetching saved replays:', error);
     res.status(500).send('Error fetching saved replays');
+  }
+});
+
+// Borra todas las partidas guardadas de un usuario
+app.delete('/api/users/:userId/saved-replays', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    // BigQuery DML para eliminar el registro completo
+    const query = `
+      DELETE FROM \`pokemon-statistics.pokemon_replays.saved_replays\`
+      WHERE user_id = @userId
+    `;
+    await bigQuery.query({ query, params: { userId } });
+    // responder sin contenido
+    return res.status(204).end();
+  } catch (error) {
+    console.error('Error deleting all saved replays for user:', error);
+    return res.status(500).json({ error: 'Error deleting saved replays' });
   }
 });
 
