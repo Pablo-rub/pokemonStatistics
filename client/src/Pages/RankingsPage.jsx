@@ -119,9 +119,14 @@ const PokemonUsage = () => {
                     }
                 }
             } catch (error) {
-                console.error("Error in fetchInitialData:", error);
-                const errorMessage = error.response?.data || "Error loading formats";
-                setError(errorMessage);
+                // Si es un 500 no deseado, lo ignoramos
+                if (error.response?.status !== 500) {
+                    console.error("Error inesperado al fetch de rankings:", error);
+                } else {
+                    console.error("Error in fetchInitialData:", error);
+                    const errorMessage = error.response?.data || "Error loading formats";
+                    setError(errorMessage);
+                }
             } finally {
                 setIsLoadingInitial(false);
             }
@@ -208,6 +213,11 @@ const PokemonUsage = () => {
             .then(({ data }) => {
                 setTeamsMonths(data.months);
                 setTeamsMonth(data.currentMonth);
+            })
+            .catch(error => {
+                if (error.response?.status !== 500) {
+                    console.error("Error fetching currentMonth:", error);
+                }
             })
             .finally(() => setIsLoadingFormat(false));
     }, []);
