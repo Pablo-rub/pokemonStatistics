@@ -66,9 +66,8 @@ export default function BattleAnalyticsPage() {
   useEffect(() => {
     if (!loading && stats) {
       const your = Object.keys(stats.usageCounts).filter(n => n !== 'none');
-      const rival = Object.keys(stats.rivalTeamCounts).filter(n => n !== 'none');
-      const totalUnique = new Set([...your, ...rival]).size;
-      if (totalUnique !== 6) {
+      const totalUnique = new Set(your).size;
+      if (totalUnique > 6) {
         setError('Error: The selected replays must share the same team of 6 Pokémon.');
       }
     }
@@ -437,58 +436,77 @@ const PIE_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
         </Typography>
 
         <Grid container spacing={4}>
-          {moveStats.map(({ mon, moves }) => (
-            <Grid key={mon} item xs={12} sm={6} md={4}>
-              <Typography
-                variant="body1"
-                component="p"
-                gutterBottom
-              >
-                {mon}
-              </Typography>
-              <Paper sx={{ p:2, bgcolor: theme.palette.primary.dark }}>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={moves}
-                      dataKey="count"
-                      nameKey="mv"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={70}
-                    >
-                      {moves.map((entry, idx) => (
-                        <Cell 
-                          key={`cell-${mon}-${idx}`} 
-                          fill={PIE_COLORS[idx % PIE_COLORS.length]} 
+          {moveStats.map(({ mon, moves }) => {
+            // Total count of times this mon's moves were used
+            const totalUses = moves.reduce((sum, mv) => sum + mv.count, 0);
+
+            return (
+              <Grid key={mon} item xs={12} sm={6} md={4}>
+                <Typography
+                  variant="body1"
+                  component="p"
+                  gutterBottom
+                >
+                  {mon}
+                </Typography>
+                <Paper sx={{ p:2, bgcolor: theme.palette.primary.dark }}>
+                  {totalUses > 0 ? (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie
+                          data={moves}
+                          dataKey="count"
+                          nameKey="mv"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={70}
+                        >
+                          {moves.map((entry, idx) => (
+                            <Cell 
+                              key={`cell-${mon}-${idx}`} 
+                              fill={PIE_COLORS[idx % PIE_COLORS.length]} 
+                            />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip
+                          formatter={(value, name) => [`${value}`, name]}
+                          separator=": "
+                          contentStyle={{
+                            backgroundColor: theme.palette.primary.main,
+                            border: 'none',
+                            borderRadius: 8,
+                            padding: '8px'
+                          }}
+                          itemStyle={{ color: theme.palette.common.white }}
                         />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip
-                      formatter={(value) => [value, '']}
-                      labelFormatter={() => ''}
-                      separator=""
-                      contentStyle={{
-                        backgroundColor: theme.palette.primary.main,
-                        border: 'none',
-                        borderRadius: 8,
-                        padding: '8px'
+                        <RechartsLegend 
+                          verticalAlign="bottom" 
+                          layout="horizontal"
+                          wrapperStyle={{ 
+                            color: theme.palette.common.white,
+                            paddingTop: 10
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Box
+                      sx={{
+                        height: 200,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
                       }}
-                      itemStyle={{ color: theme.palette.common.white }}
-                    />
-                    <RechartsLegend 
-                      verticalAlign="bottom" 
-                      layout="horizontal"
-                      wrapperStyle={{ 
-                        color: theme.palette.common.white,
-                        paddingTop: 10
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Paper>
-            </Grid>
-          ))}
+                    >
+                      <Typography color="common.white" variant="body2">
+                        No move usage data available
+                      </Typography>
+                    </Box>
+                  )}
+                </Paper>
+              </Grid>
+            );
+          })}
         </Grid>
       </Box>
     </Box>
