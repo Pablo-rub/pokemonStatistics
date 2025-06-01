@@ -789,7 +789,7 @@ const PokemonUsage = () => {
                 </Typography>
                 
                 {/* Combined chart for top elements in this category */}
-                {chartData.length > 1 && elements.length > 0 && (
+                {chartData.length >= 1 && elements.length > 0 && (
                     <Box sx={{ mt: 3, mb: 4 }}>
                         <Typography component="h4" variant="subtitle1" sx={{ color: 'white', mb: 1 }}>
                             Top {elements.length} {category.name} 
