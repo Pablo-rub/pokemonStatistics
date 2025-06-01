@@ -36,8 +36,15 @@ const ReplayCard = ({ game, showAnalyze = false, showAnalytics = false, onToggle
     e.stopPropagation();
     if (!currentUser) return;
     try {
-      if (isSaved) await unsave(game.replay_id);
-      else await save(game.replay_id);
+      if (isSaved) {
+        await unsave(game.replay_id);
+        // If this replay was also selected for Battle Analytics, deselect it
+        if (isInAnalytics && onToggleAnalytics) {
+          onToggleAnalytics(game.replay_id);
+        }
+      } else {
+        await save(game.replay_id);
+      }
     } catch (err) {
       console.error(err);
     }
