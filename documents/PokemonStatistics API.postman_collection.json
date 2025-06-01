@@ -1,0 +1,780 @@
+{
+	"info": {
+		"_postman_id": "52205337-f19a-4e8b-97f3-91a5a8671730",
+		"name": "PokemonStatistics API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "38698963"
+	},
+	"item": [
+		{
+			"name": "Root",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get total games count",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/games/count",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"games",
+						"count"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List games",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/games?page=1&limit=50",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"games"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "limit",
+							"value": "50"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get game by ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/games/:gameId",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"games",
+						":gameId"
+					],
+					"variable": [
+						{
+							"key": "gameId",
+							"value": "gen9vgc2025regibo3-2354964760"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List months",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/months",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"months"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List formats for month",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/formats/:month",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"formats",
+						":month"
+					],
+					"variable": [
+						{
+							"key": "month",
+							"value": "2025-03"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get rankings",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/rankings?format=gen9zu-1760&month=2025-03",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"rankings"
+					],
+					"query": [
+						{
+							"key": "format",
+							"value": "gen9zu-1760"
+						},
+						{
+							"key": "month",
+							"value": "2025-03"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create empty saved‑replays record",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"userId\": \"userid\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/users/saved-replays",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"users",
+						"saved-replays"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Save a replay",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"replayId\": \"gen9vgc2025regibo3-2354964760\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/users/:userId/saved-replays",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"users",
+						":userId",
+						"saved-replays"
+					],
+					"variable": [
+						{
+							"key": "userId",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Unsave a replay",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/users/:userId/saved-replays/:replayId",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"users",
+						":userId",
+						"saved-replays",
+						":replayId"
+					],
+					"variable": [
+						{
+							"key": "userId",
+							"value": "UbN9TyXjdXUOsmpO615UPxyqTsh2"
+						},
+						{
+							"key": "replayId",
+							"value": "gen9vgc2025regibo3-2354964760"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete user",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/users/:userId/saved-replays",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"users",
+						":userId",
+						"saved-replays"
+					],
+					"variable": [
+						{
+							"key": "userId",
+							"value": ""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List saved replays",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/users/:userId/saved-replays",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"users",
+						":userId",
+						"saved-replays"
+					],
+					"variable": [
+						{
+							"key": "userId",
+							"value": "UbN9TyXjdXUOsmpO615UPxyqTsh2"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Turn‑assistant analyze",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"pokemonData\": {\n    \"topLeft\": {\n      \"name\": \"Pikachu\",\n      \"item\": \"Life Orb\",\n      \"ability\": \"Static\",\n      \"moves\": [\"Thunderbolt\", \"Volt Tackle\"],\n      \"teraType\": \"Electric\",\n      \"teraActive\": true,\n      \"nonVolatileStatus\": \"par\",\n      \"volatileStatuses\": [\"focusenergy\"]\n    },\n    \"topRight\": {\n      \"name\": \"Charizard\",\n      \"item\": \"Charizardite Y\",\n      \"ability\": \"Blaze\",\n      \"moves\": [\"Heat Wave\", \"Solar Beam\"],\n      \"teraType\": \"Fire\",\n      \"teraActive\": false,\n      \"nonVolatileStatus\": \"\",\n      \"volatileStatuses\": []\n    },\n    \"bottomLeft\": {\n      \"name\": \"Toxapex\",\n      \"item\": \"Black Sludge\",\n      \"ability\": \"Regenerator\",\n      \"moves\": [\"Baneful Bunker\", \"Toxic Spikes\"],\n      \"teraType\": \"Poison\",\n      \"teraActive\": false,\n      \"nonVolatileStatus\": \"\",\n      \"volatileStatuses\": []\n    },\n    \"bottomRight\": {\n      \"name\": \"Incineroar\",\n      \"item\": \"Assault Vest\",\n      \"ability\": \"Intimidate\",\n      \"moves\": [\"Flare Blitz\", \"Fake Out\"],\n      \"teraType\": \"Dark\",\n      \"teraActive\": true,\n      \"nonVolatileStatus\": \"\",\n      \"volatileStatuses\": [\"partiallytrapped\"]\n    }\n  },\n  \"battleConditions\": {\n    \"weather\": \"sunny\",\n    \"weatherDuration\": 3,\n    \"field\": \"electricterrain\",\n    \"fieldDuration\": 2,\n    \"room\": \"\",\n    \"roomDuration\": 0,\n    \"sideEffects\": {\n      \"yourSide\": { \"tailwind\": false, \"reflect\": false, \"lightscreen\": false, \"auroraveil\": false },\n      \"opponentSide\": { \"tailwind\": false, \"reflect\": false, \"lightscreen\": false, \"auroraveil\": false }\n    },\n    \"sideEffectsDuration\": {\n      \"yourSide\": { \"tailwind\": 0, \"reflect\": 0, \"lightscreen\": 0, \"auroraveil\": 0 },\n      \"opponentSide\": { \"tailwind\": 0, \"reflect\": 0, \"lightscreen\": 0, \"auroraveil\": 0 }\n    },\n    \"entryHazards\": { \"yourSide\": {}, \"opponentSide\": {} },\n    \"entryHazardsLevel\": { \"yourSide\": {}, \"opponentSide\": {} },\n    \"entryHazardsDuration\": { \"yourSide\": {}, \"opponentSide\": {} }\n  },\n  \"yourTeam\": [\n    { \"name\": \"Pikachu\",   \"item\": \"Life Orb\",       \"ability\": \"Static\",     \"moves\": [\"Thunderbolt\",\"Volt Tackle\"],  \"teraType\": \"Electric\" },\n    { \"name\": \"Charizard\", \"item\": \"Charizardite Y\", \"ability\": \"Blaze\",      \"moves\": [\"Heat Wave\",  \"Solar Beam\"],   \"teraType\": \"Fire\"     }\n  ],\n  \"opponentTeam\": [\n    { \"name\": \"Toxapex\",   \"item\": \"Black Sludge\",    \"ability\": \"Regenerator\",\"moves\": [\"Baneful Bunker\",\"Toxic Spikes\"],\"teraType\": \"Poison\"   },\n    { \"name\": \"Incineroar\",\"item\": \"Assault Vest\",    \"ability\": \"Intimidate\", \"moves\": [\"Flare Blitz\", \"Fake Out\"],     \"teraType\": \"Dark\"     }\n  ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/turn-assistant/analyze",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"turn-assistant",
+						"analyze"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List items",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/items",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"items"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List abilities",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/abilities",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"abilities"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List moves",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/moves",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"moves"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List forum topics",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/forum/topics",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"forum",
+						"topics"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get forum topic",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/forum/topics/:topicId",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"forum",
+						"topics",
+						":topicId"
+					],
+					"variable": [
+						{
+							"key": "topicId",
+							"value": "battle-strategies"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create forum topic",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"topicId\": \"my-new-topic\",\n  \"title\": \"My new topic\",\n  \"description\": \"Some description…\",\n  \"userId\": \"abc123\",\n  \"userName\": \"pikachuMaster\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/forum/topics",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"forum",
+						"topics"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Post message to topic",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"content\": \"mensaje\",\n  \"userId\": \"UbN9TyXjdXUOsmpO615UPxyqTsh2\",\n  \"userName\": \"pikachuMaster\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/forum/topics/:topicId/messages",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"forum",
+						"topics",
+						":topicId",
+						"messages"
+					],
+					"variable": [
+						{
+							"key": "topicId",
+							"value": "topic-1746197629167-6pdjidwg"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get victory rates (base)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/victories",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"victories"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Victory rates by ability",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/victories/abilities?pokemon=Incineroar",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"victories",
+						"abilities"
+					],
+					"query": [
+						{
+							"key": "pokemon",
+							"value": "Incineroar"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Victory rates by item",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/victories/items?pokemon=Incineroar",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"victories",
+						"items"
+					],
+					"query": [
+						{
+							"key": "pokemon",
+							"value": "Incineroar"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Victory rates by move",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/victories/moves?pokemon=Incineroar",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"victories",
+						"moves"
+					],
+					"query": [
+						{
+							"key": "pokemon",
+							"value": "Incineroar"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Victory rates by tera type",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/victories/tera?pokemon=Incineroar",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"victories",
+						"tera"
+					],
+					"query": [
+						{
+							"key": "pokemon",
+							"value": "Incineroar"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Victory rates by teammate",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/victories/teammates?pokemon=Incineroar",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"victories",
+						"teammates"
+					],
+					"query": [
+						{
+							"key": "pokemon",
+							"value": "Incineroar"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Team usage stats",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/teams/usage?format=gen9vgc2025reggbo3-1760",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"teams",
+						"usage"
+					],
+					"query": [
+						{
+							"key": "format",
+							"value": "gen9vgc2025reggbo3-1760"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Lead usage stats",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/leads/usage?format=gen9vgc2025reggbo3-1760",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"leads",
+						"usage"
+					],
+					"query": [
+						{
+							"key": "format",
+							"value": "gen9vgc2025reggbo3-1760"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Analyze a single battle",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/analyze-battle/:replayId",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"analyze-battle",
+						":replayId"
+					],
+					"variable": [
+						{
+							"key": "replayId",
+							"value": "gen9vgc2025regibo3-2354964760"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Multi‑replay stats",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"replayIds\": [\n    \"gen9vgc2025reggbo3-2349659165\",\n    \"gen9vgc2025reggbo3-2349183200\",\n    \"gen9vgc2025reggbo3-2349093268\"\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/multistats",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"multistats"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://pokemon-app-732921265503.us-central1.run.app"
+		}
+	]
+}
