@@ -16,9 +16,27 @@ import MultiLineChart from '../components/rankings/MultiLineChart';
 import PokemonSprite from '../components/PokemonSprite';
 
 //todo
-// ocultar error raro (localhost only)
+// evitar duplicacion de llamadas a la API por el modo estricto de React 18 en desarrollo (“StrictMode”) que monta y desmonta dos veces tus componentes para detectar efectos colaterales
 // eliminar meses innecesarios
 // cambiar los ultimos 4 colores para el contraste
+
+const victoryEndpoints = {
+  historicalWinrate: '/api/victories',
+  abilities: '/api/victories/abilities',
+  moves: '/api/victories/moves',
+  items: '/api/victories/items',
+  teraTypes: '/api/victories/tera',
+  teammates: '/api/victories/teammates',
+};
+
+const victoryCategoryTitles = [
+  { name: "Historical Winrate", key: "historicalWinrate" },
+  { name: "Abilities", key: "abilities" },
+  { name: "Moves", key: "moves" },
+  { name: "Items", key: "items" },
+  { name: "Tera Types", key: "teraTypes" },
+  { name: "Teammates", key: "teammates" },
+];
 
 const PokemonUsage = () => {
     const [formats, setFormats] = useState([]);
@@ -57,34 +75,12 @@ const PokemonUsage = () => {
     const [leadsTotal, setLeadsTotal] = useState(0);
     const [leadsMonth, setLeadsMonth] = useState('');
 
-    // Mapeo de endpoints para cada categoría (excepto historicalUsage)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const victoryEndpoints = {
-        historicalWinrate: '/api/victories',
-        abilities: '/api/victories/abilities',
-        moves: '/api/victories/moves',
-        items: '/api/victories/items',
-        teraTypes: '/api/victories/tera',
-        teammates: '/api/victories/teammates'
-    };
-
     const categories = [
         { name: "Historical Usage", key: "historicalUsage" },
         { name: "Abilities", key: "abilities" },
         { name: "Moves", key: "moves" },
         { name: "Items", key: "items" },
         { name: "Spreads", key: "spreads" },
-        { name: "Tera Types", key: "teraTypes" },
-        { name: "Teammates", key: "teammates" }
-    ];
-
-    // Para el modo 'victories', define títulos ajustados
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    const victoryCategoryTitles = [
-        { name: "Historical Winrate", key: "historicalWinrate" },
-        { name: "Abilities", key: "abilities" },
-        { name: "Moves", key: "moves" },
-        { name: "Items", key: "items" },
         { name: "Tera Types", key: "teraTypes" },
         { name: "Teammates", key: "teammates" }
     ];
@@ -119,9 +115,14 @@ const PokemonUsage = () => {
                     }
                 }
             } catch (error) {
-                console.error("Error in fetchInitialData:", error);
-                const errorMessage = error.response?.data || "Error loading formats";
-                setError(errorMessage);
+                // Si es un 500 no deseado, lo ignoramos
+                if (error.response?.status !== 500) {
+                    console.error("Error inesperado al fetch de rankings:", error);
+                } else {
+                    console.error("Error in fetchInitialData:", error);
+                    const errorMessage = error.response?.data || "Error loading formats";
+                    setError(errorMessage);
+                }
             } finally {
                 setIsLoadingInitial(false);
             }
@@ -138,28 +139,31 @@ const PokemonUsage = () => {
     }, [rankingType]);
 
     useEffect(() => {
-        const fetchVictoryData = async () => {
-            if (rankingType !== 'victories' || !selectedPokemon) return;
-            const currentVictoryCategory = victoryCategoryTitles[currentCategory].key;
-            setIsVictoryDataLoading(true);
-            try {
-                const endpoint = victoryEndpoints[currentVictoryCategory];
-                console.log(`Fetching victory data for ${currentVictoryCategory}...`);
-                const response = await axios.get(endpoint, {
-                    params: { pokemon: selectedPokemon.name }
-                });
-                console.log("Victory data response:", response.data);
-                setVictoryData(response.data);
-            } catch (error) {
-                console.error(`Error fetching victory data for ${currentVictoryCategory}:`, error);
-                setVictoryData([]);
-            } finally {
-                setIsVictoryDataLoading(false);
-            }
-        };
+        if (rankingType !== 'victories' || !selectedPokemon) return;
 
-        fetchVictoryData();
-    }, [rankingType, currentCategory, selectedPokemon, victoryCategoryTitles, victoryEndpoints]);
+        const { key } = victoryCategoryTitles[currentCategory];
+        const endpoint = victoryEndpoints[key];
+        console.log(`Fetching victory data for ${key}…`);
+        setIsVictoryDataLoading(true);
+
+        axios.get(endpoint, {
+            params: { pokemon: selectedPokemon.name, format }
+        })
+        .then(({ data }) => {
+            console.log('Victory data response:', data);
+            setVictoryData(data);
+        })
+        .catch(err => {
+            console.error('Error fetching victory data:', err);
+            setVictoryData([]);
+        })
+        .finally(() => setIsVictoryDataLoading(false));
+    }, [
+        rankingType,
+        currentCategory,
+        selectedPokemon,
+        format
+    ]);
 
     useEffect(() => {
         if (rankingType !== 'teams' || !format) return;
@@ -208,6 +212,11 @@ const PokemonUsage = () => {
             .then(({ data }) => {
                 setTeamsMonths(data.months);
                 setTeamsMonth(data.currentMonth);
+            })
+            .catch(error => {
+                if (error.response?.status !== 500) {
+                    console.error("Error fetching currentMonth:", error);
+                }
             })
             .finally(() => setIsLoadingFormat(false));
     }, []);
