@@ -22,7 +22,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Button
+  Button,
+  Container
 } from '@mui/material';
 import { useNavigate } from "react-router-dom";
 import SaveIcon from '@mui/icons-material/Save';
@@ -35,10 +36,15 @@ import {
   Tooltip as RechartsTooltip, 
   Legend as RechartsLegend 
 } from 'recharts';
+import { useAuth } from '../contexts/AuthContext';
+import LoginDialog from '../components/LoginDialog';
+import LoginIcon from '@mui/icons-material/Login';
 
 export default function BattleAnalyticsPage() {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
   const [stats, setStats]     = useState(null);
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(true);
@@ -72,6 +78,50 @@ export default function BattleAnalyticsPage() {
       }
     }
   }, [loading, stats]);
+
+  // If no user session, prompt to sign in
+  if (!currentUser) {
+    return (
+      <Box
+        component="main"
+        sx={{ maxWidth: 800, mx: 'auto', mt: 8, p: 3 }}
+      >
+        <Typography
+          component="h1"
+          variant="h"
+          gutterBottom
+        >
+          Battle Analytics
+        </Typography>
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            alignItems: 'center', 
+            justifyContent: 'center',
+            minHeight: '50vh',
+            gap: 3
+          }}
+        >
+          <Typography component="h2" variant="h5" align="center">
+            Please sign in to see your battle statistics.
+          </Typography>
+          <Button
+            variant="contained"
+            startIcon={<LoginIcon />}
+            onClick={() => setLoginDialogOpen(true)}
+          >
+            Sign In
+          </Button>
+          <LoginDialog 
+            open={loginDialogOpen} 
+            onClose={() => setLoginDialogOpen(false)}
+            isSignUp={false}
+          />
+        </Box>
+      </Box>
+    );
+  }
 
   if (loading) {
     return (

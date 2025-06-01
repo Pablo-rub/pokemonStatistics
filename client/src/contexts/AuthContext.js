@@ -128,12 +128,17 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    localStorage.removeItem('analyticsReplays');
     return signOut(auth);
   };
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
+      if (!user) {
+        localStorage.removeItem('analyticsReplays');
+        setSavedReplaysIds([]);
+      }
       setCurrentUser(user);
       setLoading(false);
     });
