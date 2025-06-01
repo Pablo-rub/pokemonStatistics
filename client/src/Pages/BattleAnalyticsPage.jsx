@@ -63,6 +63,17 @@ export default function BattleAnalyticsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!loading && stats) {
+      const your = Object.keys(stats.usageCounts).filter(n => n !== 'none');
+      const rival = Object.keys(stats.rivalTeamCounts).filter(n => n !== 'none');
+      const totalUnique = new Set([...your, ...rival]).size;
+      if (totalUnique !== 6) {
+        setError('Error: The selected replays must share the same team of 6 Pokémon.');
+      }
+    }
+  }, [loading, stats]);
+
   if (loading) {
     return (
       <Box sx={{ textAlign:'center', mt:8 }}>
@@ -433,7 +444,7 @@ const PIE_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
                 component="p"
                 gutterBottom
               >
-                Player 1 Team
+                {mon}
               </Typography>
               <Paper sx={{ p:2, bgcolor: theme.palette.primary.dark }}>
                 <ResponsiveContainer width="100%" height={200}>
@@ -476,13 +487,6 @@ const PIE_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
                   </PieChart>
                 </ResponsiveContainer>
               </Paper>
-              <Typography
-                variant="body1"
-                component="p"
-                gutterBottom
-              >
-                Player 2 Team
-              </Typography>
             </Grid>
           ))}
         </Grid>
