@@ -33,6 +33,7 @@ import {
   Badge,
   VerifiedUser
 } from '@mui/icons-material';
+import LoginDialog from "../components/LoginDialog";
 
 const ProfilePage = () => {
   const { currentUser, changePassword, deleteAccount, logout } = useAuth();
@@ -52,6 +53,7 @@ const ProfilePage = () => {
   const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const isGoogleAccount = currentUser?.providerData[0]?.providerId === 'google.com';
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -154,10 +156,11 @@ const ProfilePage = () => {
           </Typography>
           <Button 
             variant="contained" 
-            onClick={() => navigate('/login')}
+            onClick={() => setLoginDialogOpen(true)}
             sx={{ 
               mt: 2, 
               backgroundColor: '#24CC9F',
+              color: 'black',
               '&:hover': {
                 backgroundColor: '#1FA082',
               }
@@ -165,6 +168,11 @@ const ProfilePage = () => {
           >
             Sign In
           </Button>
+          <LoginDialog 
+            open={loginDialogOpen} 
+            onClose={() => setLoginDialogOpen(false)}
+            isSignUp={false}
+          />
         </Paper>
       </Container>
     );
