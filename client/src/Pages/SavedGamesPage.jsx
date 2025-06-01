@@ -27,7 +27,7 @@ import LoginDialog from "../components/LoginDialog";
 import { filterAndSortGames, ClearFiltersButton } from '../utils/gameFilters';
 
 function SavedGamesPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, clearSavedReplays } = useAuth();
   const navigate = useNavigate();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -91,11 +91,10 @@ function SavedGamesPage() {
   const handleUnsaveAll = async () => {
     if (!currentUser) return;
     try {
-      // Llamada única al endpoint que borra todas las replays del usuario
       await axios.delete(`/api/users/${currentUser.uid}/saved-replays`);
-      // Limpiar estado local
       setGames([]);
       setAnalyticsReplays([]);
+      clearSavedReplays();      // ← actualiza contexto
     } catch (err) {
       console.error("Error unsaving all:", err);
     }
