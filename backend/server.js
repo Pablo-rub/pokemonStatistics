@@ -628,17 +628,17 @@ app.get('/api/users/:userId/saved-replays', async (req, res) => {
 app.delete('/api/users/:userId/saved-replays', async (req, res) => {
   const { userId } = req.params;
   try {
-    // BigQuery DML para eliminar el registro completo
+    // Instead of deleting the entire user row, just clear their saved_replays array
     const query = `
-      DELETE FROM \`pokemon-statistics.pokemon_replays.saved_replays\`
+      UPDATE \`pokemon-statistics.pokemon_replays.saved_replays\`
+      SET replays_saved = []
       WHERE user_id = @userId
     `;
     await bigQuery.query({ query, params: { userId } });
-    // responder sin contenido
-    return res.status(204).end();
-  } catch (error) {
-    console.error('Error deleting all saved replays for user:', error);
-    return res.status(500).json({ error: 'Error deleting saved replays' });
+    return res.status(200).json({ message: 'All saved replays cleared.' });
+  } catch (err) {
+    console.error('Error clearing saved replays:', err);
+    return res.status(500).json({ error: 'Failed to clear saved replays.' });
   }
 });
 
