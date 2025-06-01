@@ -133,6 +133,8 @@ export function AuthProvider({ children }) {
     return signOut(auth);
   };
 
+  const clearSavedReplays = () => setSavedReplaysIds([]);
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (!user) {
@@ -185,7 +187,8 @@ export function AuthProvider({ children }) {
     unsave,
     EmailAuthProvider,
     reauthenticateWithCredential,
-    updatePassword
+    updatePassword,
+    clearSavedReplays
   };
 
   return (
