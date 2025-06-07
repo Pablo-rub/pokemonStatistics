@@ -96,7 +96,7 @@ async function fetchReplayLinks(format) {
             if (!processedReplays.has(replay.id)) {
               const replayUrl = `https://replay.pokemonshowdown.com/${replay.id}.json`;
               const replayResponse = await axios.get(replayUrl);
-              //console.log(`Processing replay ${replay.id}`);
+              console.log(`Processing replay ${replay.id}`);
               
               await saveReplayToBigQuery(replayResponse.data);
               processedReplays.add(replay.id);
@@ -105,7 +105,8 @@ async function fetchReplayLinks(format) {
               await delay(1000); // Pausa entre replays
             }
           } catch (error) {
-            console.error(`Error processing replay ${replay.id}:`, error.message);
+            console.log("Error saving replay");
+            //console.error(`Error processing replay ${replay.id}:`, error.message);
           }
         }
 

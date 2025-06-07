@@ -29,13 +29,6 @@ import HelpDialog from '../components/HelpDialog';
 import useDraggable from "../hooks/useDraggable";
 import TeamDialog from "../components/TeamDialog";
 
-//todo
-//iu:
-//fix teras in moves text
-
-//backend:
-//ver que hacer con el mirror
-
 // Estado inicial compartido para condiciones de batalla
 const defaultBattleConditions = {
   weather: "",

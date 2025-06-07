@@ -13,9 +13,6 @@ const API_URL = process.env.API_URL || `http://localhost:${process.env.PORT || 5
 const projectRoot = path.resolve(__dirname, '..');
 const publicPath = path.join(projectRoot, 'public');
 
-// todo
-// comentar o quitar filtro de teams en analyze battle si fuese necesario
-
 // Initialize express
 const app = express();
 app.use(cors());
