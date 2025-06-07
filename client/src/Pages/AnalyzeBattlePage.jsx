@@ -12,9 +12,6 @@ import {
 import PokemonSprite from "../components/PokemonSprite";
 import TurnCard from "../components/TurnCard";
 
-// todo
-// moves for p2
-
 export default function AnalyzeBattlePage() {
   const { replayId } = useParams();
   const [data, setData] = useState(null);

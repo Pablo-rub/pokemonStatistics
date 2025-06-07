@@ -15,11 +15,6 @@ import DetailsPane from '../components/rankings/DetailsPane';
 import MultiLineChart from '../components/rankings/MultiLineChart';
 import PokemonSprite from '../components/PokemonSprite';
 
-//todo
-// evitar duplicacion de llamadas a la API por el modo estricto de React 18 en desarrollo (“StrictMode”) que monta y desmonta dos veces tus componentes para detectar efectos colaterales
-// eliminar meses innecesarios
-// cambiar los ultimos 4 colores para el contraste
-
 const victoryEndpoints = {
   historicalWinrate: '/api/victories',
   abilities: '/api/victories/abilities',

@@ -1,9 +1,5 @@
 const { BigQuery } = require('@google-cloud/bigquery');
 
-// todo
-// sticky web ?
-// electric terrain pasa de 3 a 0 turnos restantes
-
 // Initialize BigQuery without keyFilename for Cloud Functions
 const bigQuery = new BigQuery();
 
@@ -268,10 +264,11 @@ async function saveReplayToBigQuery(replayData) {
 
         return true;
     } catch (error) {
-        console.error('Error in saveReplayToBigQuery:', error);
+        console.log("Error saving replay");
+        /*console.error('Error in saveReplayToBigQuery:', error);
         if (error.errors) {
             console.error('BigQuery errors:', JSON.stringify(error.errors, null, 2));
-        }
+        }*/
         throw error;
     }
 }
