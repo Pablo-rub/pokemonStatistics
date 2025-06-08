@@ -99,7 +99,7 @@ const ContactPage = () => {
                   }}
                   component="h2"
                 >
-                  support@pokemonstatistics.com
+                  support@traineracademy.xyz
                 </Typography>
               </Box>
             </Box>
