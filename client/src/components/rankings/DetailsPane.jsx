@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Paper, Typography, CircularProgress, Button, ButtonGroup, Chip } from '@mui/material';
+import { Box, Paper, Typography, CircularProgress, Button, ButtonGroup, Chip, Tooltip } from '@mui/material';
 import PokemonSprite from '../PokemonSprite';
 import MultiLineChart from './MultiLineChart';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -229,50 +229,8 @@ const DetailsPane = ({
                       win_rate: item.total_games > 0 ? (item.wins / item.total_games) * 100 : 0,
                     }));
 
-                    // Format the month for display
-                    let displayMonth = latestMonth;
-                    if (latestMonth) {
-                      const [year, month] = latestMonth.split('-');
-                      const monthNames = [
-                        'January',
-                        'February',
-                        'March',
-                        'April',
-                        'May',
-                        'June',
-                        'July',
-                        'August',
-                        'September',
-                        'October',
-                        'November',
-                        'December',
-                      ];
-                      displayMonth = `${monthNames[parseInt(month) - 1]} ${year}`;
-                    }
-
                     return (
                       <>
-                        {/* Global stats header showing total stats for last month */}
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                            p: 1.5,
-                            borderRadius: 1,
-                            mb: 1,
-                          }}
-                        >
-                          <Typography component="p" variant="subtitle2" sx={{ color: 'white' }}>
-                            Stats of last month:
-                          </Typography>
-                          <Typography component="p" variant="subtitle2" sx={{ color: 'white' }}>
-                            {totalWins} / {totalGames}{' '}
-                            {getCategoryStatsLabel(categories[currentCategory].key)} ({displayMonth})
-                          </Typography>
-                        </Box>
-
                         {/* Sorting controls */}
                         <Box sx={{ mb: 2, mt: 1, display: 'flex', justifyContent: 'center' }}>
                           <ButtonGroup size="small" variant="outlined" sx={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
@@ -380,54 +338,71 @@ const DetailsPane = ({
                                     {label}
                                   </Typography>
                                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    {/* WIN RATE con fondo para mejorar contraste */}
-                                    <Chip
-                                      size="small"
-                                      label={`${item.win_rate.toFixed(2)}%`}
-                                      sx={{
-                                        backgroundColor: 'rgba(255,255,255,0.15)',
-                                        color: 'white',
-                                        fontSize: '0.75rem',
-                                        height: 20,
-                                        '& .MuiChip-label': {
-                                          px: 0.5,
-                                        },
-                                        mr: 1,
-                                      }}
-                                    />
-                                    {/* Badge de cambio mensual (ya existente) */}
-                                    {monthlyChange && (
+                                    {/* Nuevo: chip con número de partidas */}
+                                    <Tooltip title="Games">
                                       <Chip
                                         size="small"
-                                        label={`${monthlyChange.change}%`}
-                                        icon={
-                                          monthlyChange.isPositive ? (
-                                            <ArrowDropUpIcon fontSize="small" />
-                                          ) : monthlyChange.isNeutral ? (
-                                            <RemoveIcon fontSize="small" />
-                                          ) : (
-                                            <ArrowDropDownIcon fontSize="small" />
-                                          )
-                                        }
+                                        label={item.total_games}
                                         sx={{
                                           backgroundColor: 'rgba(255,255,255,0.15)',
-                                          color: monthlyChange.isPositive
-                                            ? '#4CAF50'
-                                            : monthlyChange.isNeutral
-                                            ? '#FFC107'
-                                            : '#F44336',
-                                          '& .MuiChip-icon': {
+                                          color: 'white',
+                                          fontSize: '0.75rem',
+                                          height: 20,
+                                          mr: 1,
+                                          '& .MuiChip-label': { px: 0.5 },
+                                        }}
+                                      />
+                                    </Tooltip>
+
+                                    {/* WIN RATE con hover */}
+                                    <Tooltip title="Win Rate">
+                                      <Chip
+                                        size="small"
+                                        label={`${item.win_rate.toFixed(2)}%`}
+                                        sx={{
+                                          backgroundColor: 'rgba(255,255,255,0.15)',
+                                          color: 'white',
+                                          fontSize: '0.75rem',
+                                          height: 20,
+                                          '& .MuiChip-label': { px: 0.5 },
+                                          mr: 1,
+                                        }}
+                                      />
+                                    </Tooltip>
+                                    {monthlyChange && (
+                                      <Tooltip title="Monthly Change">
+                                        <Chip
+                                          size="small"
+                                          label={`${monthlyChange.change}%`}
+                                          icon={
+                                            monthlyChange.isPositive ? (
+                                              <ArrowDropUpIcon fontSize="small" />
+                                            ) : monthlyChange.isNeutral ? (
+                                              <RemoveIcon fontSize="small" />
+                                            ) : (
+                                              <ArrowDropDownIcon fontSize="small" />
+                                            )
+                                          }
+                                          sx={{
+                                            backgroundColor: 'rgba(255,255,255,0.15)',
                                             color: monthlyChange.isPositive
                                               ? '#4CAF50'
                                               : monthlyChange.isNeutral
                                               ? '#FFC107'
                                               : '#F44336',
-                                          },
-                                          fontSize: '0.75rem',
-                                          height: 20,
-                                          '& .MuiChip-label': { px: 0.5 },
-                                        }}
-                                      />
+                                            '& .MuiChip-icon': {
+                                              color: monthlyChange.isPositive
+                                                ? '#4CAF50'
+                                                : monthlyChange.isNeutral
+                                                ? '#FFC107'
+                                                : '#F44336',
+                                            },
+                                            fontSize: '0.75rem',
+                                            height: 20,
+                                            '& .MuiChip-label': { px: 0.5 },
+                                          }}
+                                        />
+                                      </Tooltip>
                                     )}
                                   </Box>
                                 </Box>
