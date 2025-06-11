@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Select, MenuItem, FormControl, InputLabel,
-  Grid, CircularProgress, IconButton, Button, Paper, Pagination
+  Grid, CircularProgress, IconButton, Button, Paper, Pagination, Tooltip
 } from '@mui/material';
 import axios from 'axios';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
@@ -821,40 +821,54 @@ const PokemonUsage = () => {
                                     {itemName}
                                 </Typography>
                                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <Typography variant="body2" sx={{ color: 'white' }}>
-                                        {parseFloat(item.percentage).toFixed(2)}%
-                                    </Typography>
-                                    {monthlyChange && (
+                                    {/* Usage Rate */}
+                                    <Tooltip title="Usage Rate">
                                         <Chip
                                             size="small"
-                                            label={`${monthlyChange.change}%`}
-                                            icon={
-                                                monthlyChange.isPositive ? (
-                                                    <ArrowUpwardIcon fontSize="small" />
-                                                ) : monthlyChange.isNeutral ? (
-                                                    <RemoveIcon fontSize="small" />
-                                                ) : (
-                                                    <ArrowDownwardIcon fontSize="small" />
-                                                )
-                                            }
+                                            label={`${parseFloat(item.percentage).toFixed(2)}%`}
                                             sx={{
-                                                ml: 1,
                                                 backgroundColor: 'rgba(255,255,255,0.15)',
-                                                color: monthlyChange.isPositive
-                                                    ? '#4CAF50'
-                                                    : monthlyChange.isNeutral
-                                                    ? '#FFC107'
-                                                    : '#F44336',
-                                                '& .MuiChip-icon': {
+                                                color: 'white',
+                                                fontSize: '0.75rem',
+                                                height: 20,
+                                                '& .MuiChip-label': { px: 0.5 },
+                                            }}
+                                        />
+                                    </Tooltip>
+
+                                    {/* Monthly Change */}
+                                    {monthlyChange && (
+                                        <Tooltip title="Monthly Change">
+                                            <Chip
+                                                size="small"
+                                                label={`${monthlyChange.change}%`}
+                                                icon={
+                                                    monthlyChange.isPositive ? (
+                                                        <ArrowUpwardIcon fontSize="small" />
+                                                    ) : monthlyChange.isNeutral ? (
+                                                        <RemoveIcon fontSize="small" />
+                                                    ) : (
+                                                        <ArrowDownwardIcon fontSize="small" />
+                                                    )
+                                                }
+                                                sx={{
+                                                    ml: 1,
+                                                    backgroundColor: 'rgba(255,255,255,0.15)',
                                                     color: monthlyChange.isPositive
                                                         ? '#4CAF50'
                                                         : monthlyChange.isNeutral
                                                         ? '#FFC107'
                                                         : '#F44336',
-                                                },
-                                                borderRadius: '4px'
-                                            }}
-                                        />
+                                                    '& .MuiChip-icon': {
+                                                        color: monthlyChange.isPositive
+                                                            ? '#4CAF50'
+                                                            : monthlyChange.isNeutral
+                                                            ? '#FFC107'
+                                                            : '#F44336',
+                                                    },
+                                                }}
+                                            />
+                                        </Tooltip>
                                     )}
                                 </Box>
                             </Box>
