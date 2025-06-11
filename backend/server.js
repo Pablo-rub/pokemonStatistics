@@ -3275,7 +3275,6 @@ app.get('/api/teams/usage', async (req, res) => {
         FROM \`pokemon-statistics.pokemon_replays.replays\`
         WHERE LOWER(format) LIKE '%vgc%'
           AND LOWER(format) LIKE '%2025%'
-          AND LOWER(format) LIKE '%reg g%'
           AND LOWER(format) LIKE '%bo3%'
           AND (rating IS NULL OR rating >= @minRating)
         GROUP BY month, team
@@ -3294,7 +3293,6 @@ app.get('/api/teams/usage', async (req, res) => {
         FROM \`pokemon-statistics.pokemon_replays.replays\`
         WHERE LOWER(format) LIKE '%vgc%'
           AND LOWER(format) LIKE '%2025%'
-          AND LOWER(format) LIKE '%reg g%'
           AND LOWER(format) LIKE '%bo3%'
           AND (rating IS NULL OR rating >= @minRating)
         GROUP BY month, team
@@ -3398,7 +3396,6 @@ app.get('/api/leads/usage', async (req, res) => {
         FROM \`pokemon-statistics.pokemon_replays.replays\`
         WHERE LOWER(format) LIKE '%vgc%'
           AND LOWER(format) LIKE '%2025%'
-          AND LOWER(format) LIKE '%reg g%'
           AND LOWER(format) LIKE '%bo3%'
           AND (rating IS NULL OR rating >= @minRating)
           AND ARRAY_LENGTH(teams.p1) >= 2   -- need two starting Pokémon
@@ -3416,7 +3413,6 @@ app.get('/api/leads/usage', async (req, res) => {
         FROM \`pokemon-statistics.pokemon_replays.replays\`
         WHERE LOWER(format) LIKE '%vgc%'
           AND LOWER(format) LIKE '%2025%'
-          AND LOWER(format) LIKE '%reg g%'
           AND LOWER(format) LIKE '%bo3%'
           AND (rating IS NULL OR rating >= @minRating)
           AND ARRAY_LENGTH(teams.p2) >= 2   -- need two starting Pokémon

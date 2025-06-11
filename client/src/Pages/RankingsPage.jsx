@@ -59,7 +59,7 @@ const PokemonUsage = () => {
     const [teamsTotal, setTeamsTotal] = useState(0);
     const [teamsMonths, setTeamsMonths] = useState([]);
     const [teamsMonth, setTeamsMonth] = useState('');
-
+    
     // Leads ranking state
     const [leadData, setLeadData] = useState([]);
     const [isLoadingLeads, setIsLoadingLeads] = useState(false);
@@ -69,6 +69,7 @@ const PokemonUsage = () => {
     const [leadsSortDir, setLeadsSortDir] = useState('desc');
     const [leadsTotal, setLeadsTotal] = useState(0);
     const [leadsMonth, setLeadsMonth] = useState('');
+    const [leadsMonths, setLeadsMonths] = useState([]);
 
     const categories = [
         { name: "Historical Usage", key: "historicalUsage" },
@@ -216,12 +217,16 @@ const PokemonUsage = () => {
             .finally(() => setIsLoadingFormat(false));
     }, []);
 
-    // Cargar lista de meses para filtro de teams
+    // Cargar lista de meses
     useEffect(() => {
         axios.get('/api/months')
           .then(({ data }) => {
             setTeamsMonths(data);
-            if (data.length) setTeamsMonth(data[0]);
+            setLeadsMonths(data);
+            if (data.length) {
+                setTeamsMonth(data[0]);
+                setLeadsMonth(data[0]);
+            }
           });
     }, []);
     
@@ -1298,7 +1303,7 @@ const PokemonUsage = () => {
                                             }
                                         }}
                                     >
-                                        <MenuItem value="usage">Usage %</MenuItem>
+                                        <MenuItem value="usage">Winrate %</MenuItem>
                                         <MenuItem value="total_games">Battles</MenuItem>
                                     </Select>
                                 </FormControl>
@@ -1315,7 +1320,7 @@ const PokemonUsage = () => {
                                         inputProps={{
                                             id: "teams-month-select",
                                             'aria-labelledby': 'teams-month-label',
-                                            style: { display: 'none' }               // oculta el select nativo
+                                            style: { display: 'none' }
                                         }}
                                         sx={{
                                             color: 'white',
@@ -1394,7 +1399,7 @@ const PokemonUsage = () => {
                                         inputProps={{
                                             id: "leads-sort-by-select",
                                             'aria-labelledby': 'leads-sort-by-label',
-                                            style: { display: 'none' }               // oculta el select nativo
+                                            style: { display: 'none' }
                                         }}
                                         sx={{
                                             color: 'white',
@@ -1433,7 +1438,7 @@ const PokemonUsage = () => {
                                             }
                                         }}
                                     >
-                                        {teamsMonths.map(m => (
+                                        {leadsMonths.map(m => (
                                             <MenuItem key={m} value={m}>{m}</MenuItem>
                                         ))}
                                     </Select>
