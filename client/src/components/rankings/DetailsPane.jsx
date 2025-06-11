@@ -338,7 +338,7 @@ const DetailsPane = ({
                                     {label}
                                   </Typography>
                                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    {/* Nuevo: chip con número de partidas */}
+                                    {/* chip con número de partidas */}
                                     <Tooltip title="Games">
                                       <Chip
                                         size="small"
