@@ -26,7 +26,7 @@ app.use(express.json());
 
 // Initialize the BigQuery client with explicit credentials
 const bigQuery = new BigQuery({
-  keyFilename: "D:/tfg/pokemonStatistics/credentials.json",
+  //keyFilename: "D:/tfg/pokemonStatistics/credentials.json",
 });
 
 // Rutas para robots.txt y sitemap.xml
