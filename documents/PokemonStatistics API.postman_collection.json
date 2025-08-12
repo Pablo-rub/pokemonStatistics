@@ -173,7 +173,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"userId\": \"userid\"\n}",
+					"raw": "{\n  \"userId\": \"UbN9TyXjdXUOsmpO615UPxyqTsh2\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -222,7 +222,7 @@
 					"variable": [
 						{
 							"key": "userId",
-							"value": ""
+							"value": "UbN9TyXjdXUOsmpO615UPxyqTsh2"
 						}
 					]
 				}
@@ -261,7 +261,7 @@
 			"response": []
 		},
 		{
-			"name": "Delete user",
+			"name": "Unsave all replays of a user",
 			"request": {
 				"method": "DELETE",
 				"header": [],
@@ -279,7 +279,7 @@
 					"variable": [
 						{
 							"key": "userId",
-							"value": ""
+							"value": "UbN9TyXjdXUOsmpO615UPxyqTsh2"
 						}
 					]
 				}
@@ -319,7 +319,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"pokemonData\": {\n    \"topLeft\": {\n      \"name\": \"Pikachu\",\n      \"item\": \"Life Orb\",\n      \"ability\": \"Static\",\n      \"moves\": [\"Thunderbolt\", \"Volt Tackle\"],\n      \"teraType\": \"Electric\",\n      \"teraActive\": true,\n      \"nonVolatileStatus\": \"par\",\n      \"volatileStatuses\": [\"focusenergy\"]\n    },\n    \"topRight\": {\n      \"name\": \"Charizard\",\n      \"item\": \"Charizardite Y\",\n      \"ability\": \"Blaze\",\n      \"moves\": [\"Heat Wave\", \"Solar Beam\"],\n      \"teraType\": \"Fire\",\n      \"teraActive\": false,\n      \"nonVolatileStatus\": \"\",\n      \"volatileStatuses\": []\n    },\n    \"bottomLeft\": {\n      \"name\": \"Toxapex\",\n      \"item\": \"Black Sludge\",\n      \"ability\": \"Regenerator\",\n      \"moves\": [\"Baneful Bunker\", \"Toxic Spikes\"],\n      \"teraType\": \"Poison\",\n      \"teraActive\": false,\n      \"nonVolatileStatus\": \"\",\n      \"volatileStatuses\": []\n    },\n    \"bottomRight\": {\n      \"name\": \"Incineroar\",\n      \"item\": \"Assault Vest\",\n      \"ability\": \"Intimidate\",\n      \"moves\": [\"Flare Blitz\", \"Fake Out\"],\n      \"teraType\": \"Dark\",\n      \"teraActive\": true,\n      \"nonVolatileStatus\": \"\",\n      \"volatileStatuses\": [\"partiallytrapped\"]\n    }\n  },\n  \"battleConditions\": {\n    \"weather\": \"sunny\",\n    \"weatherDuration\": 3,\n    \"field\": \"electricterrain\",\n    \"fieldDuration\": 2,\n    \"room\": \"\",\n    \"roomDuration\": 0,\n    \"sideEffects\": {\n      \"yourSide\": { \"tailwind\": false, \"reflect\": false, \"lightscreen\": false, \"auroraveil\": false },\n      \"opponentSide\": { \"tailwind\": false, \"reflect\": false, \"lightscreen\": false, \"auroraveil\": false }\n    },\n    \"sideEffectsDuration\": {\n      \"yourSide\": { \"tailwind\": 0, \"reflect\": 0, \"lightscreen\": 0, \"auroraveil\": 0 },\n      \"opponentSide\": { \"tailwind\": 0, \"reflect\": 0, \"lightscreen\": 0, \"auroraveil\": 0 }\n    },\n    \"entryHazards\": { \"yourSide\": {}, \"opponentSide\": {} },\n    \"entryHazardsLevel\": { \"yourSide\": {}, \"opponentSide\": {} },\n    \"entryHazardsDuration\": { \"yourSide\": {}, \"opponentSide\": {} }\n  },\n  \"yourTeam\": [\n    { \"name\": \"Pikachu\",   \"item\": \"Life Orb\",       \"ability\": \"Static\",     \"moves\": [\"Thunderbolt\",\"Volt Tackle\"],  \"teraType\": \"Electric\" },\n    { \"name\": \"Charizard\", \"item\": \"Charizardite Y\", \"ability\": \"Blaze\",      \"moves\": [\"Heat Wave\",  \"Solar Beam\"],   \"teraType\": \"Fire\"     }\n  ],\n  \"opponentTeam\": [\n    { \"name\": \"Toxapex\",   \"item\": \"Black Sludge\",    \"ability\": \"Regenerator\",\"moves\": [\"Baneful Bunker\",\"Toxic Spikes\"],\"teraType\": \"Poison\"   },\n    { \"name\": \"Incineroar\",\"item\": \"Assault Vest\",    \"ability\": \"Intimidate\", \"moves\": [\"Flare Blitz\", \"Fake Out\"],     \"teraType\": \"Dark\"     }\n  ]\n}",
+					"raw": "{\n  \"pokemonData\": {\n    \"topLeft\": {\n      \"name\": \"Miraidon\",\n      \"item\": \"Choice Specs\",\n      \"ability\": null,\n      \"moves\": [],\n      \"stats\": {\n        \"hp\": 100,\n        \"atk\": 0,\n        \"def\": 0,\n        \"spa\": 0,\n        \"spd\": 0,\n        \"spe\": 0,\n        \"acc\": 0,\n        \"eva\": 0\n      },\n      \"filterStats\": false,\n      \"nonVolatileStatus\": null,\n      \"volatileStatuses\": [],\n      \"teraType\": \"\",\n      \"teraActive\": null\n    },\n    \"topRight\": {\n      \"name\": \"Calyrex-Ice\",\n      \"item\": null,\n      \"ability\": null,\n      \"moves\": [],\n      \"stats\": {\n        \"hp\": 100,\n        \"atk\": 0,\n        \"def\": 0,\n        \"spa\": 0,\n        \"spd\": 0,\n        \"spe\": 0,\n        \"acc\": 0,\n        \"eva\": 0\n      },\n      \"filterStats\": false,\n      \"nonVolatileStatus\": null,\n      \"volatileStatuses\": [],\n      \"teraType\": \"\",\n      \"teraActive\": null\n    },\n    \"bottomLeft\": {\n      \"name\": \"Incineroar\",\n      \"item\": null,\n      \"ability\": null,\n      \"moves\": [],\n      \"stats\": {\n        \"hp\": 100,\n        \"atk\": 0,\n        \"def\": 0,\n        \"spa\": 0,\n        \"spd\": 0,\n        \"spe\": 0,\n        \"acc\": 0,\n        \"eva\": 0\n      },\n      \"filterStats\": false,\n      \"nonVolatileStatus\": null,\n      \"volatileStatuses\": [],\n      \"teraType\": \"\",\n      \"teraActive\": null\n    },\n    \"bottomRight\": {\n      \"name\": \"Calyrex-Shadow\",\n      \"item\": null,\n      \"ability\": null,\n      \"moves\": [],\n      \"stats\": {\n        \"hp\": 100,\n        \"atk\": 0,\n        \"def\": 0,\n        \"spa\": 0,\n        \"spd\": 0,\n        \"spe\": 0,\n        \"acc\": 0,\n        \"eva\": 0\n      },\n      \"filterStats\": false,\n      \"nonVolatileStatus\": null,\n      \"volatileStatuses\": [],\n      \"teraType\": \"\",\n      \"teraActive\": null\n    }\n  },\n  \"battleConditions\": {\n    \"weather\": \"\",\n    \"weatherDuration\": 0,\n    \"field\": \"\",\n    \"fieldDuration\": 0,\n    \"room\": \"\",\n    \"roomDuration\": 0,\n    \"sideEffects\": {\n      \"yourSide\": {\n        \"tailwind\": false\n      },\n      \"opponentSide\": {\n        \"tailwind\": false\n      }\n    },\n    \"sideEffectsDuration\": {\n      \"yourSide\": {\n        \"tailwind\": 0\n      },\n      \"opponentSide\": {\n        \"tailwind\": 0\n      }\n    },\n    \"entryHazards\": {\n      \"yourSide\": {},\n      \"opponentSide\": {}\n    },\n    \"entryHazardsLevel\": {\n      \"yourSide\": {},\n      \"opponentSide\": {}\n    },\n    \"entryHazardsDuration\": {\n      \"yourSide\": {},\n      \"opponentSide\": {}\n    }\n  },\n  \"yourTeam\": [],\n  \"opponentTeam\": []\n}",
 					"options": {
 						"raw": {
 							"language": "json"

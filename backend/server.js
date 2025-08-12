@@ -26,7 +26,16 @@ app.use(express.json());
 
 // Initialize the BigQuery client with explicit credentials
 const bigQuery = new BigQuery({
-  //keyFilename: "D:/tfg/pokemonStatistics/credentials.json",
+  keyFilename: "D:/tfg/pokemonStatistics/credentials.json",
+});
+
+// Rutas para robots.txt y sitemap.xml
+app.get('/robots.txt', (req, res) => {
+  res.sendFile(path.join(__dirname, 'robots.txt'));
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  res.sendFile(path.join(__dirname, 'sitemap.xml'));
 });
 
 // Show when server is running
@@ -3879,9 +3888,24 @@ app.post('/api/multistats', async (req, res) => {
 
 app.use(express.static(publicPath));
 
+const clientBuildPath = path.join(projectRoot, 'client', 'build');
+// Redirección a HTTPS en producción (opcional pero recomendable)
+if (process.env.NODE_ENV === 'production') {
+  app.enable('trust proxy');
+  app.use((req, res, next) => {
+    if (req.headers['x-forwarded-proto'] !== 'https') {
+      return res.redirect(`https://${req.get('host')}${req.originalUrl}`);
+    }
+    next();
+  });
+}
+// Servir estáticos del cliente
+app.use(express.static(clientBuildPath));
+
 // Si no encuentra una ruta API, devuelve el index.html (para React Router)
 app.get('*', (req, res) => {
-  res.sendFile(path.join(publicPath, 'index.html'));
+  if (req.path.startsWith('/api')) return res.status(404).send('Not found');
+  res.sendFile(path.join(clientBuildPath, 'index.html'));
 });
 
 // Start the server

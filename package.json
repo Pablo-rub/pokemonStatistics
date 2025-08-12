@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Main project for fullstack app (React frontend + Node/Express backend)",
   "scripts": {
-    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "start": "cross-env WDS_ALLOWED_HOSTS=all react-scripts start",
     "server": "cd backend && npm start",
     "client": "cd client && npm start"
   },
