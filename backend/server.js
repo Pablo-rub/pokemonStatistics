@@ -4,6 +4,7 @@ const axios = require('axios');
 const cors = require("cors");
 const cheerio = require('cheerio');
 const obtainGameDataRouter = require('./obtainGameData');
+const fs = require('fs');
 
 require('dotenv').config();
 
@@ -26,16 +27,28 @@ app.use(express.json());
 
 // Initialize the BigQuery client with explicit credentials
 const bigQuery = new BigQuery({
-  //keyFilename: "D:/tfg/pokemonStatistics/credentials.json",
+  keyFilename: "D:/tfg/pokemonStatistics/credentials.json",
 });
 
-// Rutas para robots.txt y sitemap.xml
+// Rutas para robots.txt y sitemap.xml (asegurar existencia física y fallback)
 app.get('/robots.txt', (req, res) => {
-  res.sendFile(path.join(__dirname, 'robots.txt'));
+  const filePath = path.join(__dirname, 'robots.txt'); // backend/robots.txt
+  if (fs.existsSync(filePath)) {
+    return res.sendFile(filePath);
+  }
+  // fallback inline (si no hay archivo)
+  res.type('text/plain').send(`User-agent: *
+Allow: /
+
+Sitemap: https://traineracademy.xyz/sitemap.xml`);
 });
 
 app.get('/sitemap.xml', (req, res) => {
-  res.sendFile(path.join(__dirname, 'sitemap.xml'));
+  const filePath = path.join(__dirname, 'sitemap.xml'); // backend/sitemap.xml
+  if (fs.existsSync(filePath)) {
+    return res.sendFile(filePath);
+  }
+  res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`);
 });
 
 // Show when server is running
