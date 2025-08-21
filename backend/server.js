@@ -46,9 +46,22 @@ Sitemap: https://traineracademy.xyz/sitemap.xml`);
 app.get('/sitemap.xml', (req, res) => {
   const filePath = path.join(__dirname, 'sitemap.xml'); // backend/sitemap.xml
   if (fs.existsSync(filePath)) {
-    return res.sendFile(filePath);
+    try {
+      const content = fs.readFileSync(filePath, 'utf8');
+      // enviar XML limpio con tipo correcto
+      res.type('application/xml; charset=utf-8').send(content);
+    } catch (err) {
+      console.error('Error reading sitemap.xml:', err);
+      res.status(500).type('text/plain').send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
+    }
+    return;
   }
-  res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>`);
+
+  // fallback mínimo si no existe
+  res.type('application/xml; charset=utf-8').send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://traineracademy.xyz/</loc></url>
+</urlset>`);
 });
 
 // Show when server is running
