@@ -27,7 +27,7 @@ app.use(express.json());
 
 // Initialize the BigQuery client with explicit credentials
 const bigQuery = new BigQuery({
-  //keyFilename: "D:/tfg/pokemonStatistics/credentials.json",
+  keyFilename: "D:/tfg/pokemonStatistics/credentials.json",
 });
 
 // Rutas para robots.txt y sitemap.xml (asegurar existencia física y fallback)
@@ -47,14 +47,30 @@ app.get('/sitemap.xml', (req, res) => {
   const filePath = path.join(__dirname, 'sitemap.xml'); // backend/sitemap.xml
   if (fs.existsSync(filePath)) {
     try {
-      const content = fs.readFileSync(filePath, 'utf8');
-      // enviar XML limpio con tipo correcto
-      res.type('application/xml; charset=utf-8').send(content);
+      let content = fs.readFileSync(filePath, 'utf8');
+
+      // 1) Remove BOM if present
+      content = content.replace(/^\uFEFF/, '');
+
+      // 2) Remove any accidental filepath comments injected by tooling
+      content = content.replace(/<!--\s*filepath:[\s\S]*?-->/gi, '');
+
+      // 3) Strip any <script>...</script> and self-closing <script/> tags
+      content = content.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+      content = content.replace(/<script\s*\/>/gi, '');
+
+      // 4) Remove any text before the XML declaration (keep only starting at <?xml)
+      const xmlStart = content.indexOf('<?xml');
+      if (xmlStart > 0) content = content.slice(xmlStart);
+
+      // 5) Final trim and send as XML
+      content = content.trim();
+      res.set('Cache-Control', 'public, max-age=3600');
+      return res.type('application/xml; charset=utf-8').send(content);
     } catch (err) {
       console.error('Error reading sitemap.xml:', err);
-      res.status(500).type('text/plain').send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
+      return res.status(500).type('application/xml').send('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
     }
-    return;
   }
 
   // fallback mínimo si no existe
