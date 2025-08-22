@@ -605,93 +605,72 @@ function TurnAssistantPage() {
               
               <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, mb: 3 }}>
                 {/* First Pokémon's moves */}
-                <TableContainer component={Paper} sx={{ flex: 1, backgroundColor: '#221FC7' }}>
-                  <Table 
-                    size="small" 
-                    aria-label={`Move Options for ${selectedPokemon.topLeft.name}`} 
-                    sx={{ 
-                      captionSide: 'top',
-                      backgroundColor: '#221FC7'
-                    }}
-                  >
-                    <caption style={{
-                      padding: '8px',
-                      color: 'white',
-                      textAlign: 'left',
-                      fontSize: '0.875rem'
-                    }}>
-                      {selectedPokemon.topLeft.name} {selectedPokemon.topLeft.item ? `(${selectedPokemon.topLeft.item})` : ''}
-                    </caption>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Move</TableCell>
-                        <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Win Rate</TableCell>
-                        <TableCell align="right">Games</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {/* Make sure the array exists before mapping */}
-                      {Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topLeft.name]) && analysisResults.allMoveOptions[selectedPokemon.topLeft.name].map((move) => (
-                        <TableRow key={move.move}>
-                          <TableCell>{move.move}</TableCell>
-                          <TableCell align="right">{move.winRate.toFixed(1)}%</TableCell>
-                          <TableCell align="right">{move.total}</TableCell>
-                        </TableRow>
-                      ))}
-                      {/* Handle case when no moves exist */}
-                      {(!analysisResults.allMoveOptions[selectedPokemon.topLeft.name] || 
-                        !Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topLeft.name]) || 
-                        analysisResults.allMoveOptions[selectedPokemon.topLeft.name].length === 0) && (
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ color: 'white', mb: 1, fontSize: '0.95rem', fontWeight: '600', textAlign: 'left' }}>
+                    {selectedPokemon.topLeft.name} {selectedPokemon.topLeft.item ? `(${selectedPokemon.topLeft.item})` : ''}
+                  </Typography>
+                  <TableContainer component={Paper} sx={{ backgroundColor: '#221FC7' }}>
+                    <Table size="small" aria-label={`Move Options for ${selectedPokemon.topLeft.name}`} sx={{ backgroundColor: '#221FC7' }}>
+                      <TableHead>
                         <TableRow>
-                          <TableCell colSpan={3} align="center">No move data available</TableCell>
+                          <TableCell>Move</TableCell>
+                          <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Win Rate</TableCell>
+                          <TableCell align="right">Games</TableCell>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-                
+                      </TableHead>
+                      <TableBody>
+                        {Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topLeft.name]) && analysisResults.allMoveOptions[selectedPokemon.topLeft.name].map((move) => (
+                          <TableRow key={move.move}>
+                            <TableCell>{move.move}</TableCell>
+                            <TableCell align="right">{move.winRate.toFixed(1)}%</TableCell>
+                            <TableCell align="right">{move.total}</TableCell>
+                          </TableRow>
+                        ))}
+                        {(!analysisResults.allMoveOptions[selectedPokemon.topLeft.name] || 
+                          !Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topLeft.name]) || 
+                          analysisResults.allMoveOptions[selectedPokemon.topLeft.name].length === 0) && (
+                          <TableRow>
+                            <TableCell colSpan={3} align="center">No move data available</TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+ 
                 {/* Second Pokémon's moves */}
-                <TableContainer component={Paper} sx={{ flex: 1, backgroundColor: '#221FC7' }}>
-                  <Table 
-                    size="small" 
-                    aria-label={`Move Options for ${selectedPokemon.topRight.name}`} 
-                    sx={{ captionSide: 'top', backgroundColor: '#221FC7' }}
-                  >
-                    <caption style={{
-                      padding: '8px',
-                      color: 'white',
-                      textAlign: 'left',
-                      fontSize: '0.875rem'
-                    }}>
-                      {selectedPokemon.topRight.name} {selectedPokemon.topRight.item ? `(${selectedPokemon.topRight.item})` : ''}
-                    </caption>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Move</TableCell>
-                        <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Win Rate</TableCell>
-                        <TableCell align="right">Games</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {/* Make sure the array exists before mapping */}
-                      {Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topRight.name]) && analysisResults.allMoveOptions[selectedPokemon.topRight.name].map((move) => (
-                        <TableRow key={move.move}>
-                          <TableCell>{move.move}</TableCell>
-                          <TableCell align="right">{move.winRate.toFixed(1)}%</TableCell>
-                          <TableCell align="right">{move.total}</TableCell>
-                        </TableRow>
-                      ))}
-                      {/* Handle case when no moves exist */}
-                      {(!analysisResults.allMoveOptions[selectedPokemon.topRight.name] || 
-                        !Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topRight.name]) || 
-                        analysisResults.allMoveOptions[selectedPokemon.topRight.name].length === 0) && (
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ color: 'white', mb: 1, fontSize: '0.95rem', fontWeight: '600', textAlign: 'left' }}>
+                    {selectedPokemon.topRight.name} {selectedPokemon.topRight.item ? `(${selectedPokemon.topRight.item})` : ''}
+                  </Typography>
+                  <TableContainer component={Paper} sx={{ backgroundColor: '#221FC7' }}>
+                    <Table size="small" aria-label={`Move Options for ${selectedPokemon.topRight.name}`} sx={{ backgroundColor: '#221FC7' }}>
+                      <TableHead>
                         <TableRow>
-                          <TableCell colSpan={3} align="center">No move data available</TableCell>
+                          <TableCell>Move</TableCell>
+                          <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>Win Rate</TableCell>
+                          <TableCell align="right">Games</TableCell>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                      </TableHead>
+                      <TableBody>
+                        {Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topRight.name]) && analysisResults.allMoveOptions[selectedPokemon.topRight.name].map((move) => (
+                          <TableRow key={move.move}>
+                            <TableCell>{move.move}</TableCell>
+                            <TableCell align="right">{move.winRate.toFixed(1)}%</TableCell>
+                            <TableCell align="right">{move.total}</TableCell>
+                          </TableRow>
+                        ))}
+                        {(!analysisResults.allMoveOptions[selectedPokemon.topRight.name] || 
+                          !Array.isArray(analysisResults.allMoveOptions[selectedPokemon.topRight.name]) || 
+                          analysisResults.allMoveOptions[selectedPokemon.topRight.name].length === 0) && (
+                          <TableRow>
+                            <TableCell colSpan={3} align="center">No move data available</TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
               </Box>
               
               <Typography component="p" variant="h6" gutterBottom>
