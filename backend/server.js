@@ -1118,12 +1118,12 @@ app.post('/api/multistats', async (req, res) => {
       teraWinCounts,
       rivalUsageCounts,
       rivalWinCounts,
-      rivalTeamCounts,      // <-- nuevo campo
+      rivalTeamCounts,
       leadCounts,
       leadWinCounts,
       leadPairCounts,
       leadPairWinCounts,
-      moveCounts    // <-- aquí están los conteos de cada movimiento
+      moveCounts
     });
   } catch (err) {
     console.error(err);
