@@ -1,10 +1,10 @@
-const { BigQuery } = require('@google-cloud/bigquery');
 const express = require("express");
 const axios = require('axios');
 const cors = require("cors");
 const cheerio = require('cheerio');
 const obtainGameDataRouter = require('./obtainGameData');
 const fs = require('fs');
+const bigQuery = require('./src/db/bigquery');
 
 require('dotenv').config();
 
@@ -24,11 +24,6 @@ app.use(cors());
 
 // Enable parsing of JSON bodies
 app.use(express.json());
-
-// Initialize the BigQuery client with explicit credentials
-const bigQuery = new BigQuery({
-  //keyFilename: "D:/tfg/pokemonStatistics/credentials.json",
-});
 
 // Rutas para robots.txt y sitemap.xml (asegurar existencia física y fallback)
 app.get('/robots.txt', (req, res) => {
