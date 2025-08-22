@@ -5,6 +5,8 @@ const cheerio = require('cheerio');
 const obtainGameDataRouter = require('./obtainGameData');
 const fs = require('fs');
 const bigQuery = require('./src/db/bigquery');
+const forumService = require('./src/services/forumService');
+const { formatTimeSince } = require('./src/utils/helpers');
 
 require('dotenv').config();
 
@@ -562,6 +564,9 @@ function parseMovesetText(text) {
 
 // Mount the obtainGameData router on the /api/replays path
 app.use('/api/replays', obtainGameDataRouter);
+
+// Mount the forumService router on the /api/forum path
+app.use('/api/forum', forumService);
 
 // Create a new user with empty saved_replays
 app.post('/api/users/saved-replays', async (req, res) => {
@@ -2798,34 +2803,6 @@ app.post('/api/forum/topics/:topicId/messages', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-// Helper function to format time since a given date
-function formatTimeSince(date) {
-  const seconds = Math.floor((new Date() - date) / 1000);
-  
-  let interval = seconds / 31536000; // seconds in a year
-  
-  if (interval > 1) {
-    return Math.floor(interval) + " years ago";
-  }
-  interval = seconds / 2592000; // seconds in a month
-  if (interval > 1) {
-    return Math.floor(interval) + " months ago";
-  }
-  interval = seconds / 86400; // seconds in a day
-  if (interval > 1) {
-    return Math.floor(interval) + " days ago";
-  }
-  interval = seconds / 3600; // seconds in an hour
-  if (interval > 1) {
-    return Math.floor(interval) + " hours ago";
-  }
-  interval = seconds / 60; // seconds in a minute
-  if (interval > 1) {
-    return Math.floor(interval) + " minutes ago";
-  }
-  return Math.floor(seconds) + " seconds ago";
-}
 
 // Endpoint para obtener el porcentaje de victorias por Pokémon agrupados por mes
 app.get('/api/victories', async (req, res) => {
