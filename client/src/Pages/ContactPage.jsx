@@ -16,6 +16,7 @@ import EmailIcon from '@mui/icons-material/Email';
 import HelpIcon from '@mui/icons-material/Help';
 import LiveHelpIcon from '@mui/icons-material/LiveHelp';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import CloseIcon from '@mui/icons-material/Close';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import TwitterIcon from '@mui/icons-material/Twitter';
 
@@ -87,7 +88,10 @@ const ContactPage = () => {
                   Contact Us
                 </Typography>
                 <Typography variant="body1" sx={{ mb: 3 }}>
-                  For any questions, suggestions, or technical support, please email us at:
+                  Have questions, suggestions, or spotted something we could improve? Don’t hesitate to reach out — we love hearing from you!
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 3, color: 'rgba(255,255,255,0.75)' }}>
+                  This application is under active development and may contain bugs or unexpected behavior. If you find any issues or something doesn't work as expected, please report it to support@traineracademy.xyz — every bug report helps us improve.
                 </Typography>
                 <Typography 
                   variant="h6" 
@@ -129,32 +133,52 @@ const ContactPage = () => {
                 </Typography>
                 <Box component="ul" sx={{ pl: 2, mb: 3 }}>
                   <Box component="li" sx={{ mb: 1.5 }}>
-                    <Link href="#" sx={{ color: '#24CC9F', '&:hover': { color: '#1aa37f' } }}>
-                      Understanding Usage Statistics
+                    <Link href="https://www.pokemon.com" target="_blank" rel="noopener" sx={{ color: '#24CC9F', '&:hover': { color: '#1aa37f' } }}>
+                      Official Pokémon Site
                     </Link>
                   </Box>
                   <Box component="li" sx={{ mb: 1.5 }}>
-                    <Link href="#" sx={{ color: '#24CC9F', '&:hover': { color: '#1aa37f' } }}>
-                      Competitive Pokémon Guide
+                    <Link href="https://www.pokemon.com/us/play-pokemon/pokemon-events/" target="_blank" rel="noopener" sx={{ color: '#24CC9F', '&:hover': { color: '#1aa37f' } }}>
+                      Pokémon Events / Tournament Finder
                     </Link>
                   </Box>
                   <Box component="li" sx={{ mb: 1.5 }}>
-                    <Link href="#" sx={{ color: '#24CC9F', '&:hover': { color: '#1aa37f' } }}>
-                      Turn Assistant Tutorial
+                    <Link href="https://pokemonshowdown.com" target="_blank" rel="noopener" sx={{ color: '#24CC9F', '&:hover': { color: '#1aa37f' } }}>
+                      Pokémon Showdown (battle simulator)
                     </Link>
                   </Box>
                   <Box component="li" sx={{ mb: 1.5 }}>
-                    <Link href="#" sx={{ color: '#24CC9F', '&:hover': { color: '#1aa37f' } }}>
-                      Battle Replay Analysis
+                    <Link href="https://www.smogon.com" target="_blank" rel="noopener" sx={{ color: '#24CC9F', '&:hover': { color: '#1aa37f' } }}>
+                      Smogon (competitive resources & usage)
+                    </Link>
+                  </Box>
+                  <Box component="li" sx={{ mb: 1.5 }}>
+                    <Link href="https://bulbapedia.bulbagarden.net" target="_blank" rel="noopener" sx={{ color: '#24CC9F', '&:hover': { color: '#1aa37f' } }}>
+                      Bulbapedia (encyclopedia)
                     </Link>
                   </Box>
                 </Box>
-                <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-                  <Link href="#" aria-label="GitHub Repository" sx={{ color: 'white' }}>
-                    <GitHubIcon fontSize="large" />
+                <Box sx={{ display: 'flex', gap: 2, mt: 2, alignItems: 'center' }}>
+                  <Link
+                    href="https://x.com/_traineracademy"
+                    aria-label="X (Trainer Academy)"
+                    sx={{ color: 'white', display: 'flex', alignItems: 'center' }}
+                  >
+                    <CloseIcon fontSize="large" />
                   </Link>
-                  <Link href="#" aria-label="Twitter Page" sx={{ color: 'white' }}>
-                    <TwitterIcon fontSize="large" />
+
+                  <Link
+                    href="https://buymeacoffee.com/traineracademy"
+                    target="_blank"
+                    rel="noopener"
+                    aria-label="Buy Me a Coffee"
+                    sx={{ display: 'flex', alignItems: 'center' }}
+                  >
+                    <img
+                      src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+                      alt="Buy Me a Coffee"
+                      style={{ height: 36, border: 0, display: 'block' }}
+                    />
                   </Link>
                 </Box>
               </Box>
@@ -221,6 +245,20 @@ const ContactPage = () => {
       >
         Pokémon Statistics is a fan project. Pokémon and all related properties are © of Nintendo, Game Freak, and The Pokémon Company. 
         This site is not affiliated with or endorsed by Nintendo, Game Freak, or The Pokémon Company.
+      </Typography>
+
+      <Typography
+        variant="body2"
+        sx={{
+          textAlign: 'center',
+          color: 'rgba(255,255,255,0.6)',
+          mt: 2,
+          mb: 6,
+          maxWidth: '700px',
+          mx: 'auto'
+        }}
+      >
+        This project was born as a university final project and is maintained to serve the community. Its primary goal is to provide useful tools and statistics to help players. Development is voluntary — if the site stops meeting that goal, lacks community usefulness, or becomes impossible to maintain, it may no longer receive updates. We welcome feedback, contributions and suggestions to keep the project helpful for everyone.
       </Typography>
     </Box>
   );
