@@ -164,7 +164,7 @@ const PokemonUsage = () => {
     useEffect(() => {
         if (rankingType !== 'teams' || !format) return;
         setIsLoadingTeams(true);
-        axios.get('/api/teams/usage', {
+        axios.get('/api/usage/teams', {
             params: {
                 format,
                 month: teamsMonth,
@@ -185,7 +185,7 @@ const PokemonUsage = () => {
     useEffect(() => {
         if (rankingType !== 'leads' || !format) return;
         setIsLoadingLeads(true);
-        axios.get('/api/leads/usage', {
+        axios.get('/api/usage/leads', {
             params: {
                 format,
                 month: leadsMonth,

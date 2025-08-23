@@ -100,11 +100,11 @@ app.use('/api/users', usersService);
 
 app.use('/api/turn-assistant', turnAssistantService);
 
+app.use('/api/usage', usageService);
+
 app.use('/api', smogonService);
 
 app.use('/api', pokeapiService);
-
-app.use('/api', usageService);
 
 app.use('/api', analysisService);
 
