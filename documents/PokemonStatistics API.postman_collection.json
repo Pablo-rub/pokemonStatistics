@@ -652,7 +652,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{baseUrl}}/api/teams/usage?format=gen9vgc2025reggbo3-1760",
+					"raw": "{{baseUrl}}/api/usage/teams?format=gen9vgc2025reggbo3-1760",
 					"host": [
 						"{{baseUrl}}"
 					],
@@ -677,7 +677,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{baseUrl}}/api/leads/usage?format=gen9vgc2025reggbo3-1760",
+					"raw": "{{baseUrl}}/api/usage/leads?format=gen9vgc2025reggbo3-1760",
 					"host": [
 						"{{baseUrl}}"
 					],

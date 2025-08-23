@@ -3,7 +3,7 @@ const router = express.Router();
 const bigQuery = require('../db/bigquery');
 
 // Endpoint: Team usage statistics grouped by month
-router.get('/teams/usage', async (req, res) => {
+router.get('/teams', async (req, res) => {
 try {
     const {
     format: formatParam,
@@ -128,7 +128,7 @@ try {
 });
 
 // Endpoint: Lead usage statistics grouped by month
-router.get('/leads/usage', async (req, res) => {
+router.get('/leads', async (req, res) => {
 try {
     const {
     format: formatParam,
