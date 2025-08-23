@@ -160,7 +160,7 @@ export default function HomePage() {
           variant="h3"
           sx={{ position: 'absolute', width: 1, height: 1, clip: 'rect(0,0,0,0)' }}
         >
-          Pokémon Statistics
+          Trainer Academy
         </Typography>
 
         {/* Key Features Section */}
@@ -292,7 +292,7 @@ export default function HomePage() {
 
       {/* Footer region */}
       <Box component="footer" role="contentinfo" sx={{ py: 2, textAlign: 'center' }}>
-        © 2025 Pokémon Statistics
+        © 2025 Trainer Academy
       </Box>
     </>
   );
