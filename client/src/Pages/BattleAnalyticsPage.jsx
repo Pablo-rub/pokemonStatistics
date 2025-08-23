@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import {
   Box,
@@ -22,8 +22,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Button,
-  Container
+  Button
 } from '@mui/material';
 import { useNavigate } from "react-router-dom";
 import SaveIcon from '@mui/icons-material/Save';
@@ -55,7 +54,10 @@ export default function BattleAnalyticsPage() {
   const [yourSortDir, setYourSortDir] = useState('desc');
   const RIVAL_PAGE_SIZE = 10;
 
-  const replayIds = JSON.parse(localStorage.getItem('analyticsReplays')) || [];
+  const replayIds = useMemo(
+    () => JSON.parse(localStorage.getItem('analyticsReplays')) || [],
+    []
+  );
 
   useEffect(() => {
     if (replayIds.length < 2) {
@@ -67,7 +69,7 @@ export default function BattleAnalyticsPage() {
       .then(res => setStats(res.data))
       .catch(err => setError(err.response?.data?.error || err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [replayIds]);
 
   useEffect(() => {
     if (!loading && stats) {
@@ -268,11 +270,21 @@ export default function BattleAnalyticsPage() {
   );
 
   // Prepare move usage stats
-  const moveStats = Object.entries(stats.moveCounts).map(([mon, moves]) => ({
-    mon, moves: Object.entries(moves)
-      .map(([mv, count]) => ({ mv, count }))
-      .sort((a,b) => b.count - a.count)
-  }));
+  // Sólo incluir mons realmente usados (según usageCounts) y normalizar nombres
+  const usedNamesSet = new Set(
+    Object.keys(stats.usageCounts)
+      .filter(n => n && n !== 'none')
+      .map(n => n.toLowerCase())
+  );
+
+  const moveStats = Object.entries(stats.moveCounts)
+    .filter(([mon]) => usedNamesSet.has(String(mon).toLowerCase()))
+    .map(([mon, moves]) => ({
+      mon,
+      moves: Object.entries(moves)
+        .map(([mv, count]) => ({ mv, count }))
+        .sort((a, b) => b.count - a.count)
+    }));
 
   // Define a palette of colors to cycle through
 const PIE_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
