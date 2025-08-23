@@ -31,21 +31,11 @@ function analyzeMatchingScenarios(scenarios, yourPokemon, yourItems = {}, yourAb
   // Track combinations of moves
   const moveComboStats = {};
 
-  // Primero, construimos un objeto que asocia el nombre del Pokémon con su tipo de tera (si está activo)
+  // Nota: no precomputamos tipo de Tera globalmente (provocaría usar siempre el mismo tipo).
+  // El tipo de Tera se evaluará por separado en cada escenario (más abajo) para que
+  // escenarios con diferentes teratypes se muestren correctamente.
+  // (dejamos sin valor una posible variable teraInfo global)
   const teraInfo = {};
-  // Recorremos ambos lados de 'revealed' por cada escenario para detectar terastallize de tus Pokémon
-  scenarios.forEach(scenario => {
-    ['player1_revealed', 'player2_revealed'].forEach(sideRevealed => {
-      if (!Array.isArray(scenario[sideRevealed])) return;
-      scenario[sideRevealed].forEach(pokemon => {
-        if (!pokemon || !pokemon.name) return;
-        if (!yourPokemon.includes(pokemon.name)) return;
-        if (pokemon.tera && pokemon.tera.active) {
-          teraInfo[pokemon.name] = pokemon.tera.type || "";
-        }
-      });
-    });
-  });
 
   // For each scenario, analyze the moves used
   scenarios.forEach(scenario => {
@@ -72,14 +62,19 @@ function analyzeMatchingScenarios(scenarios, yourPokemon, yourItems = {}, yourAb
         }
       });
       
-      // Get Tera status for your Pokémon (inspeccionamos ambos revealed para este escenario)
+      // Por cada escenario calculamos:
+      // - teraStatus[pokemonName] => si ese Pokémon ha terastallizado en ESTE escenario
+      // - teraType[pokemonName] => el tipo de Tera active en ESTE escenario (o null)
       const teraStatus = {};
+      const teraType = {};
       ['player1_revealed', 'player2_revealed'].forEach(sideRevealed => {
         if (!Array.isArray(scenario[sideRevealed])) return;
         scenario[sideRevealed].forEach(pokemon => {
           if (!pokemon || !pokemon.name) return;
           if (!yourPokemon.includes(pokemon.name)) return;
-          teraStatus[pokemon.name] = !!(pokemon.tera && pokemon.tera.active === true);
+          const active = !!(pokemon.tera && pokemon.tera.active === true);
+          teraStatus[pokemon.name] = active;
+          teraType[pokemon.name] = active ? (pokemon.tera.type || null) : null;
         });
       });
       
@@ -99,10 +94,10 @@ function analyzeMatchingScenarios(scenarios, yourPokemon, yourItems = {}, yourAb
           
           // Añadir nota de Tera solo si en ESTE escenario ese Pokémon ha terastallizado
           if (teraStatus[pokemon]) {
-            const type = teraInfo[pokemon];
+            const type = teraType[pokemon];
             moveText = type
-              ? `${moveText} (Tera ${type} activo)`
-              : `${moveText} (Tera activo)`;
+              ? `${moveText} (Tera ${type} active)`
+              : `${moveText} (Tera active)`;
           }
 
           // Track move usage and win rates
@@ -137,12 +132,12 @@ function analyzeMatchingScenarios(scenarios, yourPokemon, yourItems = {}, yourAb
         
         // Añadir nota de Tera solo si en ESTE escenario ese Pokémon ha terastallizado
         if (teraStatus[pokemon1]) {
-          const type = teraInfo[pokemon1];
-          move1 = type ? `${move1} (Tera ${type} activo)` : `${move1} (Tera activo)`;
+          const type = teraType[pokemon1];
+          move1 = type ? `${move1} (Tera ${type} active)` : `${move1} (Tera active)`;
         }
         if (teraStatus[pokemon2]) {
-          const type = teraInfo[pokemon2];
-          move2 = type ? `${move2} (Tera ${type} activo)` : `${move2} (Tera activo)`;
+          const type = teraType[pokemon2];
+          move2 = type ? `${move2} (Tera ${type} active)` : `${move2} (Tera active)`;
         }
         
         // Create a unique key for this move combination
