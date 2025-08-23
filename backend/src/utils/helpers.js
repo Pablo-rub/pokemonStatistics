@@ -105,11 +105,12 @@ function analyzeMatchingScenarios(scenarios, yourPokemon, yourItems = {}, yourAb
           // Si el Pokémon tiene terastallizado (la lógica original podría usar un objeto teraStatus booleado)
           if (teraInfo[pokemon] !== undefined) {
             const type = teraInfo[pokemon];
-            // Si ya se añadió "(Tera)" previamente, se elimina para que quede solo la versión detallada
-            moveText = type ? `${moveText.replace(" (Tera)", "")} (Tera ${type})` : `${moveText.replace(" (Tera)", "")} (Tera)`;
+            // Mostrar en texto: "(Tera <tipo> activo)" o "(Tera activo)" si no hay tipo
+            moveText = type
+              ? `${moveText.replace(" (Tera)", "")} (Tera ${type} active)`
+              : `${moveText.replace(" (Tera)", "")} (Tera active)`;
           }
-          
-          // Track move usage and win rates
+        // Track move usage and win rates
           if (!moveStats[pokemon][moveText]) {
             moveStats[pokemon][moveText] = { total: 0, wins: 0 };
           }
