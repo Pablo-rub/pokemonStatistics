@@ -676,13 +676,27 @@ function TurnAssistantPage() {
               <Typography component="p" variant="h6" gutterBottom>
                 Best Combinations
               </Typography>
-              
+
+              {/* Mostrar los nombres de los Pokémon igual que en "Move Options" */}
+              <Box sx={{ display: 'flex', gap: 2, mb: 1 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ color: 'white', mb: 1, fontSize: '0.95rem', fontWeight: '600', textAlign: 'left' }}>
+                    {selectedPokemon.topLeft.name} {selectedPokemon.topLeft.item ? `(${selectedPokemon.topLeft.item})` : ''}
+                  </Typography>
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ color: 'white', mb: 1, fontSize: '0.95rem', fontWeight: '600', textAlign: 'left' }}>
+                    {selectedPokemon.topRight.name} {selectedPokemon.topRight.item ? `(${selectedPokemon.topRight.item})` : ''}
+                  </Typography>
+                </Box>
+              </Box>
+
               <TableContainer component={Paper} sx={{ backgroundColor: '#221FC7' }}>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>{selectedPokemon.topLeft.name}</TableCell>
-                      <TableCell>{selectedPokemon.topRight.name}</TableCell>
+                      <TableCell>Move</TableCell>
+                      <TableCell>Move</TableCell>
                       <TableCell align="right">Win Rate</TableCell>
                       <TableCell align="right">Games</TableCell>
                     </TableRow>
