@@ -216,18 +216,29 @@ try {
     params: { ids: replayIds }
     });
 
-    // 0) Determinar los movesets de los Pokémon del jugador común (suponiendo todas las replays comparten equipo)
-    const firstMeta = playerRows.find(r => r.replay_id === dataRows[0].replay_id);
-    const firstSide = firstMeta.player1 === player ? 'p1' : 'p2';
-    const firstTeam = dataRows[0].teams?.[firstSide] || [];
+    // 0) Determinar los movesets de los Pokémon del jugador común:
+    // unir (merge) los movesets presentes en todas las replays para asegurarnos
+    // de incluir Pokémon que sólo aparecen en algunas partidas (p.ej. Great Tusk)
     const teamMovesets = {};
-    for (const mon of firstTeam) {
-    if (mon.name && Array.isArray(mon.moves)) {
-        teamMovesets[mon.name] = mon.moves;
+    for (const row of dataRows) {
+    const metaForRow = playerRows.find(r => r.replay_id === row.replay_id);
+    const sideForRow = metaForRow.player1 === player ? 'p1' : 'p2';
+    const teamForRow = row.teams?.[sideForRow] || [];
+
+    for (const mon of teamForRow) {
+        if (mon && mon.name && Array.isArray(mon.moves)) {
+        // merge unique moves if mon already present
+        if (!teamMovesets[mon.name]) {
+            teamMovesets[mon.name] = Array.from(new Set(mon.moves));
+        } else {
+            const merged = new Set([...(teamMovesets[mon.name] || []), ...mon.moves]);
+            teamMovesets[mon.name] = Array.from(merged);
+        }
+        }
     }
     }
 
-    // 1) Inicializar contador de uso de cada movimiento por Pokémon
+    // 1) Inicializar contador de uso de cada movimiento por Pokémon (para todos los mons detectados)
     const moveCounts = {};
     for (const [name, moves] of Object.entries(teamMovesets)) {
     moveCounts[name] = {};
