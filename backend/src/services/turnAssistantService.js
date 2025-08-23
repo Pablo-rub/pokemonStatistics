@@ -746,57 +746,100 @@ try {
     }
 
     // Filtro para los tera type de los 4 Pokémon activos (seleccionados en Pokémon Dialog)
-    let activeTeraTypeConditions = [];
+    // Replaced: separate activeTeraTypeConditions + activeTeraActiveConditions with unified logic:
+    let activeTeraConditions = [];
 
     // Para tus Pokémon activos (lado player1)
     ["topLeft", "topRight"].forEach((slot, idx) => {
     const details = pokemonData[slot];
-    if (details && details.teraType && details.teraType.trim() !== "") {
+    if (details && details.teraType && details.teraType.trim() !== "" && (details.teraActive !== null && details.teraActive !== undefined)) {
         const normalizedTeraType = details.teraType.toLowerCase().replace(/\s+/g, '');
-        activeTeraTypeConditions.push(`
-        (
+        // Si se indicó que queremos filtrar por Tera activo
+        if (details.teraActive === true) {
+        activeTeraConditions.push(`
+            (
             EXISTS(
-            SELECT 1 FROM UNNEST(r.teams.p1) AS p
-            WHERE p.name = @yourPokemon${idx+1}
-                AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                WHERE rp.name = @yourPokemon${idx+1}
+                    AND rp.tera.active = TRUE
+                    AND LOWER(REPLACE(IFNULL(rp.tera.type, ''), ' ', '')) = '${normalizedTeraType}'
             )
             OR
             EXISTS(
-            SELECT 1 FROM UNNEST(r.teams.p2) AS p
-            WHERE p.name = @yourPokemon${idx+1}
-                AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                WHERE rp.name = @yourPokemon${idx+1}
+                    AND rp.tera.active = TRUE
+                    AND LOWER(REPLACE(IFNULL(rp.tera.type, ''), ' ', '')) = '${normalizedTeraType}'
             )
-        )
+            )
         `);
+        } else {
+        // details.teraActive === false -> exigir que el Tera NO esté activo (ignore type)
+        activeTeraConditions.push(`
+            (
+            EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                WHERE rp.name = @yourPokemon${idx+1}
+                    AND (rp.tera.active = FALSE OR rp.tera.active IS NULL)
+            )
+            OR
+            EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                WHERE rp.name = @yourPokemon${idx+1}
+                    AND (rp.tera.active = FALSE OR rp.tera.active IS NULL)
+            )
+            )
+        `);
+        }
     }
     });
 
     // Para los Pokémon activos del oponente (lado player2)
     ["bottomLeft", "bottomRight"].forEach((slot, idx) => {
     const details = pokemonData[slot];
-    if (details && details.teraType && details.teraType.trim() !== "") {
+    if (details && details.teraType && details.teraType.trim() !== "" && (details.teraActive !== null && details.teraActive !== undefined)) {
         const normalizedTeraType = details.teraType.toLowerCase().replace(/\s+/g, '');
-        activeTeraTypeConditions.push(`
-        (
+        if (details.teraActive === true) {
+        activeTeraConditions.push(`
+            (
             EXISTS(
-            SELECT 1 FROM UNNEST(r.teams.p1) AS p
-            WHERE p.name = @opponentPokemon${idx+1}
-                AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                WHERE rp.name = @opponentPokemon${idx+1}
+                    AND rp.tera.active = TRUE
+                    AND LOWER(REPLACE(IFNULL(rp.tera.type, ''), ' ', '')) = '${normalizedTeraType}'
             )
             OR
             EXISTS(
-            SELECT 1 FROM UNNEST(r.teams.p2) AS p
-            WHERE p.name = @opponentPokemon${idx+1}
-                AND LOWER(REPLACE(p.tera_type, ' ', '')) = '${normalizedTeraType}'
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                WHERE rp.name = @opponentPokemon${idx+1}
+                    AND rp.tera.active = TRUE
+                    AND LOWER(REPLACE(IFNULL(rp.tera.type, ''), ' ', '')) = '${normalizedTeraType}'
             )
-        )
+            )
         `);
+        } else {
+        activeTeraConditions.push(`
+            (
+            EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player1) AS rp
+                WHERE rp.name = @opponentPokemon${idx+1}
+                    AND (rp.tera.active = FALSE OR rp.tera.active IS NULL)
+            )
+            OR
+            EXISTS(
+                SELECT 1 FROM UNNEST(t.revealed_pokemon.player2) AS rp
+                WHERE rp.name = @opponentPokemon${idx+1}
+                    AND (rp.tera.active = FALSE OR rp.tera.active IS NULL)
+            )
+            )
+        `);
+        }
     }
     });
 
     // Si se generaron condiciones, se agregan al query general:
-    if (activeTeraTypeConditions.length > 0) {
-    matchingTurnsQuery += ` AND (${activeTeraTypeConditions.join(' AND ')})`;
+    if (activeTeraConditions.length > 0) {
+    matchingTurnsQuery += ` AND (${activeTeraConditions.join(' AND ')})`;
     }
 
     // Filtro para Tera Active de los 4 Pokémon activos (seleccionados en Pokémon Dialog)
