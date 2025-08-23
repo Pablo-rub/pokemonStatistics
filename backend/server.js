@@ -74,7 +74,7 @@ app.get('/sitemap.xml', (req, res) => {
     }
   }
 
-  // fallback mínimo si no existe
+  // faallback mínimo si no existe
   res.type('application/xml; charset=utf-8').send(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://traineracademy.xyz/</loc></url>
