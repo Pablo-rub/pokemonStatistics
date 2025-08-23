@@ -10,7 +10,6 @@ import {
   Card, 
   CardContent,
   Paper,
-  Divider,
   alpha,
   Fade
 } from '@mui/material';
@@ -105,7 +104,7 @@ export default function HomePage() {
                   gutterBottom
                   sx={{ fontWeight: 'bold' }}
                 >
-                  Competitive Pokémon Statistics
+                  Competitive Statistics
                 </Typography>
                 <Typography 
                   variant={'body1'}
