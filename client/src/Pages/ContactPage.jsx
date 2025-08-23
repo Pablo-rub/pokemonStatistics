@@ -180,6 +180,17 @@ const ContactPage = () => {
                       style={{ height: 36, border: 0, display: 'block' }}
                     />
                   </Link>
+
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      ml: 1, 
+                      color: 'rgba(255,255,255,0.85)', 
+                      maxWidth: 260 
+                    }}
+                  >
+                    If you'd like to support development, you can buy me a coffee — thank you! The button above links to our Buy Me a Coffee page.
+                  </Typography>
                 </Box>
               </Box>
             </Box>
