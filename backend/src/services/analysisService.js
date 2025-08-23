@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const bigQuery = require('../db/bigquery');
+const axios = require('axios');
 
 const API_URL = process.env.API_URL || `http://localhost:${process.env.PORT || 5000}`;
 
 // Analyze battle endpoint
-router.get('/api/analyze-battle/:replayId', async (req, res) => {
+router.get('/analyze-battle/:replayId', async (req, res) => {
 const { replayId } = req.params;
 try {
     // 1) Fetch teams + turns
@@ -167,7 +168,7 @@ catch (err) {
 });
 
 // Endpoint para estadísticas de múltiples replays
-router.post('/api/multistats', async (req, res) => {
+router.post('/multistats', async (req, res) => {
 try {
     const { replayIds } = req.body;
     if (!Array.isArray(replayIds) || replayIds.length < 2) {

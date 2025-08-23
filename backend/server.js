@@ -106,7 +106,7 @@ app.use('/api', pokeapiService);
 
 app.use('/api', usageService);
 
-
+app.use('/api', analysisService);
 
 
 

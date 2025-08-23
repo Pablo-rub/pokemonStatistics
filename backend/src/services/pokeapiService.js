@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 // Endpoint para obtener la lista de ítems (items)
-router.get('/api/items', async (req, res) => {
+router.get('/items', async (req, res) => {
     try {
         // Consulta PokeAPI para obtener hasta 1000 ítems (ajusta el limit según sea necesario)
         const response = await axios.get('https://pokeapi.co/api/v2/item?limit=10000');
@@ -22,7 +22,7 @@ router.get('/api/items', async (req, res) => {
 });
 
 // Endpoint para obtener la lista de habilidades (abilities)
-router.get('/api/abilities', async (req, res) => {
+router.get('/abilities', async (req, res) => {
     try {
         const response = await axios.get('https://pokeapi.co/api/v2/ability?limit=1000');
         const abilities = response.data.results.map(ability => ({
@@ -40,7 +40,7 @@ router.get('/api/abilities', async (req, res) => {
 });
 
 // Endpoint para obtener la lista de movimientos (moves)
-router.get('/api/moves', async (req, res) => {
+router.get('/moves', async (req, res) => {
     try {
         const response = await axios.get('https://pokeapi.co/api/v2/move?limit=1000');
         const moves = response.data.results.map(move => ({

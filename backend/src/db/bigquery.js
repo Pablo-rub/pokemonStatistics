@@ -4,7 +4,7 @@ const keyFilename = process.env.GOOGLE_KEY_FILE || process.env.BQ_KEYFILE || nul
 const options = keyFilename ? { keyFilename } : {};
 
 const bigQuery = new BigQuery({
-    //keyFilename: "D:/tfg/pokemonStatistics/credentials.json",
+    keyFilename: "D:/tfg/pokemonStatistics/credentials.json",
 });
 
 module.exports = bigQuery;

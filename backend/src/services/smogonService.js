@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const cheerio = require('cheerio');
+const axios = require('axios');
 const { parseUsageData, combineData, parseMovesetText } = require('../utils/helpers');
 
 // Endpoint to get the list of months
-router.get('/api/months', async (req, res) => {
+router.get('/months', async (req, res) => {
     try {
         const response = await axios.get('https://www.smogon.com/stats/');
         const $ = cheerio.load(response.data);
@@ -29,7 +30,7 @@ router.get('/api/months', async (req, res) => {
 });
 
 // Endpoint to get the list of formats for a given month
-router.get('/api/formats/:month', async (req, res) => {
+router.get('/formats/:month', async (req, res) => {
     const { month } = req.params;
 
     try {
@@ -52,8 +53,8 @@ router.get('/api/formats/:month', async (req, res) => {
     }
 });
 
-// Modify the /api/rankings endpoint to fetch both sources
-router.get('/api/rankings', async (req, res) => {
+// Endpoint to get rankings for a given format and month
+router.get('/rankings', async (req, res) => {
     const { format, month } = req.query;
 
     if (!format || !month) {
