@@ -173,18 +173,34 @@ const DetailsPane = ({
 
                   {/* Lista de elementos con sus tasas de victoria con barras horizontales - AHORA FILTRADA Y ORDENADA */}
                   {(() => {
-                    // Identify which property we're categorizing by
-                    const elementKey =
-                      categories[currentCategory].key === 'teraTypes'
-                        ? 'tera_type'
-                        : categories[currentCategory].key === 'abilities'
-                        ? 'ability'
-                        : categories[currentCategory].key === 'moves'
-                        ? 'move'
-                        : categories[currentCategory].key === 'items'
-                        ? 'item'
-                        : 'teammate';
-
+                    // Normalize label extraction so teammates (and other types) don't become undefined
+                    const getLabelFromItem = (item) => {
+                      const key = categories[currentCategory].key;
+                  
+                      if (key === 'teraTypes') {
+                        return item.tera_type || item.tera || item.label || item.name || '';
+                      }
+                      if (key === 'abilities') {
+                        return item.ability || item.label || item.name || '';
+                      }
+                      if (key === 'moves') {
+                        return item.move || item.label || item.name || '';
+                      }
+                      if (key === 'items') {
+                        return item.item || item.label || item.name || '';
+                      }
+                      // teammates can be a string, array or object
+                      if (key === 'teammates') {
+                        const t = item.teammate || item.teammate_name || item.name || item.label || item.teammates;
+                        if (Array.isArray(t)) return t.join(';');
+                        if (typeof t === 'object' && t !== null) return t.name || JSON.stringify(t);
+                        return String(t || '');
+                      }
+                  
+                      // fallback
+                      return item.label || item.name || '';
+                    };
+                  
                     // Find the latest month in the dataset
                     let latestMonth = '';
                     for (const item of victoryData) {
@@ -192,43 +208,40 @@ const DetailsPane = ({
                         latestMonth = item.month;
                       }
                     }
-
+                  
                     // Filter for items from the latest month, or use all if month data is missing
                     const relevantData = latestMonth
                       ? victoryData.filter((item) => item.month === latestMonth)
                       : victoryData;
-
-                    // Aggregate data by element name
+                  
+                    // Aggregate data by the normalized label
                     const aggregatedData = {};
                     let totalWins = 0;
                     let totalGames = 0;
-
+                  
                     relevantData.forEach((item) => {
-                      const key = item[elementKey];
-                      if (key) {
-                        if (!aggregatedData[key]) {
-                          aggregatedData[key] = {
-                            [elementKey]: key,
-                            wins: 0,
-                            total_games: 0,
-                            month: latestMonth,
-                          };
-                        }
-                        // Add wins and total games to the aggregate
-                        aggregatedData[key].wins += item.wins || 0;
-                        aggregatedData[key].total_games += item.total_games || 0;
-                        // Track totals for the summary header
-                        totalWins += item.wins || 0;
-                        totalGames += item.total_games || 0;
+                      const label = getLabelFromItem(item);
+                      if (!label) return;
+                      if (!aggregatedData[label]) {
+                        aggregatedData[label] = {
+                          label,
+                          wins: 0,
+                          total_games: 0,
+                          month: latestMonth,
+                        };
                       }
+                      aggregatedData[label].wins += item.wins || 0;
+                      aggregatedData[label].total_games += item.total_games || 0;
+                      totalWins += item.wins || 0;
+                      totalGames += item.total_games || 0;
                     });
-
+                  
                     // Calculate win rates and convert to array
                     const aggregatedArray = Object.values(aggregatedData).map((item) => ({
                       ...item,
                       win_rate: item.total_games > 0 ? (item.wins / item.total_games) * 100 : 0,
                     }));
-
+ 
                     return (
                       <>
                         {/* Sorting controls */}
@@ -281,40 +294,36 @@ const DetailsPane = ({
                         {aggregatedArray
                           .sort((a, b) => {
                             // Get appropriate values based on sort field
-                            const valueA = sortBy === 'label' ? a[elementKey] : 
-                                          sortBy === 'total_games' ? a.total_games : 
-                                          sortBy === 'win_rate' ? a.win_rate : 
-                                          sortBy === 'change' ? (calculateVictoryMonthlyChange && 
-                                                               calculateVictoryMonthlyChange(victoryData, a[elementKey])?.change) : 0;
-                            
-                            const valueB = sortBy === 'label' ? b[elementKey] : 
-                                          sortBy === 'total_games' ? b.total_games : 
-                                          sortBy === 'win_rate' ? b.win_rate : 
-                                          sortBy === 'change' ? (calculateVictoryMonthlyChange && 
-                                                               calculateVictoryMonthlyChange(victoryData, b[elementKey])?.change) : 0;
-                            
+                            const valueA =
+                              sortBy === 'label' ? a.label :
+                              sortBy === 'total_games' ? a.total_games :
+                              sortBy === 'win_rate' ? a.win_rate :
+                              sortBy === 'change' ? (calculateVictoryMonthlyChange && calculateVictoryMonthlyChange(victoryData, a.label)?.change) : 0;
+ 
+                            const valueB =
+                              sortBy === 'label' ? b.label :
+                              sortBy === 'total_games' ? b.total_games :
+                              sortBy === 'win_rate' ? b.win_rate :
+                              sortBy === 'change' ? (calculateVictoryMonthlyChange && calculateVictoryMonthlyChange(victoryData, b.label)?.change) : 0;
+ 
                             // Apply sort direction
                             if (sortBy === 'label') {
                               // String comparison for labels
-                              return sortDirection === 'asc' 
+                              return sortDirection === 'asc'
                                 ? String(valueA).localeCompare(String(valueB))
                                 : String(valueB).localeCompare(String(valueA));
                             } else {
                               // Numeric comparison for everything else
-                              return sortDirection === 'asc' 
-                                ? valueA - valueB 
-                                : valueB - valueA;
+                              return sortDirection === 'asc' ? valueA - valueB : valueB - valueA;
                             }
                           })
                           .map((item, index) => {
-                            // Get appropriate label
-                            const label = item[elementKey] || 'N/A';
-
+                            // Use normalized label
+                            const label = item.label || 'N/A';
+ 
                             // Calculate month-over-month change
-                            const monthlyChange =
-                              calculateVictoryMonthlyChange &&
-                              calculateVictoryMonthlyChange(victoryData, label);
-
+                            const monthlyChange = calculateVictoryMonthlyChange && calculateVictoryMonthlyChange(victoryData, label);
+ 
                             return (
                               <Box key={index} sx={{ mb: 2 }}>
                                 <Box
