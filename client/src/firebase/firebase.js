@@ -14,7 +14,10 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || ''
 };
 
-// Initialize Firebase
+// DEBUG (temporal): mostrar config en producción para validar
+console.log("FIREBASE CONFIG:", JSON.stringify(firebaseConfig));
+
+/* Initialize Firebase */
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const auth = getAuth(app);
