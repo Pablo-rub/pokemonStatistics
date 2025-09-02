@@ -27,3 +27,7 @@ yarn-error.log*
 
 # credentials
 credentials.json
+binding.json
+policy.json
+new_policy.json
+/scripts
