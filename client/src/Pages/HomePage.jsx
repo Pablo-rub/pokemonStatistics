@@ -18,8 +18,8 @@ import BarChartIcon from '@mui/icons-material/BarChart';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import OndemandVideoIcon from '@mui/icons-material/OndemandVideo';
 import ExploreIcon from '@mui/icons-material/Explore';
-import PersonIcon from '@mui/icons-material/Person';
 import ForumIcon from '@mui/icons-material/Forum';
+import SEOHeading from '../components/SEOHeading';
 
 export default function HomePage() {
   const theme = useTheme();
@@ -71,6 +71,7 @@ export default function HomePage() {
 
   return (
     <>
+      <SEOHeading text="Rankings and Match Analysis for Pokémon" visible={false} />
       {/* Banner region */}
       <Box component="header" role="banner">
         {/* Hero Section */}
