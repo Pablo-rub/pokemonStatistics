@@ -19,7 +19,6 @@ import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import OndemandVideoIcon from '@mui/icons-material/OndemandVideo';
 import ExploreIcon from '@mui/icons-material/Explore';
 import ForumIcon from '@mui/icons-material/Forum';
-import SEOHeading from '../components/SEOHeading';
 
 export default function HomePage() {
   const theme = useTheme();
@@ -71,7 +70,6 @@ export default function HomePage() {
 
   return (
     <>
-      <SEOHeading text="Rankings and Match Analysis for Pokémon" visible={false} />
       {/* Banner region */}
       <Box component="header" role="banner">
         {/* Hero Section */}
@@ -101,7 +99,7 @@ export default function HomePage() {
               >
                 <Typography 
                   variant={isMobile ? 'h4' : isTablet ? 'h3' : 'h2'} 
-                  component="h2"
+                  component="h1"
                   gutterBottom
                   sx={{ fontWeight: 'bold' }}
                 >
@@ -157,7 +155,7 @@ export default function HomePage() {
       <Box component="main" role="main" aria-labelledby="home-title">
         <Typography
           id="home-title"
-          component="h2"
+          component="h1"
           variant="h3"
           sx={{ position: 'absolute', width: 1, height: 1, clip: 'rect(0,0,0,0)' }}
         >
