@@ -22,6 +22,7 @@ import {
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import InfoIcon from '@mui/icons-material/Info';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import FlashOnIcon from '@mui/icons-material/FlashOn';
 import { useTheme } from '@mui/material/styles';
@@ -40,6 +41,10 @@ const PokemonDetailPage = () => {
   const [loadingForms, setLoadingForms] = useState(false);
   const [selectedForm, setSelectedForm] = useState(null);
   const [displayedPokemon, setDisplayedPokemon] = useState(null);
+  
+  // NEW: State for ability descriptions
+  const [abilityDescriptions, setAbilityDescriptions] = useState({});
+  const [loadingAbilityDesc, setLoadingAbilityDesc] = useState({});
 
   useEffect(() => {
     fetchPokemonDetails();
@@ -59,6 +64,13 @@ const PokemonDetailPage = () => {
       setDisplayedPokemon(selectedForm);
     }
   }, [selectedForm, pokemonData]);
+
+  // NEW: Fetch ability descriptions when displayed Pokemon changes
+  useEffect(() => {
+    if (displayedPokemon?.abilities) {
+      fetchAbilityDescriptions(displayedPokemon.abilities);
+    }
+  }, [displayedPokemon]);
 
   const fetchPokemonDetails = async () => {
     setLoading(true);
@@ -86,6 +98,55 @@ const PokemonDetailPage = () => {
       setAlternateForms([]);
     } finally {
       setLoadingForms(false);
+    }
+  };
+
+  // NEW: Function to fetch ability descriptions from PokeAPI
+  const fetchAbilityDescriptions = async (abilities) => {
+    for (const ability of abilities) {
+      // Skip if already fetched
+      if (abilityDescriptions[ability.name]) {
+        continue;
+      }
+
+      // Convert ability name to API format (lowercase, spaces to hyphens)
+      const abilitySlug = ability.name
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '');
+
+      setLoadingAbilityDesc(prev => ({ ...prev, [ability.name]: true }));
+
+      try {
+        const response = await axios.get(`https://pokeapi.co/api/v2/ability/${abilitySlug}`);
+        
+        // Find English description
+        const englishEntry = response.data.effect_entries.find(
+          entry => entry.language.name === 'en'
+        );
+
+        // Alternatively, use flavor_text_entries for a shorter description
+        const flavorTextEntry = response.data.flavor_text_entries.find(
+          entry => entry.language.name === 'en'
+        );
+
+        const description = englishEntry?.effect || 
+                          flavorTextEntry?.flavor_text || 
+                          'Description not available';
+
+        setAbilityDescriptions(prev => ({
+          ...prev,
+          [ability.name]: description.replace(/\n/g, ' ')
+        }));
+      } catch (err) {
+        console.error(`Error fetching description for ${ability.name}:`, err);
+        setAbilityDescriptions(prev => ({
+          ...prev,
+          [ability.name]: 'Description not available'
+        }));
+      } finally {
+        setLoadingAbilityDesc(prev => ({ ...prev, [ability.name]: false }));
+      }
     }
   };
 
@@ -658,10 +719,11 @@ const PokemonDetailPage = () => {
                           }}
                         >
                           <CardContent>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                               <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
                                 {ability.name}
                               </Typography>
+                              
                               {ability.isHidden && (
                                 <Chip
                                   label="Hidden"
@@ -673,7 +735,63 @@ const PokemonDetailPage = () => {
                                   }}
                                 />
                               )}
+                              
+                              {/* NEW: Info button with ability description tooltip */}
+                              <Tooltip 
+                                title={
+                                  loadingAbilityDesc[ability.name] ? (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <CircularProgress size={16} sx={{ color: 'white' }} />
+                                      <Typography variant="caption">Loading...</Typography>
+                                    </Box>
+                                  ) : (
+                                    <Typography variant="body2" sx={{ maxWidth: 400 }}>
+                                      {abilityDescriptions[ability.name] || 'Hover to see description'}
+                                    </Typography>
+                                  )
+                                }
+                                arrow
+                                placement="top"
+                                enterDelay={300}
+                                leaveDelay={200}
+                                PopperProps={{
+                                  sx: {
+                                    '& .MuiTooltip-tooltip': {
+                                      backgroundColor: 'rgba(30, 30, 30, 0.95)',
+                                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                                      fontSize: '0.875rem',
+                                      maxWidth: 450,
+                                      padding: 2
+                                    },
+                                    '& .MuiTooltip-arrow': {
+                                      color: 'rgba(30, 30, 30, 0.95)',
+                                      '&::before': {
+                                        border: '1px solid rgba(255, 255, 255, 0.2)'
+                                      }
+                                    }
+                                  }
+                                }}
+                              >
+                                <IconButton 
+                                  size="small" 
+                                  sx={{ 
+                                    color: 'rgba(255, 255, 255, 0.6)',
+                                    '&:hover': {
+                                      color: theme.palette.primary.main,
+                                      backgroundColor: 'rgba(36, 204, 159, 0.1)'
+                                    },
+                                    transition: 'all 0.2s'
+                                  }}
+                                >
+                                  {loadingAbilityDesc[ability.name] ? (
+                                    <CircularProgress size={18} sx={{ color: 'inherit' }} />
+                                  ) : (
+                                    <InfoOutlinedIcon fontSize="small" />
+                                  )}
+                                </IconButton>
+                              </Tooltip>
                             </Box>
+                            
                             <Typography 
                               variant="body2" 
                               sx={{ 
@@ -683,6 +801,22 @@ const PokemonDetailPage = () => {
                             >
                               Slot {ability.slot}
                             </Typography>
+                            
+                            {/* Show description inline if available (optional) */}
+                            {abilityDescriptions[ability.name] && (
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  color: 'rgba(255, 255, 255, 0.5)',
+                                  display: 'block',
+                                  mt: 1,
+                                  fontStyle: 'italic'
+                                }}
+                              >
+                                {abilityDescriptions[ability.name].substring(0, 100)}
+                                {abilityDescriptions[ability.name].length > 100 ? '...' : ''}
+                              </Typography>
+                            )}
                           </CardContent>
                         </Card>
                       </Grid>
