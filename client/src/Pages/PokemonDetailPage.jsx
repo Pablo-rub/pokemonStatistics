@@ -42,7 +42,7 @@ const PokemonDetailPage = () => {
   const [selectedForm, setSelectedForm] = useState(null);
   const [displayedPokemon, setDisplayedPokemon] = useState(null);
   
-  // NEW: State for ability descriptions
+  // State for ability descriptions
   const [abilityDescriptions, setAbilityDescriptions] = useState({});
   const [loadingAbilityDesc, setLoadingAbilityDesc] = useState({});
 
@@ -65,7 +65,7 @@ const PokemonDetailPage = () => {
     }
   }, [selectedForm, pokemonData]);
 
-  // NEW: Fetch ability descriptions when displayed Pokemon changes
+  // Fetch ability descriptions when displayed Pokemon changes
   useEffect(() => {
     if (displayedPokemon?.abilities) {
       fetchAbilityDescriptions(displayedPokemon.abilities);
@@ -101,7 +101,7 @@ const PokemonDetailPage = () => {
     }
   };
 
-  // NEW: Function to fetch ability descriptions from PokeAPI
+  // Function to fetch ability descriptions from PokeAPI
   const fetchAbilityDescriptions = async (abilities) => {
     for (const ability of abilities) {
       // Skip if already fetched
@@ -154,9 +154,11 @@ const PokemonDetailPage = () => {
     setCurrentTab(newValue);
   };
 
+  // MODIFIED: Keep current tab when changing forms
   const handleFormChange = (form) => {
     setSelectedForm(form);
-    setCurrentTab(0);
+    // REMOVED: setCurrentTab(0); 
+    // Now the tab stays where it was
   };
 
   const getFormBadgeColor = (formType) => {
@@ -736,7 +738,7 @@ const PokemonDetailPage = () => {
                                 />
                               )}
                               
-                              {/* NEW: Info button with ability description tooltip */}
+                              {/* Info button with ability description tooltip */}
                               <Tooltip 
                                 title={
                                   loadingAbilityDesc[ability.name] ? (
@@ -802,7 +804,7 @@ const PokemonDetailPage = () => {
                               Slot {ability.slot}
                             </Typography>
                             
-                            {/* Show description inline if available (optional) */}
+                            {/* Show description inline if available */}
                             {abilityDescriptions[ability.name] && (
                               <Typography 
                                 variant="caption" 
@@ -827,8 +829,6 @@ const PokemonDetailPage = () => {
             </Paper>
           </Grid>
         </Grid>
-
-        {/* SECCIÓN ELIMINADA: Ya no renderizamos la sección de "Alternate Forms & Regional Variants" aquí */}
       </Box>
     </Container>
   );
