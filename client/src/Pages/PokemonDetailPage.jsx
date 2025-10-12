@@ -18,15 +18,24 @@ import {
   Tooltip,
   Button,
   ButtonGroup,
-  Fade
+  Fade,
+  Divider
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import InfoIcon from '@mui/icons-material/Info';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import FlashOnIcon from '@mui/icons-material/FlashOn';
+import ShieldIcon from '@mui/icons-material/Shield';
+import GavelIcon from '@mui/icons-material/Gavel';
 import { useTheme } from '@mui/material/styles';
 import axios from 'axios';
+import {
+  calculateDefensiveMatchups,
+  calculateOffensiveMatchups,
+  getTypeColor,
+  getEffectivenessInfo
+} from '../utils/typeMatchups';
 
 const PokemonDetailPage = () => {
   const { id } = useParams();
@@ -41,10 +50,10 @@ const PokemonDetailPage = () => {
   const [loadingForms, setLoadingForms] = useState(false);
   const [selectedForm, setSelectedForm] = useState(null);
   const [displayedPokemon, setDisplayedPokemon] = useState(null);
-  
-  // State for ability descriptions
   const [abilityDescriptions, setAbilityDescriptions] = useState({});
   const [loadingAbilityDesc, setLoadingAbilityDesc] = useState({});
+
+  // ... existing useEffects and functions ...
 
   useEffect(() => {
     fetchPokemonDetails();
@@ -65,7 +74,6 @@ const PokemonDetailPage = () => {
     }
   }, [selectedForm, pokemonData]);
 
-  // Fetch ability descriptions when displayed Pokemon changes
   useEffect(() => {
     if (displayedPokemon?.abilities) {
       fetchAbilityDescriptions(displayedPokemon.abilities);
@@ -101,15 +109,12 @@ const PokemonDetailPage = () => {
     }
   };
 
-  // Function to fetch ability descriptions from PokeAPI
   const fetchAbilityDescriptions = async (abilities) => {
     for (const ability of abilities) {
-      // Skip if already fetched
       if (abilityDescriptions[ability.name]) {
         continue;
       }
 
-      // Convert ability name to API format (lowercase, spaces to hyphens)
       const abilitySlug = ability.name
         .toLowerCase()
         .replace(/\s+/g, '-')
@@ -120,12 +125,10 @@ const PokemonDetailPage = () => {
       try {
         const response = await axios.get(`https://pokeapi.co/api/v2/ability/${abilitySlug}`);
         
-        // Find English description
         const englishEntry = response.data.effect_entries.find(
           entry => entry.language.name === 'en'
         );
 
-        // Alternatively, use flavor_text_entries for a shorter description
         const flavorTextEntry = response.data.flavor_text_entries.find(
           entry => entry.language.name === 'en'
         );
@@ -154,11 +157,8 @@ const PokemonDetailPage = () => {
     setCurrentTab(newValue);
   };
 
-  // MODIFIED: Keep current tab when changing forms
   const handleFormChange = (form) => {
     setSelectedForm(form);
-    // REMOVED: setCurrentTab(0); 
-    // Now the tab stays where it was
   };
 
   const getFormBadgeColor = (formType) => {
@@ -183,30 +183,6 @@ const PokemonDetailPage = () => {
       return <FlashOnIcon sx={{ fontSize: 16 }} />;
     }
     return null;
-  };
-
-  const getTypeColor = (type) => {
-    const typeColors = {
-      normal: '#A8A878',
-      fire: '#F08030',
-      water: '#6890F0',
-      electric: '#F8D030',
-      grass: '#78C850',
-      ice: '#98D8D8',
-      fighting: '#C03028',
-      poison: '#A040A0',
-      ground: '#E0C068',
-      flying: '#A890F0',
-      psychic: '#F85888',
-      bug: '#A8B820',
-      rock: '#B8A038',
-      ghost: '#705898',
-      dragon: '#7038F8',
-      dark: '#705848',
-      steel: '#B8B8D0',
-      fairy: '#EE99AC'
-    };
-    return typeColors[type.toLowerCase()] || '#68A090';
   };
 
   const getStatColor = (value) => {
@@ -245,6 +221,65 @@ const PokemonDetailPage = () => {
     };
   };
 
+  // Render type matchup category
+  const renderMatchupCategory = (category, types, effectivenessInfo) => {
+    if (!types || types.length === 0) return null;
+
+    return (
+      <Box sx={{ mb: 3 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1, 
+          mb: 1.5,
+          pb: 1,
+          borderBottom: `2px solid ${effectivenessInfo.color}`
+        }}>
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              color: effectivenessInfo.color,
+              fontWeight: 'bold'
+            }}
+          >
+            {effectivenessInfo.label}
+          </Typography>
+          <Typography 
+            variant="body2" 
+            sx={{ color: 'rgba(255, 255, 255, 0.6)' }}
+          >
+            ({types.length} {types.length === 1 ? 'type' : 'types'})
+          </Typography>
+        </Box>
+        
+        <Box sx={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: 1
+        }}>
+          {types.sort().map((type) => (
+            <Chip
+              key={type}
+              label={type.charAt(0).toUpperCase() + type.slice(1)}
+              sx={{
+                backgroundColor: getTypeColor(type),
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '0.875rem',
+                px: 1.5,
+                py: 0.5,
+                height: 'auto',
+                '& .MuiChip-label': {
+                  padding: '6px 0'
+                }
+              }}
+            />
+          ))}
+        </Box>
+      </Box>
+    );
+  };
+
   if (loading) {
     return (
       <Container maxWidth="xl">
@@ -278,11 +313,16 @@ const PokemonDetailPage = () => {
   if (!pokemonData || !displayedPokemon) return null;
 
   const optimizedStats = calculateOptimizedTotal(displayedPokemon.stats);
+  
+  // Calculate type matchups
+  const pokemonTypes = displayedPokemon.types.map(t => t.name.toLowerCase());
+  const defensiveMatchups = calculateDefensiveMatchups(pokemonTypes);
+  const offensiveMatchups = calculateOffensiveMatchups(pokemonTypes);
 
   return (
     <Container maxWidth="xl">
       <Box sx={{ py: 4 }}>
-        {/* Header with back button */}
+        {/* Header */}
         <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
           <IconButton 
             onClick={handleBackToList}
@@ -476,7 +516,7 @@ const PokemonDetailPage = () => {
             </Fade>
           </Grid>
 
-          {/* Right Column - Stats and Abilities */}
+          {/* Right Column - Stats, Abilities, and Type Matchups */}
           <Grid item xs={12} md={8}>
             <Paper
               elevation={3}
@@ -504,8 +544,10 @@ const PokemonDetailPage = () => {
               >
                 <Tab label="Stats" />
                 <Tab label="Abilities" />
+                <Tab label="Type Matchups" />
               </Tabs>
 
+              {/* Stats Tab */}
               {currentTab === 0 && (
                 <Box>
                   <Typography variant="h5" sx={{ color: 'white', mb: 3, fontWeight: 'bold' }}>
@@ -701,6 +743,7 @@ const PokemonDetailPage = () => {
                 </Box>
               )}
 
+              {/* Abilities Tab */}
               {currentTab === 1 && (
                 <Box>
                   <Typography variant="h5" sx={{ color: 'white', mb: 3, fontWeight: 'bold' }}>
@@ -738,7 +781,6 @@ const PokemonDetailPage = () => {
                                 />
                               )}
                               
-                              {/* Info button with ability description tooltip */}
                               <Tooltip 
                                 title={
                                   loadingAbilityDesc[ability.name] ? (
@@ -804,7 +846,6 @@ const PokemonDetailPage = () => {
                               Slot {ability.slot}
                             </Typography>
                             
-                            {/* Show description inline if available */}
                             {abilityDescriptions[ability.name] && (
                               <Typography 
                                 variant="caption" 
@@ -824,6 +865,183 @@ const PokemonDetailPage = () => {
                       </Grid>
                     ))}
                   </Grid>
+                </Box>
+              )}
+
+              {/* Type Matchups Tab */}
+              {currentTab === 2 && (
+                <Box>
+                  <Typography variant="h5" sx={{ color: 'white', mb: 3, fontWeight: 'bold' }}>
+                    Type Matchups
+                  </Typography>
+
+                  {/* Defensive Matchups */}
+                  <Card
+                    sx={{
+                      backgroundColor: 'rgba(50, 50, 50, 0.5)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      mb: 3
+                    }}
+                  >
+                    <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                        <ShieldIcon sx={{ color: theme.palette.primary.main }} />
+                        <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
+                          Defensive (Taking Damage)
+                        </Typography>
+                        <Tooltip 
+                          title="How much damage this Pokémon takes from each attacking type"
+                          arrow
+                        >
+                          <IconButton size="small">
+                            <InfoOutlinedIcon sx={{ fontSize: 18, color: 'rgba(255, 255, 255, 0.5)' }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          display: 'block',
+                          mb: 2
+                        }}
+                      >
+                        Damage multipliers when hit by attacks of these types
+                      </Typography>
+
+                      <Divider sx={{ mb: 2, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+
+                      {renderMatchupCategory(
+                        'immune',
+                        defensiveMatchups.immune,
+                        getEffectivenessInfo('immune')
+                      )}
+
+                      {renderMatchupCategory(
+                        'quarter',
+                        defensiveMatchups.quarter,
+                        getEffectivenessInfo('quarter')
+                      )}
+
+                      {renderMatchupCategory(
+                        'half',
+                        defensiveMatchups.half,
+                        getEffectivenessInfo('half')
+                      )}
+
+                      {renderMatchupCategory(
+                        'neutral',
+                        defensiveMatchups.neutral,
+                        getEffectivenessInfo('neutral')
+                      )}
+
+                      {renderMatchupCategory(
+                        'double',
+                        defensiveMatchups.double,
+                        getEffectivenessInfo('double')
+                      )}
+
+                      {renderMatchupCategory(
+                        'quadruple',
+                        defensiveMatchups.quadruple,
+                        getEffectivenessInfo('quadruple')
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Offensive Matchups */}
+                  {displayedPokemon.types.map((type, index) => {
+                    const typeMatchups = offensiveMatchups[type.name];
+                    if (!typeMatchups) return null;
+
+                    return (
+                      <Card
+                        key={index}
+                        sx={{
+                          backgroundColor: 'rgba(50, 50, 50, 0.5)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          mb: displayedPokemon.types.length > 1 && index < displayedPokemon.types.length - 1 ? 3 : 0
+                        }}
+                      >
+                        <CardContent>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            {/* CAMBIADO: SwordIcon → GavelIcon */}
+                            <GavelIcon sx={{ color: getTypeColor(type.name) }} />
+                            <Chip
+                              label={type.name}
+                              sx={{
+                                backgroundColor: getTypeColor(type.name),
+                                color: 'white',
+                                fontWeight: 'bold',
+                                fontSize: '0.875rem'
+                              }}
+                            />
+                            <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
+                              Type Offensive
+                            </Typography>
+                            <Tooltip 
+                              title={`How effective ${type.name}-type attacks are against each defending type`}
+                              arrow
+                            >
+                              <IconButton size="small">
+                                <InfoOutlinedIcon sx={{ fontSize: 18, color: 'rgba(255, 255, 255, 0.5)' }} />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              color: 'rgba(255, 255, 255, 0.6)',
+                              display: 'block',
+                              mb: 2
+                            }}
+                          >
+                            Damage multipliers when attacking Pokémon of these types
+                          </Typography>
+
+                          <Divider sx={{ mb: 2, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+
+                          {renderMatchupCategory(
+                            'immune',
+                            typeMatchups.immune,
+                            getEffectivenessInfo('immune')
+                          )}
+
+                          {renderMatchupCategory(
+                            'quarter',
+                            typeMatchups.quarter,
+                            getEffectivenessInfo('quarter')
+                          )}
+
+                          {renderMatchupCategory(
+                            'half',
+                            typeMatchups.half,
+                            getEffectivenessInfo('half')
+                          )}
+
+                          {renderMatchupCategory(
+                            'neutral',
+                            typeMatchups.neutral,
+                            getEffectivenessInfo('neutral')
+                          )}
+
+                          {renderMatchupCategory(
+                            'double',
+                            typeMatchups.double,
+                            getEffectivenessInfo('double')
+                          )}
+
+                          {renderMatchupCategory(
+                            'quadruple',
+                            typeMatchups.quadruple,
+                            getEffectivenessInfo('quadruple')
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </Box>
               )}
             </Paper>
