@@ -6,6 +6,16 @@ const bigQuery = new BigQuery();
 // Remove Express-specific code and export only the necessary functions
 async function saveReplayToBigQuery(replayData) {
     try {
+        if (!replayData || !replayData.replay_id) {
+            console.error('Invalid replay payload:', replayData);
+            return;
+        }
+
+        if (!replayData.log || typeof replayData.log !== 'string') {
+            console.error('Empty or invalid log for replay', replayData.replay_id);
+            return;
+        }
+
         // Extract data from the replay
         const id = replayData.id;
         const format = replayData.format;
@@ -1111,6 +1121,149 @@ function getPokemonName(nickname, player, turns, currentTurn) {
     }
     
     return pokemon.name;
+}
+
+/**
+ * Garantiza que teams.p1 y teams.p2 sean arrays (evita errores al leer [0])
+ */
+function ensureTeamsObject(teams) {
+    if (!teams || typeof teams !== 'object') return { p1: [], p2: [] };
+    if (!Array.isArray(teams.p1)) teams.p1 = [];
+    if (!Array.isArray(teams.p2)) teams.p2 = [];
+    return teams;
+}
+
+/**
+ * Quick heuristic extractor to pull team Pokemon names from a raw replay log.
+ * Tries several common Showdown markers (|poke|, |team|, |switch|, |player|).
+ * Returns { p1: [{name: '...'}, ...], p2: [...] }
+ */
+function extractTeamsFromLog(rawLog) {
+    const teams = { p1: [], p2: [] };
+    if (!rawLog || typeof rawLog !== 'string') return teams;
+
+    const lines = rawLog.split('\n').map(l => l.trim());
+    for (const line of lines) {
+        // |poke|p1|Porygon-Z|...
+        const m = line.match(/^\|poke\|p([12])\|([^|]+)/i);
+        if (m) {
+            const side = m[1] === '1' ? 'p1' : 'p2';
+            const name = m[2].trim();
+            if (name) teams[side].push({ name });
+            continue;
+        }
+
+        // |team|p1|Porygon-Z, Pikachu, ...
+        const tm = line.match(/^\|team\|p([12])\|(.+)/i);
+        if (tm) {
+            const side = tm[1] === '1' ? 'p1' : 'p2';
+            const names = tm[2].split(',').map(s => s.trim()).filter(Boolean);
+            names.forEach(n => teams[side].push({ name: n }));
+            continue;
+        }
+
+        // fallback: look for switch lines that may include the species
+        const sm = line.match(/^\|switch\|p([12])(?:[ab]?:)?([^|,]+)/i);
+        if (sm) {
+            const side = sm[1] === '1' ? 'p1' : 'p2';
+            const name = sm[2].trim();
+            if (name) teams[side].push({ name });
+            continue;
+        }
+    }
+
+    // deduplicate by name
+    teams.p1 = teams.p1.filter((v,i,a)=>a.findIndex(x=>x.name===v.name)===i);
+    teams.p2 = teams.p2.filter((v,i,a)=>a.findIndex(x=>x.name===v.name)===i);
+    return teams;
+}
+
+/**
+ * Main save function used by fetchReplaysDeploy.js
+ * This is defensive: avoids throwing TypeError when parsed structure is missing,
+ * logs useful info and skips saving when insufficient data.
+ */
+async function saveReplayToBigQuery(replayData) {
+    try {
+        if (!replayData || !replayData.replay_id) {
+            console.error('Invalid replay payload:', replayData);
+            return;
+        }
+
+        if (!replayData.log || typeof replayData.log !== 'string') {
+            console.error('Empty or invalid log for replay', replayData.replay_id);
+            return;
+        }
+
+        // -------------------------------------------------------
+        // Intent: si existe lógica compleja de parseo previa, intentarla primero.
+        // Si falla o el resultado es defecto, aplicamos heurística.
+        // -------------------------------------------------------
+
+        let processed = null;
+
+        try {
+            // Si ya existe una función interna robusta de parseo (por ejemplo run() o parseReplay),
+            // intentamos usarla. Si no existe, omitimos.
+            if (typeof run === 'function') {
+                // Algunos deploys tienen "run" para parsear replays; intentamos usarlo si existe.
+                processed = await run(replayData.log);
+            }
+        } catch (parseErr) {
+            console.warn(`Primary parse failed for ${replayData.replay_id}:`, parseErr.message || parseErr);
+            processed = null;
+        }
+
+        // Si no tenemos objeto `processed`, aplicamos heurística ligera para extraer teams
+        if (!processed) {
+            const extractedTeams = extractTeamsFromLog(replayData.log);
+            processed = {
+                replay_id: replayData.replay_id,
+                format: replayData.format || null,
+                meta: replayData.meta || {},
+                teams: ensureTeamsObject(extractedTeams),
+                turns: [], // fallback vacío
+                raw_log_excerpt: replayData.log.slice(0, 2000)
+            };
+        }
+
+        // Aseguramos estructura teams para evitar TypeError al acceder [0]
+        processed.teams = ensureTeamsObject(processed.teams);
+
+        // Si no hay ningún Pokémon detectado en ambos lados, no guardamos y logueamos snippet
+        if (processed.teams.p1.length === 0 && processed.teams.p2.length === 0) {
+            console.warn(`Replay ${replayData.replay_id} - no team info detected. Skipping save. Log excerpt:\n${replayData.log.slice(0, 1000)}`);
+            return;
+        }
+
+        // Normalizar/transformar a la forma que BigQuery espera (si existe función toSnakeCase)
+        let rowToInsert = processed;
+        if (typeof toSnakeCase === 'function') {
+            try {
+                rowToInsert = toSnakeCase(processed);
+            } catch (e) {
+                // si falla la normalización, seguimos con `processed` tal cual
+                console.warn(`toSnakeCase failed for ${replayData.replay_id}:`, e.message || e);
+                rowToInsert = processed;
+            }
+        }
+
+        // Insertar en BigQuery: usar dataset.table si está configurado
+        try {
+            await bigQuery.dataset('pokemon_replays').table('replays').insert([rowToInsert], { raw: true });
+            console.log(`Saved replay ${replayData.replay_id} (teams p1=${processed.teams.p1.length} p2=${processed.teams.p2.length})`);
+        } catch (bqErr) {
+            // si la inserción falla, mostrar un extracto del log y el error
+            console.error(`Error saving replay ${replayData.replay_id}:`, bqErr.message || bqErr);
+            console.error('Replay log excerpt:', replayData.log.slice(0, 1000));
+            // no relanzar para que el proceso siga
+        }
+
+    } catch (err) {
+        // Capturamos errores inesperados aquí para evitar que el scheduler/fetch aborte
+        console.error('Unexpected error in saveReplayToBigQuery:', err && (err.stack || err.message) || err);
+        // no relanzar
+    }
 }
 
 run().catch(console.dir);

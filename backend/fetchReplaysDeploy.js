@@ -10,7 +10,6 @@ const CONTINUE_ON_EXISTING = false;
 
 async function getLatestFormat() {
   try {
-    // Se mantiene igual ya que necesitamos obtener el formato más reciente
     const response = await axios.get('https://www.smogon.com/stats/');
     const $ = cheerio.load(response.data);
     const months = new Set();
@@ -33,15 +32,29 @@ async function getLatestFormat() {
         formats.push(href.replace('.txt', ''));
       }
     });
-    const vgcBo3Formats = formats.filter(f => f.toLowerCase().includes("vgc") && f.toLowerCase().includes("bo3"));
+
+    // Filtrar sólo los formatos VGC y devolver la lista completa
+    const vgcBo3Formats = formats
+      .filter(f => f.toLowerCase().includes("vgc"))
+      .map(f => f.trim());
+
     if (!vgcBo3Formats.length) {
       throw new Error("No VGC BO3 formats found");
     }
-    let latestFormat = vgcBo3Formats[vgcBo3Formats.length - 1];
-    if (latestFormat.includes('-')) {
-      latestFormat = latestFormat.split('-')[0];
-    }
-    return latestFormat;
+
+    // Normalizar: quitar sufijo final si es numérico o '0' (ej. '-1500', '-0') para obtener el formato base
+    const normalized = vgcBo3Formats.map(f => {
+      const parts = f.split('-');
+      const last = parts[parts.length - 1];
+      if (/^\d+$/.test(last) || last === '0') {
+        parts.pop();
+        return parts.join('-');
+      }
+      return f;
+    });
+
+    // Devolver formatos base únicos, preservando orden
+    return Array.from(new Set(normalized));
   } catch (error) {
     console.error("Error in getLatestFormat:", error);
     throw error;
@@ -52,85 +65,105 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function fetchReplayLinks(format) {
+async function fetchReplayLinks(formats) {
   try {
-    let hasMoreReplays = true;
-    let processedReplays = new Set();
-    let lastTimestamp = null;
+    const formatsToProcess = Array.isArray(formats) ? formats : [formats];
+    const processedReplays = new Set();
+    const stats = {
+      total: 0,
+      success: 0,
+      failed: 0,
+      skipped: 0
+    };
 
-    while (hasMoreReplays) {
-      try {
-        let searchUrl = `https://replay.pokemonshowdown.com/search.json?format=${format}`;
-        if (lastTimestamp) {
-          searchUrl += `&before=${lastTimestamp}`;
-        }
-        console.log(`Fetching replays from: ${searchUrl}`);
+    for (const format of formatsToProcess) {
+      console.log(`\n====== Processing format: ${format} ======`);
+      const searchBaseUrl = `https://replay.pokemonshowdown.com/search.json?format=${encodeURIComponent(format)}`;
+      console.log(`Search URL: ${searchBaseUrl}`);
 
-        const response = await axios.get(searchUrl);
-        const replays = response.data;
+      let hasMoreReplays = true;
+      let lastTimestamp = null;
+      let pageCount = 0;
 
-        if (!replays || !Array.isArray(replays) || replays.length === 0) {
-          console.log('No more replays found');
-          break;
-        }
+      while (hasMoreReplays) {
+        try {
+          let searchUrl = searchBaseUrl;
+          if (lastTimestamp) searchUrl += `&before=${lastTimestamp}`;
 
-        // Si hay 51 elementos, significa que hay más páginas
-        hasMoreReplays = replays.length > 50;
-        console.log(`Found ${replays.length} replays (${hasMoreReplays ? 'more pages available' : 'last page'})`);
+          const response = await axios.get(searchUrl);
+          const replays = response.data;
 
-        // Procesar solo los primeros 50 replays
-        for (const replay of replays.slice(0, 50)) {
-          try {
-            const query = `SELECT replay_id FROM \`pokemon-statistics.pokemon_replays.replays\` WHERE replay_id = '${replay.id}'`;
-            const [rows] = await bigQuery.query(query);
+          if (!replays || !Array.isArray(replays) || replays.length === 0) {
+            console.log(`No more replays for format ${format} (page ${pageCount})`);
+            break;
+          }
 
-            if (rows.length > 0) {
-              console.log(`Replay ${replay.id} already exists in database`);
-              if (!CONTINUE_ON_EXISTING) {
-                hasMoreReplays = false;
-                break;
-              }
+          pageCount++;
+          hasMoreReplays = replays.length > 50;
+
+          console.log(`Page ${pageCount}: Processing ${Math.min(50, replays.length)} replays...`);
+
+          for (const replayMeta of replays.slice(0, 50)) {
+            if (processedReplays.has(replayMeta.id)) {
+              stats.skipped++;
               continue;
             }
 
-            if (!processedReplays.has(replay.id)) {
-              const replayUrl = `https://replay.pokemonshowdown.com/${replay.id}.json`;
-              const replayResponse = await axios.get(replayUrl);
-              console.log(`Processing replay ${replay.id}`);
+            stats.total++;
+            let logUrl = null;
+
+            try {
+              logUrl = `https://replay.pokemonshowdown.com/${replayMeta.id}.log`;
+              const logResp = await axios.get(logUrl);
               
-              await saveReplayToBigQuery(replayResponse.data);
-              processedReplays.add(replay.id);
-              console.log(`Successfully saved replay ${replay.id}`);
-              
-              await delay(1000); // Pausa entre replays
+              const replayPayload = {
+                replay_id: replayMeta.id,
+                format,
+                meta: replayMeta,
+                log: logResp.data,
+                source_url: logUrl
+              };
+
+              const result = await saveReplayToBigQuery(replayPayload);
+
+              if (result && result.success) {
+                processedReplays.add(replayMeta.id);
+                stats.success++;
+              } else {
+                stats.failed++;
+                console.warn(`Failed to save ${replayMeta.id}: ${result ? result.error : 'unknown error'}`);
+              }
+
+            } catch (err) {
+              stats.failed++;
+              console.error(`Error processing replay ${replayMeta.id} (${logUrl || 'unknown'}): ${err.message}`);
             }
-          } catch (error) {
-            console.log("Error saving replay");
-            //console.error(`Error processing replay ${replay.id}:`, error.message);
           }
-        }
 
-        // Si hay más páginas, actualizar el timestamp con el último replay procesado
-        if (hasMoreReplays && replays.length >= 50) {
-          lastTimestamp = replays[49].uploadtime;
-          console.log(`Setting timestamp for next page: ${lastTimestamp}`);
-          await delay(2000); // Pausa entre páginas
-        }
+          const last = replays[replays.length - 1];
+          lastTimestamp = last && (last.time || last.id) ? (last.time || last.id) : null;
 
-      } catch (error) {
-        console.error(`Error processing batch:`, error.message);
-        if (error.response && error.response.status === 404) {
+          await delay(300);
+
+        } catch (error) {
+          console.error(`Error fetching replays for format ${format}:`, error.message);
           hasMoreReplays = false;
-        } else {
-          await delay(5000); // Esperar más tiempo si hay un error
         }
       }
+
+      console.log(`\n====== Format ${format} complete: ${pageCount} pages processed ======`);
     }
 
-    console.log(`Total replays processed: ${processedReplays.size}`);
+    console.log(`\n====== FINAL STATS ======`);
+    console.log(`Total processed: ${stats.total}`);
+    console.log(`Successful: ${stats.success}`);
+    console.log(`Failed: ${stats.failed}`);
+    console.log(`Skipped (duplicates): ${stats.skipped}`);
+    console.log(`==========================\n`);
+
     return Array.from(processedReplays);
   } catch (error) {
-    console.error("Error fetching replay links:", error);
+    console.error("Error in fetchReplayLinks:", error);
     throw error;
   }
 }
@@ -141,13 +174,13 @@ exports.fetchReplaysDaily = async (req, res) => {
   
   (async () => {
     try {
-      console.log('Getting latest format...');
-      const format = await getLatestFormat();
-      console.log('Latest format:', format);
+      console.log('Getting latest formats...');
+      const formats = await getLatestFormat();
+      console.log('Latest formats:', formats);
 
-      console.log('Starting to fetch replay links...');
+      console.log('Starting to fetch replay links for all formats...');
       try {
-        const processedReplays = await fetchReplayLinks(format);
+        const processedReplays = await fetchReplayLinks(formats);
         console.log(`Successfully processed ${processedReplays.length} replays`);
       } catch (fetchError) {
         console.error('Error in fetchReplayLinks:', fetchError);
