@@ -6,14 +6,16 @@ import {
   Typography,
   Box,
   Skeleton,
-  Tooltip
+  Tooltip,
+  Chip
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import { getTypeColor } from '../../utils/pokemonTypes';
 
 /**
- * PokemonCard - Reusable component to display a Pokémon card
+ * PokemonCard - Reusable component to display a Pokémon card with types
  * 
- * @param {Object} pokemon - Pokémon data
+ * @param {Object} pokemon - Pokémon data (must include types array)
  * @param {Function} onClick - Optional click handler
  */
 const PokemonCard = ({ pokemon, onClick }) => {
@@ -50,6 +52,7 @@ const PokemonCard = ({ pokemon, onClick }) => {
           border: `1px solid ${theme.palette.divider}`
         }}
       >
+        {/* Image Section */}
         <Box
           sx={{
             position: 'relative',
@@ -109,19 +112,31 @@ const PokemonCard = ({ pokemon, onClick }) => {
           )}
         </Box>
 
-        <CardContent sx={{ flexGrow: 1, textAlign: 'center', py: 1.5 }}>
+        {/* Content Section */}
+        <CardContent 
+          sx={{ 
+            flexGrow: 1, 
+            textAlign: 'center', 
+            py: 1.5,
+            px: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0.5
+          }}
+        >
+          {/* Pokémon ID */}
           <Typography
             variant="caption"
             sx={{
               color: theme.palette.primary.main,
               fontWeight: 'bold',
-              display: 'block',
-              mb: 0.5
+              display: 'block'
             }}
           >
             #{pokemon.id.toString().padStart(4, '0')}
           </Typography>
           
+          {/* Pokémon Name */}
           <Typography
             variant="body2"
             sx={{
@@ -129,11 +144,48 @@ const PokemonCard = ({ pokemon, onClick }) => {
               fontWeight: 500,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
+              mb: 0.5
             }}
           >
             {pokemon.displayName}
           </Typography>
+
+          {/* Type Badges */}
+          {pokemon.types && pokemon.types.length > 0 && (
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                gap: 0.5, 
+                justifyContent: 'center',
+                flexWrap: 'wrap'
+              }}
+            >
+              {pokemon.types
+                .sort((a, b) => a.slot - b.slot)
+                .map((type) => {
+                  const typeName = typeof type === 'string' ? type : type.name;
+                  return (
+                    <Chip
+                      key={typeName}
+                      label={typeName}
+                      size="small"
+                      sx={{
+                        backgroundColor: getTypeColor(typeName),
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '0.65rem',
+                        height: 20,
+                        '& .MuiChip-label': {
+                          px: 1,
+                          py: 0
+                        }
+                      }}
+                    />
+                  );
+                })}
+            </Box>
+          )}
         </CardContent>
       </Card>
     </Tooltip>
