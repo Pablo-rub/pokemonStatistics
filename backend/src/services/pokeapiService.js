@@ -58,13 +58,17 @@ router.get('/moves', async (req, res) => {
     }
 });
 
-// Endpoint para obtener la lista de Pokémon
+// Endpoint para obtener la lista de Pokémon (sin Mega Evoluciones)
 router.get('/pokemon', async (req, res) => {
+    console.log('Query params:', req.query);
+    
     try {
         const limit = parseInt(req.query.limit) || 1025; // Gen 1-9
         const offset = parseInt(req.query.offset) || 0;
         
-        // Obtener lista básica de Pokémon
+        console.log(`Fetching ${limit} Pokémon from PokeAPI (offset: ${offset})`);
+        
+        // Obtener lista básica de Pokémon (solo formas base)
         const response = await axios.get(`https://pokeapi.co/api/v2/pokemon?limit=${limit}&offset=${offset}`);
         
         // Formatear los datos para incluir información útil
@@ -88,13 +92,18 @@ router.get('/pokemon', async (req, res) => {
             };
         });
         
+        console.log(`✅ Successfully fetched ${pokemon.length} Pokémon`);
+        
         res.json({
             count: response.data.count,
             pokemon: pokemon
         });
     } catch (error) {
-        console.error("Error fetching Pokémon list:", error);
-        res.status(500).send("Error fetching Pokémon list");
+        console.error("❌ Error fetching Pokémon list:", error.message);
+        res.status(500).json({ 
+            error: "Error fetching Pokémon list",
+            message: error.message 
+        });
     }
 });
 

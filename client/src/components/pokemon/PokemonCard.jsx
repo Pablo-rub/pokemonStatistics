@@ -53,7 +53,7 @@ const PokemonCard = ({ pokemon, onClick }) => {
         <Box
           sx={{
             position: 'relative',
-            paddingTop: '100%', // 1:1 aspect ratio
+            paddingTop: '100%',
             backgroundColor: 'rgba(50, 50, 50, 0.3)',
             overflow: 'hidden'
           }}
