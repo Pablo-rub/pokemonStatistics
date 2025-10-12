@@ -14,9 +14,11 @@ import {
   CardContent,
   LinearProgress,
   Tabs,
-  Tab
+  Tab,
+  Tooltip
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import InfoIcon from '@mui/icons-material/Info';
 import { useTheme } from '@mui/material/styles';
 import axios from 'axios';
 
@@ -100,6 +102,33 @@ const PokemonDetailPage = () => {
     navigate('/pokemon-list');
   };
 
+  // New helper function to calculate optimized stats total
+  const calculateOptimizedTotal = (stats) => {
+    if (!stats || !Array.isArray(stats)) return { total: 0, optimized: 0, wasted: 0 };
+    
+    // Find attack and special attack stats
+    const attackStat = stats.find(s => s.name === 'attack');
+    const spAttackStat = stats.find(s => s.name === 'special-attack');
+    
+    if (!attackStat || !spAttackStat) return { total: 0, optimized: 0, wasted: 0 };
+    
+    // Calculate total base stats
+    const total = stats.reduce((sum, stat) => sum + stat.baseStat, 0);
+    
+    // Find the lower attack stat (wasted stat)
+    const wastedStat = Math.min(attackStat.baseStat, spAttackStat.baseStat);
+    
+    // Calculate optimized total
+    const optimized = total - wastedStat;
+    
+    return {
+      total,
+      optimized,
+      wasted: wastedStat,
+      wastedStatName: attackStat.baseStat < spAttackStat.baseStat ? 'Attack' : 'Sp. Attack'
+    };
+  };
+
   if (loading) {
     return (
       <Container maxWidth="xl">
@@ -131,6 +160,9 @@ const PokemonDetailPage = () => {
   }
 
   if (!pokemonData) return null;
+
+  // Calculate optimized stats
+  const optimizedStats = calculateOptimizedTotal(pokemonData.stats);
 
   return (
     <Container maxWidth="xl">
@@ -305,7 +337,7 @@ const PokemonDetailPage = () => {
 
                   {/* Total Stats */}
                   <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                       <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
                         Total
                       </Typography>
@@ -316,8 +348,143 @@ const PokemonDetailPage = () => {
                           fontWeight: 'bold'
                         }}
                       >
-                        {pokemonData.stats.reduce((sum, stat) => sum + stat.baseStat, 0)}
+                        {optimizedStats.total}
                       </Typography>
+                    </Box>
+
+                    {/* NEW: Optimized Stats Total */}
+                    <Box 
+                      sx={{ 
+                        mt: 3,
+                        p: 2,
+                        backgroundColor: 'rgba(36, 204, 159, 0.08)',
+                        borderRadius: 2,
+                        border: '1px solid rgba(36, 204, 159, 0.3)'
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                        <Box>
+                          <Typography 
+                            variant="h6" 
+                            sx={{ 
+                              color: theme.palette.primary.main, 
+                              fontWeight: 'bold',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1
+                            }}
+                          >
+                            Optimized Stats Total (OST)
+                            <Tooltip 
+                              title="Base Stats Total minus the lower offensive stat (Attack or Sp. Attack). Shows how efficiently stats are distributed without wasting points on unused attack type."
+                              arrow
+                              placement="top"
+                            >
+                              <IconButton size="small" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+                                <InfoIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Typography>
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              color: 'rgba(255, 255, 255, 0.6)',
+                              display: 'block',
+                              mt: 0.5
+                            }}
+                          >
+                            Effective stat distribution for competitive play
+                          </Typography>
+                        </Box>
+                        <Typography 
+                          variant="h4" 
+                          sx={{ 
+                            color: theme.palette.primary.main,
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {optimizedStats.optimized}
+                        </Typography>
+                      </Box>
+
+                      {/* Calculation breakdown */}
+                      <Box 
+                        sx={{ 
+                          mt: 2,
+                          pt: 2,
+                          borderTop: '1px solid rgba(36, 204, 159, 0.2)'
+                        }}
+                      >
+                        <Grid container spacing={2}>
+                          <Grid item xs={6}>
+                            <Box sx={{ textAlign: 'center' }}>
+                              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                                Base Stat Total (BST)
+                              </Typography>
+                              <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
+                                {optimizedStats.total}
+                              </Typography>
+                            </Box>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Box sx={{ textAlign: 'center' }}>
+                              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                                Wasted Stats
+                              </Typography>
+                              <Typography 
+                                variant="h6" 
+                                sx={{ 
+                                  color: '#f44336',
+                                  fontWeight: 'bold'
+                                }}
+                              >
+                                -{optimizedStats.wasted}
+                              </Typography>
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  color: 'rgba(255, 255, 255, 0.5)',
+                                  display: 'block'
+                                }}
+                              >
+                                ({optimizedStats.wastedStatName})
+                              </Typography>
+                            </Box>
+                          </Grid>
+                        </Grid>
+
+                        {/* Visual representation */}
+                        <Box sx={{ mt: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <Box
+                              sx={{
+                                flex: optimizedStats.optimized,
+                                height: 6,
+                                backgroundColor: theme.palette.primary.main,
+                                borderRadius: '4px 0 0 4px',
+                                transition: 'all 0.3s ease'
+                              }}
+                            />
+                            <Box
+                              sx={{
+                                flex: optimizedStats.wasted,
+                                height: 6,
+                                backgroundColor: '#f44336',
+                                borderRadius: '0 4px 4px 0',
+                                transition: 'all 0.3s ease'
+                              }}
+                            />
+                          </Box>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography variant="caption" sx={{ color: theme.palette.primary.main }}>
+                              Optimized: {((optimizedStats.optimized / optimizedStats.total) * 100).toFixed(1)}%
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: '#f44336' }}>
+                              Wasted: {((optimizedStats.wasted / optimizedStats.total) * 100).toFixed(1)}%
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Box>
                     </Box>
                   </Box>
                 </Box>
