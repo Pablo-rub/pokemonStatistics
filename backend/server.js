@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require("express");
 const cors = require("cors");
 const obtainGameDataRouter = require('./obtainGameData');
@@ -12,8 +14,6 @@ const smogonService = require('./src/services/smogonService');
 const pokeapiService = require('./src/services/pokeapiService');
 const usageService = require('./src/services/usageService');
 const analysisService = require('./src/services/analysisService');
-
-require('dotenv').config();
 
 const path = require('path');
 
