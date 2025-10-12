@@ -58,8 +58,9 @@ router.get('/moves', async (req, res) => {
     }
 });
 
-// Endpoint para obtener la lista de Pokémon (sin Mega Evoluciones)
+// Endpoint para obtener la lista de Pokémon (sin Mega Evoluciones) CON TIPOS
 router.get('/pokemon', async (req, res) => {
+    console.log('📡 GET /api/pokemon - Request received');
     console.log('Query params:', req.query);
     
     try {
@@ -68,41 +69,94 @@ router.get('/pokemon', async (req, res) => {
         
         console.log(`Fetching ${limit} Pokémon from PokeAPI (offset: ${offset})`);
         
-        // Obtener lista básica de Pokémon (solo formas base)
+        // Obtener lista básica de Pokémon
         const response = await axios.get(`https://pokeapi.co/api/v2/pokemon?limit=${limit}&offset=${offset}`);
         
-        // Formatear los datos para incluir información útil
-        const pokemon = response.data.results.map((mon, index) => {
-            // Extraer el ID del URL
-            const id = mon.url.split('/').filter(Boolean).pop();
+        // Formatear datos básicos
+        const basicPokemonList = response.data.results.map((pokemon, index) => {
+            const id = pokemon.url.split('/').filter(Boolean).pop();
             
             return {
                 id: parseInt(id),
-                name: mon.name
+                name: pokemon.name
                     .split('-')
                     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                     .join('-'),
-                displayName: mon.name
+                displayName: pokemon.name
                     .split('-')
                     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                     .join(' '),
                 sprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`,
                 spriteShiny: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${id}.png`,
-                officialArtwork: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`
+                officialArtwork: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`,
+                url: pokemon.url // Guardamos la URL para fetch posterior de tipos
             };
         });
+
+        console.log(`✅ Basic data processed for ${basicPokemonList.length} Pokémon`);
+
+        // NUEVO: Obtener tipos en paralelo con límite de concurrencia
+        console.log('🔄 Fetching types for all Pokémon...');
         
-        console.log(`✅ Successfully fetched ${pokemon.length} Pokémon`);
+        const BATCH_SIZE = 50; // Procesar en lotes de 50
+        const pokemonWithTypes = [];
+        
+        for (let i = 0; i < basicPokemonList.length; i += BATCH_SIZE) {
+            const batch = basicPokemonList.slice(i, i + BATCH_SIZE);
+            
+            const batchResults = await Promise.all(
+                batch.map(async (pokemon) => {
+                    try {
+                        // Fetch detallado para obtener tipos
+                        const detailResponse = await axios.get(pokemon.url);
+                        
+                        return {
+                            ...pokemon,
+                            types: detailResponse.data.types.map(typeObj => ({
+                                slot: typeObj.slot,
+                                name: typeObj.type.name.charAt(0).toUpperCase() + typeObj.type.name.slice(1)
+                            }))
+                        };
+                    } catch (err) {
+                        console.error(`❌ Error fetching types for ${pokemon.name}:`, err.message);
+                        // Retornar sin tipos si falla
+                        return {
+                            ...pokemon,
+                            types: []
+                        };
+                    }
+                })
+            );
+            
+            pokemonWithTypes.push(...batchResults);
+            
+            // Log de progreso
+            const progress = Math.min(((i + BATCH_SIZE) / basicPokemonList.length) * 100, 100);
+            console.log(`   Progress: ${progress.toFixed(1)}% (${pokemonWithTypes.length}/${basicPokemonList.length})`);
+            
+            // Pequeña pausa entre lotes para respetar rate limits
+            if (i + BATCH_SIZE < basicPokemonList.length) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+        
+        console.log(`✅ Types fetched for all ${pokemonWithTypes.length} Pokémon`);
+        
+        // Remover la propiedad 'url' que ya no necesitamos
+        const finalPokemonList = pokemonWithTypes.map(({ url, ...pokemon }) => pokemon);
         
         res.json({
             count: response.data.count,
-            pokemon: pokemon
+            pokemon: finalPokemonList
         });
+        
     } catch (error) {
         console.error("❌ Error fetching Pokémon list:", error.message);
+        console.error("Stack trace:", error.stack);
         res.status(500).json({ 
             error: "Error fetching Pokémon list",
-            message: error.message 
+            message: error.message,
+            details: error.response?.data || null
         });
     }
 });
