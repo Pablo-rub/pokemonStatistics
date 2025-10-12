@@ -13,6 +13,7 @@ import AnalyzeBattlePage from './Pages/AnalyzeBattlePage';
 import BattleAnalyticsPage from './Pages/BattleAnalyticsPage';
 import ContactPage from './Pages/ContactPage';
 import PokemonListPage from './Pages/PokemonListPage';
+import PokemonDetailPage from './Pages/PokemonDetailPage';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
         <Route path="battle-analytics" element={<BattleAnalyticsPage />} />
         <Route path="contact" element={<ContactPage />} />
         <Route path="pokemon-list" element={<PokemonListPage />} />
+        <Route path="pokemon-list/:id" element={<PokemonDetailPage />} />
         <Route path="*" element={<div>404 Not Found</div>} />
       </Route>
     </Routes>

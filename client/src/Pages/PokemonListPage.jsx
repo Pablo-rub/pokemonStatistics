@@ -15,12 +15,14 @@ import SearchIcon from '@mui/icons-material/Search';
 import { useTheme } from '@mui/material/styles';
 import PokemonCard from '../components/pokemon/PokemonCard';
 import usePokemonList from '../hooks/usePokemonList';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * PokemonListPage - Page for browsing and searching Pokémon
  */
 const PokemonListPage = () => {
   const theme = useTheme();
+  const navigate = useNavigate();
   const { pokemonList, loading, error, totalCount } = usePokemonList();
   
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,8 +53,8 @@ const PokemonListPage = () => {
   };
 
   const handlePokemonClick = (pokemon) => {
-    console.log('Clicked Pokémon:', pokemon);
-    // TODO: Navigate to detail page or open modal
+    // Navigate to detail page
+    navigate(`/pokemon-list/${pokemon.id}`);
   };
 
   if (loading) {
