@@ -21,6 +21,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import InfoIcon from '@mui/icons-material/Info';
 import { useTheme } from '@mui/material/styles';
 import axios from 'axios';
+import AlternateFormCard from '../components/pokemon/AlternateFormCard';
 
 /**
  * PokemonDetailPage - Detailed view of a single Pokémon
@@ -35,10 +36,18 @@ const PokemonDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentTab, setCurrentTab] = useState(0);
+  const [alternateForms, setAlternateForms] = useState([]);
+  const [loadingForms, setLoadingForms] = useState(false);
 
   useEffect(() => {
     fetchPokemonDetails();
   }, [id]);
+
+  useEffect(() => {
+    if (pokemonData && pokemonData.id <= 1025) {
+      fetchAlternateForms(pokemonData.id);
+    }
+  }, [pokemonData]);
 
   const fetchPokemonDetails = async () => {
     setLoading(true);
@@ -52,6 +61,22 @@ const PokemonDetailPage = () => {
       setError(err.response?.data?.message || 'Error loading Pokémon details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAlternateForms = async (pokemonId) => {
+    setLoadingForms(true);
+    try {
+      const response = await axios.get(`/api/pokemon-species/${pokemonId}`);
+      
+      // Filter out default form (already shown in main view)
+      const nonDefaultForms = response.data.varieties.filter(v => !v.isDefault);
+      setAlternateForms(nonDefaultForms);
+    } catch (err) {
+      console.error('Error fetching alternate forms:', err);
+      setAlternateForms([]);
+    } finally {
+      setLoadingForms(false);
     }
   };
 
@@ -546,6 +571,88 @@ const PokemonDetailPage = () => {
             </Paper>
           </Grid>
         </Grid>
+
+        {/* NEW SECTION: Alternate Forms */}
+        {alternateForms.length > 0 && (
+          <Box sx={{ mt: 4 }}>
+            <Paper
+              elevation={3}
+              sx={{
+                p: 3,
+                backgroundColor: 'rgba(30, 30, 30, 0.9)',
+                borderRadius: 2
+              }}
+            >
+              <Typography 
+                variant="h5" 
+                sx={{ 
+                  color: 'white', 
+                  fontWeight: 'bold',
+                  mb: 3,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
+              >
+                <Box
+                  component="span"
+                  sx={{
+                    width: 4,
+                    height: 24,
+                    backgroundColor: theme.palette.primary.main,
+                    borderRadius: 1
+                  }}
+                />
+                Alternate Forms & Regional Variants
+                <Chip 
+                  label={alternateForms.length} 
+                  size="small"
+                  sx={{
+                    backgroundColor: theme.palette.primary.main,
+                    color: 'white',
+                    fontWeight: 'bold'
+                  }}
+                />
+              </Typography>
+
+              {loadingForms ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <Grid container spacing={3}>
+                  {alternateForms.map((form) => (
+                    <Grid item xs={12} key={form.id}>
+                      <AlternateFormCard
+                        form={form}
+                        getTypeColor={getTypeColor}
+                        getStatColor={getStatColor}
+                        getStatBarValue={getStatBarValue}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
+
+              {/* Info box about forms */}
+              <Box
+                sx={{
+                  mt: 3,
+                  p: 2,
+                  backgroundColor: 'rgba(36, 204, 159, 0.08)',
+                  borderRadius: 2,
+                  border: '1px solid rgba(36, 204, 159, 0.3)'
+                }}
+              >
+                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                  <strong>Note:</strong> Alternate forms include Mega Evolutions, Regional Variants, 
+                  Gigantamax forms, and other special forms. Stats and abilities may vary significantly 
+                  from the base form.
+                </Typography>
+              </Box>
+            </Paper>
+          </Box>
+        )}
       </Box>
     </Container>
   );
