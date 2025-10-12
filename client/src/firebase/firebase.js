@@ -14,26 +14,43 @@ const firebaseConfig = {
   measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || ''
 };
 
-// DEBUG (temporal): mostrar config en producción para validar
-console.log("FIREBASE CONFIG:", JSON.stringify(firebaseConfig));
+// Do NOT initialize Firebase if required values are missing.
+// This avoids the "Missing App configuration value: projectId" runtime error.
+const required = ['projectId', 'apiKey'];
+const missing = required.filter(k => !firebaseConfig[k]);
 
-/* Initialize Firebase */
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const auth = getAuth(app);
-const db = getFirestore(app);
+let app = null;
+let analytics = null;
+let auth = null;
+let db = null;
+let isFirebaseEnabled = false;
 
-// URL de FinishSignIn configurable
-const finishSignInURL =
-  process.env.REACT_APP_FINISH_SIGNIN_URL ||
-  "http://localhost:3000/finishSignIn";
+if (missing.length) {
+  console.error(
+    `Firebase NOT initialized. Missing env vars: ${missing
+      .map(k => 'REACT_APP_FIREBASE_' + k.toUpperCase())
+      .join(', ')}. Add them to client/.env (ignored by git) or inject at build time.`
+  );
+} else {
+  // Initialize normally
+  const appInstance = initializeApp(firebaseConfig);
 
-// Configure auth settings for email link
-auth.settings = {
-  url: finishSignInURL,
-  handleCodeInApp: true,
-};
+  let analyticsInstance = null;
+  try {
+    if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
+      analyticsInstance = getAnalytics(appInstance);
+    }
+  } catch (e) {
+    // analytics may fail in some environments; tolerate it
+    console.warn('Firebase analytics not initialized:', e.message);
+  }
 
-// Export the necessary Firebase instances
-export { app, analytics, auth, db };
+  app = appInstance;
+  analytics = analyticsInstance;
+  auth = getAuth(appInstance);
+  db = getFirestore(appInstance);
+  isFirebaseEnabled = true;
+}
+
+export { app, analytics, auth, db, isFirebaseEnabled };
 export default firebaseConfig;
