@@ -1,16 +1,86 @@
-import React from 'react';
-import { Box, Typography, Container, Paper } from '@mui/material';
+import React, { useState } from 'react';
+import {
+  Box,
+  Typography,
+  Container,
+  Paper,
+  Grid,
+  TextField,
+  InputAdornment,
+  CircularProgress,
+  Alert,
+  Pagination
+} from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import { useTheme } from '@mui/material/styles';
+import PokemonCard from '../components/pokemon/PokemonCard';
+import usePokemonList from '../hooks/usePokemonList';
 
 /**
  * PokemonListPage - Page for browsing and searching Pokémon
- * 
- * This page will eventually display a comprehensive list of Pokémon
- * with filtering, searching, and detailed information capabilities.
- * Currently serves as a placeholder for future development.
  */
 const PokemonListPage = () => {
   const theme = useTheme();
+  const { pokemonList, loading, error, totalCount } = usePokemonList();
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 24;
+
+  // Filter Pokémon based on search term
+  const filteredPokemon = pokemonList.filter(pokemon =>
+    pokemon.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    pokemon.id.toString().includes(searchTerm)
+  );
+
+  // Pagination
+  const totalPages = Math.ceil(filteredPokemon.length / itemsPerPage);
+  const paginatedPokemon = filteredPokemon.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  );
+
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value);
+    setPage(1); // Reset to first page on search
+  };
+
+  const handlePageChange = (event, value) => {
+    setPage(value);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePokemonClick = (pokemon) => {
+    console.log('Clicked Pokémon:', pokemon);
+    // TODO: Navigate to detail page or open modal
+  };
+
+  if (loading) {
+    return (
+      <Container maxWidth="xl">
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '60vh' 
+        }}>
+          <CircularProgress size={60} />
+        </Box>
+      </Container>
+    );
+  }
+
+  if (error) {
+    return (
+      <Container maxWidth="xl">
+        <Box sx={{ py: 4 }}>
+          <Alert severity="error">
+            {error}
+          </Alert>
+        </Box>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="xl">
@@ -21,78 +91,119 @@ const PokemonListPage = () => {
             p: 4,
             backgroundColor: 'rgba(30, 30, 30, 0.9)',
             borderRadius: 2,
-            minHeight: '70vh',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center'
+            minHeight: '70vh'
           }}
         >
-          <Typography
-            variant="h3"
-            component="h1"
-            gutterBottom
-            sx={{
-              color: theme.palette.primary.main,
-              fontWeight: 'bold',
-              textAlign: 'center',
-              mb: 3
-            }}
-          >
-            Pokémon List
-          </Typography>
-          
-          <Typography
-            variant="h6"
-            sx={{
-              color: 'white',
-              textAlign: 'center',
-              mt: 2,
-              opacity: 0.8,
-              mb: 4
-            }}
-          >
-            Browse and explore detailed information about all Pokémon
-          </Typography>
-
-          <Box
-            sx={{
-              mt: 4,
-              p: 3,
-              backgroundColor: 'rgba(36, 204, 159, 0.1)',
-              borderRadius: 2,
-              border: '1px solid rgba(36, 204, 159, 0.3)',
-              maxWidth: '600px'
-            }}
-          >
+          {/* Header */}
+          <Box sx={{ mb: 4 }}>
             <Typography
-              variant="body1"
-              sx={{ 
-                color: 'white', 
+              variant="h3"
+              component="h1"
+              gutterBottom
+              sx={{
+                color: theme.palette.primary.main,
+                fontWeight: 'bold',
                 textAlign: 'center',
-                lineHeight: 1.8
+                mb: 2
               }}
             >
-              This feature is currently under development.
-              <br />
-              Soon you'll be able to:
+              Pokémon List
             </Typography>
             
-            <Box component="ul" sx={{ color: 'white', mt: 2, pl: 3 }}>
-              <Typography component="li" variant="body2" sx={{ mb: 1 }}>
-                Search and filter Pokémon by name, type, and generation
-              </Typography>
-              <Typography component="li" variant="body2" sx={{ mb: 1 }}>
-                View detailed stats, abilities, and movesets
-              </Typography>
-              <Typography component="li" variant="body2" sx={{ mb: 1 }}>
-                Compare Pokémon side-by-side
-              </Typography>
-              <Typography component="li" variant="body2">
-                Access competitive usage data and tier information
+            <Typography
+              variant="body1"
+              sx={{
+                color: 'white',
+                textAlign: 'center',
+                opacity: 0.8,
+                mb: 3
+              }}
+            >
+              Browse all {totalCount} Pokémon from Generation 1 to 9
+            </Typography>
+
+            {/* Search Bar */}
+            <Box sx={{ maxWidth: 600, mx: 'auto' }}>
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Search by name or number..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ color: 'white' }} />
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    color: 'white',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'rgba(255, 255, 255, 0.3)'
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: theme.palette.primary.main
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: theme.palette.primary.main
+                    }
+                  }
+                }}
+              />
+            </Box>
+
+            {/* Results count */}
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'rgba(255, 255, 255, 0.6)',
+                textAlign: 'center',
+                mt: 2
+              }}
+            >
+              Showing {paginatedPokemon.length} of {filteredPokemon.length} Pokémon
+            </Typography>
+          </Box>
+
+          {/* Pokémon Grid */}
+          {paginatedPokemon.length > 0 ? (
+            <>
+              <Grid container spacing={3}>
+                {paginatedPokemon.map((pokemon) => (
+                  <Grid item xs={6} sm={4} md={3} lg={2} key={pokemon.id}>
+                    <PokemonCard
+                      pokemon={pokemon}
+                      onClick={() => handlePokemonClick(pokemon)}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                  <Pagination
+                    count={totalPages}
+                    page={page}
+                    onChange={handlePageChange}
+                    color="primary"
+                    size="large"
+                    sx={{
+                      '& .MuiPaginationItem-root': {
+                        color: 'white'
+                      }
+                    }}
+                  />
+                </Box>
+              )}
+            </>
+          ) : (
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <Typography variant="h6" sx={{ color: 'white', opacity: 0.6 }}>
+                No Pokémon found matching "{searchTerm}"
               </Typography>
             </Box>
-          </Box>
+          )}
         </Paper>
       </Box>
     </Container>
