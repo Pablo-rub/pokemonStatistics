@@ -28,6 +28,7 @@ import ForumIcon from '@mui/icons-material/Forum';
 import HelpIcon from '@mui/icons-material/Help';
 import LoginIcon from '@mui/icons-material/Login';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import CatchingPokemonIcon from '@mui/icons-material/CatchingPokemon';
 import LoginDialog from './LoginDialog';
 
 const Sidebar = () => {
@@ -76,6 +77,7 @@ const Sidebar = () => {
     { text: 'Battle Analytics', path: '/battle-analytics', icon: <LeaderboardIcon /> },
     { text: 'Rankings', path: '/rankings', icon: <InsightsIcon /> },
     { text: 'Turn Assistant', path: '/turn-assistant', icon: <AssistantIcon /> },
+    { text: 'Pokemon List', path: '/pokemon-list', icon: <CatchingPokemonIcon /> }, // NUEVO
     { text: 'Forum', path: '/forum', icon: <ForumIcon /> },
     { text: 'Contact / Help', path: '/contact', icon: <HelpIcon /> },
   ];
