@@ -15,18 +15,18 @@ import {
   LinearProgress,
   Tabs,
   Tab,
-  Tooltip
+  Tooltip,
+  Button,
+  ButtonGroup,
+  Fade
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import InfoIcon from '@mui/icons-material/Info';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import FlashOnIcon from '@mui/icons-material/FlashOn';
 import { useTheme } from '@mui/material/styles';
 import axios from 'axios';
-import AlternateFormCard from '../components/pokemon/AlternateFormCard';
 
-/**
- * PokemonDetailPage - Detailed view of a single Pokémon
- * Shows stats, types, abilities, moves, and competitive data
- */
 const PokemonDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -38,6 +38,8 @@ const PokemonDetailPage = () => {
   const [currentTab, setCurrentTab] = useState(0);
   const [alternateForms, setAlternateForms] = useState([]);
   const [loadingForms, setLoadingForms] = useState(false);
+  const [selectedForm, setSelectedForm] = useState(null);
+  const [displayedPokemon, setDisplayedPokemon] = useState(null);
 
   useEffect(() => {
     fetchPokemonDetails();
@@ -46,8 +48,17 @@ const PokemonDetailPage = () => {
   useEffect(() => {
     if (pokemonData && pokemonData.id <= 1025) {
       fetchAlternateForms(pokemonData.id);
+      setDisplayedPokemon(pokemonData);
     }
   }, [pokemonData]);
+
+  useEffect(() => {
+    if (selectedForm === null) {
+      setDisplayedPokemon(pokemonData);
+    } else {
+      setDisplayedPokemon(selectedForm);
+    }
+  }, [selectedForm, pokemonData]);
 
   const fetchPokemonDetails = async () => {
     setLoading(true);
@@ -68,8 +79,6 @@ const PokemonDetailPage = () => {
     setLoadingForms(true);
     try {
       const response = await axios.get(`/api/pokemon-species/${pokemonId}`);
-      
-      // Filter out default form (already shown in main view)
       const nonDefaultForms = response.data.varieties.filter(v => !v.isDefault);
       setAlternateForms(nonDefaultForms);
     } catch (err) {
@@ -82,6 +91,35 @@ const PokemonDetailPage = () => {
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
+  };
+
+  const handleFormChange = (form) => {
+    setSelectedForm(form);
+    setCurrentTab(0);
+  };
+
+  const getFormBadgeColor = (formType) => {
+    const colors = {
+      mega: '#9333EA',
+      primal: '#DC2626',
+      gigantamax: '#EF4444',
+      alola: '#3B82F6',
+      galar: '#6366F1',
+      hisui: '#7C3AED',
+      paldea: '#EC4899',
+      alternate: '#9CA3AF'
+    };
+    return colors[formType] || colors.alternate;
+  };
+
+  const getFormIcon = (formType) => {
+    if (formType === 'mega' || formType === 'primal') {
+      return <AutoAwesomeIcon sx={{ fontSize: 16 }} />;
+    }
+    if (formType === 'gigantamax') {
+      return <FlashOnIcon sx={{ fontSize: 16 }} />;
+    }
+    return null;
   };
 
   const getTypeColor = (type) => {
@@ -117,33 +155,23 @@ const PokemonDetailPage = () => {
   };
 
   const getStatBarValue = (value) => {
-    // Max stat is typically 255, but we'll normalize to 200 for better visualization
     return Math.min((value / 200) * 100, 100);
   };
 
-  // Enhanced back navigation that preserves list state
   const handleBackToList = () => {
-    // Navigate back to the list - usePaginationState hook will restore the previous state
     navigate('/pokemon-list');
   };
 
-  // New helper function to calculate optimized stats total
   const calculateOptimizedTotal = (stats) => {
     if (!stats || !Array.isArray(stats)) return { total: 0, optimized: 0, wasted: 0 };
     
-    // Find attack and special attack stats
     const attackStat = stats.find(s => s.name === 'attack');
     const spAttackStat = stats.find(s => s.name === 'special-attack');
     
     if (!attackStat || !spAttackStat) return { total: 0, optimized: 0, wasted: 0 };
     
-    // Calculate total base stats
     const total = stats.reduce((sum, stat) => sum + stat.baseStat, 0);
-    
-    // Find the lower attack stat (wasted stat)
     const wastedStat = Math.min(attackStat.baseStat, spAttackStat.baseStat);
-    
-    // Calculate optimized total
     const optimized = total - wastedStat;
     
     return {
@@ -184,10 +212,9 @@ const PokemonDetailPage = () => {
     );
   }
 
-  if (!pokemonData) return null;
+  if (!pokemonData || !displayedPokemon) return null;
 
-  // Calculate optimized stats
-  const optimizedStats = calculateOptimizedTotal(pokemonData.stats);
+  const optimizedStats = calculateOptimizedTotal(displayedPokemon.stats);
 
   return (
     <Container maxWidth="xl">
@@ -204,84 +231,186 @@ const PokemonDetailPage = () => {
           >
             <ArrowBackIcon />
           </IconButton>
+          
           <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
-            {pokemonData.displayName}
+            {displayedPokemon.displayName}
           </Typography>
+          
           <Typography variant="h5" sx={{ color: theme.palette.primary.main, ml: 1 }}>
-            #{pokemonData.id.toString().padStart(4, '0')}
+            #{displayedPokemon.id.toString().padStart(4, '0')}
           </Typography>
+
+          {selectedForm && (
+            <Chip
+              icon={getFormIcon(selectedForm.formType)}
+              label={selectedForm.formType.toUpperCase()}
+              sx={{
+                backgroundColor: getFormBadgeColor(selectedForm.formType),
+                color: 'white',
+                fontWeight: 'bold',
+                textTransform: 'uppercase'
+              }}
+            />
+          )}
         </Box>
 
         <Grid container spacing={3}>
           {/* Left Column - Image and Basic Info */}
           <Grid item xs={12} md={4}>
-            <Paper
-              elevation={3}
-              sx={{
-                p: 3,
-                backgroundColor: 'rgba(30, 30, 30, 0.9)',
-                borderRadius: 2,
-                textAlign: 'center'
-              }}
-            >
-              <Box
-                component="img"
-                src={pokemonData.sprites.officialArtwork}
-                alt={pokemonData.displayName}
+            <Fade in={true} timeout={500}>
+              <Paper
+                elevation={3}
                 sx={{
-                  width: '100%',
-                  maxWidth: 300,
-                  height: 'auto',
-                  margin: '0 auto',
-                  filter: 'drop-shadow(0 0 20px rgba(36, 204, 159, 0.3))'
+                  p: 3,
+                  backgroundColor: 'rgba(30, 30, 30, 0.9)',
+                  borderRadius: 2,
+                  textAlign: 'center'
                 }}
-                onError={(e) => {
-                  e.target.src = pokemonData.sprites.default;
-                }}
-              />
+              >
+                <Box
+                  component="img"
+                  src={displayedPokemon.sprites.officialArtwork}
+                  alt={displayedPokemon.displayName}
+                  sx={{
+                    width: '100%',
+                    maxWidth: 300,
+                    height: 'auto',
+                    margin: '0 auto',
+                    filter: selectedForm?.formType === 'mega' 
+                      ? 'drop-shadow(0 0 30px rgba(147, 51, 234, 0.6))' 
+                      : 'drop-shadow(0 0 20px rgba(36, 204, 159, 0.3))',
+                    transition: 'all 0.5s ease'
+                  }}
+                  onError={(e) => {
+                    e.target.src = displayedPokemon.sprites.default;
+                  }}
+                />
 
-              {/* Types */}
-              <Box sx={{ mt: 3, mb: 2 }}>
-                <Typography variant="h6" sx={{ color: 'white', mb: 1 }}>
-                  Type
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                  {pokemonData.types.map((type) => (
-                    <Chip
-                      key={type.slot}
-                      label={type.name}
-                      sx={{
-                        backgroundColor: getTypeColor(type.name),
-                        color: 'white',
-                        fontWeight: 'bold',
-                        fontSize: '1rem',
-                        px: 2
+                {/* Alternate Forms Buttons */}
+                {alternateForms.length > 0 && (
+                  <Box sx={{ mt: 3, mb: 2 }}>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        display: 'block',
+                        mb: 1.5,
+                        textTransform: 'uppercase',
+                        letterSpacing: 1
                       }}
-                    />
-                  ))}
-                </Box>
-              </Box>
+                    >
+                      Alternate Forms
+                    </Typography>
+                    
+                    <ButtonGroup 
+                      orientation="vertical" 
+                      fullWidth
+                      sx={{ gap: 1 }}
+                    >
+                      <Button
+                        variant={selectedForm === null ? 'contained' : 'outlined'}
+                        onClick={() => handleFormChange(null)}
+                        sx={{
+                          color: selectedForm === null ? 'white' : theme.palette.primary.main,
+                          borderColor: theme.palette.primary.main,
+                          backgroundColor: selectedForm === null 
+                            ? theme.palette.primary.main 
+                            : 'transparent',
+                          '&:hover': {
+                            backgroundColor: selectedForm === null
+                              ? theme.palette.primary.dark
+                              : 'rgba(36, 204, 159, 0.08)'
+                          },
+                          textTransform: 'none',
+                          fontWeight: 'bold',
+                          justifyContent: 'flex-start',
+                          px: 2
+                        }}
+                      >
+                        Base Form
+                      </Button>
 
-              {/* Height and Weight */}
-              <Grid container spacing={2} sx={{ mt: 2 }}>
-                <Grid item xs={6}>
-                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                    Height
+                      {alternateForms.map((form) => (
+                        <Button
+                          key={form.id}
+                          variant={selectedForm?.id === form.id ? 'contained' : 'outlined'}
+                          onClick={() => handleFormChange(form)}
+                          startIcon={getFormIcon(form.formType)}
+                          sx={{
+                            color: selectedForm?.id === form.id 
+                              ? 'white' 
+                              : getFormBadgeColor(form.formType),
+                            borderColor: getFormBadgeColor(form.formType),
+                            backgroundColor: selectedForm?.id === form.id 
+                              ? getFormBadgeColor(form.formType)
+                              : 'transparent',
+                            '&:hover': {
+                              backgroundColor: selectedForm?.id === form.id
+                                ? getFormBadgeColor(form.formType)
+                                : `${getFormBadgeColor(form.formType)}20`
+                            },
+                            textTransform: 'none',
+                            fontWeight: selectedForm?.id === form.id ? 'bold' : 'normal',
+                            justifyContent: 'flex-start',
+                            px: 2
+                          }}
+                        >
+                          {form.displayName.replace(pokemonData.displayName, '').trim() || form.displayName}
+                        </Button>
+                      ))}
+                    </ButtonGroup>
+
+                    {loadingForms && (
+                      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                        <CircularProgress size={20} />
+                      </Box>
+                    )}
+                  </Box>
+                )}
+
+                {/* Types */}
+                <Box sx={{ mt: 3, mb: 2 }}>
+                  <Typography variant="h6" sx={{ color: 'white', mb: 1 }}>
+                    Type
                   </Typography>
-                  <Typography variant="h6" sx={{ color: 'white' }}>
-                    {(pokemonData.height / 10).toFixed(1)} m
-                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                    {displayedPokemon.types.map((type) => (
+                      <Chip
+                        key={type.slot}
+                        label={type.name}
+                        sx={{
+                          backgroundColor: getTypeColor(type.name),
+                          color: 'white',
+                          fontWeight: 'bold',
+                          fontSize: '1rem',
+                          px: 2
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+
+                {/* Height and Weight */}
+                <Grid container spacing={2} sx={{ mt: 2 }}>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                      Height
+                    </Typography>
+                    <Typography variant="h6" sx={{ color: 'white' }}>
+                      {(displayedPokemon.height / 10).toFixed(1)} m
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                      Weight
+                    </Typography>
+                    <Typography variant="h6" sx={{ color: 'white' }}>
+                      {(displayedPokemon.weight / 10).toFixed(1)} kg
+                    </Typography>
+                  </Grid>
                 </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                    Weight
-                  </Typography>
-                  <Typography variant="h6" sx={{ color: 'white' }}>
-                    {(pokemonData.weight / 10).toFixed(1)} kg
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Paper>
+              </Paper>
+            </Fade>
           </Grid>
 
           {/* Right Column - Stats and Abilities */}
@@ -295,7 +424,6 @@ const PokemonDetailPage = () => {
                 minHeight: 500
               }}
             >
-              {/* Tabs */}
               <Tabs
                 value={currentTab}
                 onChange={handleTabChange}
@@ -315,14 +443,13 @@ const PokemonDetailPage = () => {
                 <Tab label="Abilities" />
               </Tabs>
 
-              {/* Tab Content: Stats */}
               {currentTab === 0 && (
                 <Box>
                   <Typography variant="h5" sx={{ color: 'white', mb: 3, fontWeight: 'bold' }}>
                     Base Stats
                   </Typography>
                   
-                  {pokemonData.stats.map((stat) => {
+                  {displayedPokemon.stats.map((stat) => {
                     const statName = stat.name
                       .split('-')
                       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -360,7 +487,6 @@ const PokemonDetailPage = () => {
                     );
                   })}
 
-                  {/* Total Stats */}
                   <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                       <Typography variant="h6" sx={{ color: 'white', fontWeight: 'bold' }}>
@@ -377,7 +503,6 @@ const PokemonDetailPage = () => {
                       </Typography>
                     </Box>
 
-                    {/* NEW: Optimized Stats Total */}
                     <Box 
                       sx={{ 
                         mt: 3,
@@ -432,7 +557,6 @@ const PokemonDetailPage = () => {
                         </Typography>
                       </Box>
 
-                      {/* Calculation breakdown */}
                       <Box 
                         sx={{ 
                           mt: 2,
@@ -478,7 +602,6 @@ const PokemonDetailPage = () => {
                           </Grid>
                         </Grid>
 
-                        {/* Visual representation */}
                         <Box sx={{ mt: 2 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                             <Box
@@ -515,7 +638,6 @@ const PokemonDetailPage = () => {
                 </Box>
               )}
 
-              {/* Tab Content: Abilities */}
               {currentTab === 1 && (
                 <Box>
                   <Typography variant="h5" sx={{ color: 'white', mb: 3, fontWeight: 'bold' }}>
@@ -523,7 +645,7 @@ const PokemonDetailPage = () => {
                   </Typography>
                   
                   <Grid container spacing={2}>
-                    {pokemonData.abilities.map((ability) => (
+                    {displayedPokemon.abilities.map((ability) => (
                       <Grid item xs={12} key={ability.slot}>
                         <Card
                           sx={{
@@ -572,87 +694,7 @@ const PokemonDetailPage = () => {
           </Grid>
         </Grid>
 
-        {/* NEW SECTION: Alternate Forms */}
-        {alternateForms.length > 0 && (
-          <Box sx={{ mt: 4 }}>
-            <Paper
-              elevation={3}
-              sx={{
-                p: 3,
-                backgroundColor: 'rgba(30, 30, 30, 0.9)',
-                borderRadius: 2
-              }}
-            >
-              <Typography 
-                variant="h5" 
-                sx={{ 
-                  color: 'white', 
-                  fontWeight: 'bold',
-                  mb: 3,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1
-                }}
-              >
-                <Box
-                  component="span"
-                  sx={{
-                    width: 4,
-                    height: 24,
-                    backgroundColor: theme.palette.primary.main,
-                    borderRadius: 1
-                  }}
-                />
-                Alternate Forms & Regional Variants
-                <Chip 
-                  label={alternateForms.length} 
-                  size="small"
-                  sx={{
-                    backgroundColor: theme.palette.primary.main,
-                    color: 'white',
-                    fontWeight: 'bold'
-                  }}
-                />
-              </Typography>
-
-              {loadingForms ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                  <CircularProgress />
-                </Box>
-              ) : (
-                <Grid container spacing={3}>
-                  {alternateForms.map((form) => (
-                    <Grid item xs={12} key={form.id}>
-                      <AlternateFormCard
-                        form={form}
-                        getTypeColor={getTypeColor}
-                        getStatColor={getStatColor}
-                        getStatBarValue={getStatBarValue}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
-
-              {/* Info box about forms */}
-              <Box
-                sx={{
-                  mt: 3,
-                  p: 2,
-                  backgroundColor: 'rgba(36, 204, 159, 0.08)',
-                  borderRadius: 2,
-                  border: '1px solid rgba(36, 204, 159, 0.3)'
-                }}
-              >
-                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                  <strong>Note:</strong> Alternate forms include Mega Evolutions, Regional Variants, 
-                  Gigantamax forms, and other special forms. Stats and abilities may vary significantly 
-                  from the base form.
-                </Typography>
-              </Box>
-            </Paper>
-          </Box>
-        )}
+        {/* SECCIÓN ELIMINADA: Ya no renderizamos la sección de "Alternate Forms & Regional Variants" aquí */}
       </Box>
     </Container>
   );
