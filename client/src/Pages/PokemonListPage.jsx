@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -9,25 +9,35 @@ import {
   InputAdornment,
   CircularProgress,
   Alert,
-  Pagination
+  Pagination,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import { useTheme } from '@mui/material/styles';
+import { useNavigate } from 'react-router-dom';
 import PokemonCard from '../components/pokemon/PokemonCard';
 import usePokemonList from '../hooks/usePokemonList';
-import { useNavigate } from 'react-router-dom';
+import usePaginationState from '../hooks/usePaginationState';
 
 /**
  * PokemonListPage - Page for browsing and searching Pokémon
+ * Maintains pagination state across navigation
  */
 const PokemonListPage = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { pokemonList, loading, error, totalCount } = usePokemonList();
   
-  const [searchTerm, setSearchTerm] = useState('');
-  const [page, setPage] = useState(1);
-  const itemsPerPage = 24;
+  // Use pagination state hook with persistence
+  const { state, updateState, resetState } = usePaginationState('pokemonListState', {
+    searchTerm: '',
+    page: 1,
+    itemsPerPage: 24
+  });
+
+  const { searchTerm, page, itemsPerPage } = state;
 
   // Filter Pokémon based on search term
   const filteredPokemon = pokemonList.filter(pokemon =>
@@ -42,19 +52,41 @@ const PokemonListPage = () => {
     page * itemsPerPage
   );
 
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    if (page > 1 && searchTerm !== state.searchTerm) {
+      updateState({ page: 1 });
+    }
+  }, [searchTerm, page, state.searchTerm, updateState]);
+
+  // Adjust page if current page exceeds total pages
+  useEffect(() => {
+    if (totalPages > 0 && page > totalPages) {
+      updateState({ page: totalPages });
+    }
+  }, [totalPages, page, updateState]);
+
   const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
-    setPage(1); // Reset to first page on search
+    updateState({ searchTerm: event.target.value, page: 1 });
+  };
+
+  const handleClearSearch = () => {
+    updateState({ searchTerm: '', page: 1 });
   };
 
   const handlePageChange = (event, value) => {
-    setPage(value);
+    updateState({ page: value });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePokemonClick = (pokemon) => {
-    // Navigate to detail page
+    // Navigate to detail page - state is preserved in localStorage
     navigate(`/pokemon-list/${pokemon.id}`);
+  };
+
+  const handleResetFilters = () => {
+    resetState();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (loading) {
@@ -125,7 +157,7 @@ const PokemonListPage = () => {
             </Typography>
 
             {/* Search Bar */}
-            <Box sx={{ maxWidth: 600, mx: 'auto' }}>
+            <Box sx={{ maxWidth: 600, mx: 'auto', mb: 2 }}>
               <TextField
                 fullWidth
                 variant="outlined"
@@ -136,6 +168,20 @@ const PokemonListPage = () => {
                   startAdornment: (
                     <InputAdornment position="start">
                       <SearchIcon sx={{ color: 'white' }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchTerm && (
+                    <InputAdornment position="end">
+                      <Tooltip title="Clear search">
+                        <IconButton
+                          onClick={handleClearSearch}
+                          edge="end"
+                          size="small"
+                          sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                        >
+                          <ClearIcon />
+                        </IconButton>
+                      </Tooltip>
                     </InputAdornment>
                   ),
                   sx: {
@@ -154,17 +200,27 @@ const PokemonListPage = () => {
               />
             </Box>
 
-            {/* Results count */}
-            <Typography
-              variant="body2"
-              sx={{
-                color: 'rgba(255, 255, 255, 0.6)',
-                textAlign: 'center',
-                mt: 2
-              }}
-            >
-              Showing {paginatedPokemon.length} of {filteredPokemon.length} Pokémon
-            </Typography>
+            {/* Results count and page info */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.6)'
+                }}
+              >
+                Showing {paginatedPokemon.length} of {filteredPokemon.length} Pokémon
+              </Typography>
+              
+              <Typography
+                variant="body2"
+                sx={{
+                  color: theme.palette.primary.main,
+                  fontWeight: 'bold'
+                }}
+              >
+                Page {page} of {totalPages}
+              </Typography>
+            </Box>
           </Box>
 
           {/* Pokémon Grid */}
@@ -190,6 +246,8 @@ const PokemonListPage = () => {
                     onChange={handlePageChange}
                     color="primary"
                     size="large"
+                    showFirstButton
+                    showLastButton
                     sx={{
                       '& .MuiPaginationItem-root': {
                         color: 'white'
@@ -201,8 +259,19 @@ const PokemonListPage = () => {
             </>
           ) : (
             <Box sx={{ textAlign: 'center', py: 8 }}>
-              <Typography variant="h6" sx={{ color: 'white', opacity: 0.6 }}>
+              <Typography variant="h6" sx={{ color: 'white', opacity: 0.6, mb: 2 }}>
                 No Pokémon found matching "{searchTerm}"
+              </Typography>
+              <Typography 
+                variant="body2" 
+                onClick={handleResetFilters}
+                sx={{ 
+                  color: theme.palette.primary.main,
+                  cursor: 'pointer',
+                  '&:hover': { textDecoration: 'underline' }
+                }}
+              >
+                Clear search
               </Typography>
             </Box>
           )}

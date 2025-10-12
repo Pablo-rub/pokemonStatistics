@@ -94,6 +94,12 @@ const PokemonDetailPage = () => {
     return Math.min((value / 200) * 100, 100);
   };
 
+  // Enhanced back navigation that preserves list state
+  const handleBackToList = () => {
+    // Navigate back to the list - usePaginationState hook will restore the previous state
+    navigate('/pokemon-list');
+  };
+
   if (loading) {
     return (
       <Container maxWidth="xl">
@@ -115,7 +121,7 @@ const PokemonDetailPage = () => {
         <Box sx={{ py: 4 }}>
           <Alert severity="error">{error}</Alert>
           <Box sx={{ mt: 2 }}>
-            <IconButton onClick={() => navigate('/pokemon-list')} sx={{ color: 'white' }}>
+            <IconButton onClick={handleBackToList} sx={{ color: 'white' }}>
               <ArrowBackIcon /> Back to list
             </IconButton>
           </Box>
@@ -132,11 +138,12 @@ const PokemonDetailPage = () => {
         {/* Header with back button */}
         <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
           <IconButton 
-            onClick={() => navigate('/pokemon-list')} 
+            onClick={handleBackToList}
             sx={{ 
               color: 'white',
               '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.1)' }
             }}
+            aria-label="Back to Pokémon list"
           >
             <ArrowBackIcon />
           </IconButton>
