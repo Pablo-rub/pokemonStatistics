@@ -12,6 +12,7 @@ import ProfilePage from './Pages/ProfilePage';
 import AnalyzeBattlePage from './Pages/AnalyzeBattlePage';
 import BattleAnalyticsPage from './Pages/BattleAnalyticsPage';
 import ContactPage from './Pages/ContactPage';
+import PokemonListPage from './Pages/PokemonListPage';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="analyze-battle/:replayId" element={<AnalyzeBattlePage />} />
         <Route path="battle-analytics" element={<BattleAnalyticsPage />} />
         <Route path="contact" element={<ContactPage />} />
+        <Route path="pokemon-list" element={<PokemonListPage />} />
         <Route path="*" element={<div>404 Not Found</div>} />
       </Route>
     </Routes>
