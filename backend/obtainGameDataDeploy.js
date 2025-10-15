@@ -6,31 +6,38 @@ const bigQuery = new BigQuery();
 // Remove Express-specific code and export only the necessary functions
 async function saveReplayToBigQuery(replayData) {
     try {
-        if (!replayData || !replayData.replay_id) {
-            console.error('Invalid replay payload:', replayData);
-            return;
+        // ===== FIX: Extraer datos del payload correcto (NUEVO) =====
+        let id, format, players, log, views, rating, uploadtime;
+        
+        if (replayData.meta) {
+            // Formato wrapeado (test-single-replay.js o fetchReplays)
+            id = replayData.replay_id;
+            format = replayData.format;
+            players = replayData.meta.players || [];
+            log = (replayData.log || '').split('\n');
+            views = replayData.meta.views || 0;
+            rating = replayData.meta.rating || null;
+            uploadtime = replayData.meta.uploadtime || Math.floor(Date.now() / 1000);
+        } else {
+            // Formato directo (payload original de showdown)
+            id = replayData.id;
+            format = replayData.format;
+            players = replayData.players || [];
+            log = (replayData.log || '').split('\n');
+            views = replayData.views || 0;
+            rating = replayData.rating || null;
+            uploadtime = replayData.uploadtime || Math.floor(Date.now() / 1000);
         }
-
-        if (!replayData.log || typeof replayData.log !== 'string') {
-            console.error('Empty or invalid log for replay', replayData.replay_id);
-            return;
+        
+        // Validación de campos requeridos (NUEVO)
+        if (!id || !format || !players || players.length < 2) {
+            throw new Error(`Invalid replay data: missing required fields`);
         }
-
-        // Extract data from the replay
-        const id = replayData.id;
-        const format = replayData.format;
-        const players = replayData.players;
-        const log = replayData.log.split("\n");
-        //console.log(`Processing replay ${id} - Format: ${format}, Players: ${players.join(' vs ')}`);
 
         // Process data
-        //console.log('Processing winner...');
         const winner = processWinner(log);
-        //console.log('Winner:', winner);
 
-        //console.log('Processing teams...');
         const teams = processShowteam(log);
-        //console.log('Teams processed:', JSON.stringify(teams, null, 2));
 
         let turns = [];
 
@@ -95,8 +102,6 @@ async function saveReplayToBigQuery(replayData) {
 
         // Process each line of the log
         for (let line of log) {
-            //console.log("Looking at line");
-      
             const turnMatch = line.match(/\|turn\|(\d+)/);
             const switchMatchesG = line.match(
               /\|switch\|(p1[ab]|p2[ab]): (.+)\|(.+?), L(\d+)(?:, ([MF]))?(?:, shiny)?\|(\d+)\/(\d+)/
@@ -168,22 +173,18 @@ async function saveReplayToBigQuery(replayData) {
               incrementVolatileTurnCounters(turns);
             }
             if (switchMatches) { // Detect active Pokémon switches and update revealed Pokémon if necessary
-              //console.log("Switch detected");
               processSwitch(currentTurn, switchMatches, turns, teams);
-              //console.log("Turn processed");
             } 
             if (itemMatch) { // Detect the usage of an item in different formats
               processItem(currentTurn, itemMatch, turns);
             } 
             if (endItemMatch) { // Detect the end of an item effect
-              //console.log(endItemMatch);
               processItem(currentTurn, endItemMatch, turns);
             } 
             if (moveMatch || moveFailMatch) { // Detect the usage of a move
               processMove(currentTurn, moveMatch, turns);
             } 
             if (damageMatch) { // Update the remaining HP of a Pokémon in each turn
-              //console.log(damageMatch);
               processDamage(
                 currentTurn,
                 damageMatch,
@@ -191,7 +192,6 @@ async function saveReplayToBigQuery(replayData) {
               );
             } 
             if (healMatch) { // Detect the healing of a Pokémon
-              //console.log("heal detected");
               processDamage(
                 currentTurn,
                 healMatch,
@@ -199,23 +199,18 @@ async function saveReplayToBigQuery(replayData) {
               );
             } 
             if (statusMatch) { // Detect the effect of a status condition
-              //console.log(statusMatch);
               processStatus(currentTurn, statusMatch, turns);
             } 
             if (cureStatusMatch) { // Detect the cure of a status condition
-              //console.log(cureStatusMatch);
               processStatus(currentTurn, cureStatusMatch, turns);
             } 
             if (boostMatch) { // Detect the effect of a boost
-              //console.log(boostMatch);
               processBoost(currentTurn, boostMatch, turns);
             } 
             if (unBoostMatch) { // Detect the effect of an unboost
-              //console.log(unBoostMatch);
               processBoost(currentTurn, unBoostMatch, turns);
             } 
             if (teraMatch) { // Detect the terastallize effect
-              //console.log(teraMatch);
               processTerastallize(currentTurn, teraMatch, turns);
             } 
             if (fieldMatch) { // Detect the start of a field effect
@@ -249,23 +244,19 @@ async function saveReplayToBigQuery(replayData) {
         const replayToSave = {
             replay_id: id,
             format: format,
-            views: replayData.views || 0,
-            rating: replayData.rating || null,
+            views: views,
+            rating: rating,
             player1: players[0],
             player2: players[1],
             winner: winner,
             loser: winner === players[0] ? players[1] : players[0],
-            date: new Date(replayData.uploadtime * 1000).toISOString(),
+            date: new Date(uploadtime * 1000).toISOString(),
             teams: teams,
             turns: turns
         };
 
-        //console.log('Replay to snake case');
-
         // Convertir todo el objeto a snake_case antes de guardarlo
         const snakeCaseReplay = toSnakeCase(replayToSave);
-
-        //console.log('Attempting to save to BigQuery:', replayToSave.replay_id);
 
         // Guardar en BigQuery
         const dataset = bigQuery.dataset('pokemon_replays');
@@ -275,10 +266,6 @@ async function saveReplayToBigQuery(replayData) {
         return true;
     } catch (error) {
         console.log("Error saving replay");
-        /*console.error('Error in saveReplayToBigQuery:', error);
-        if (error.errors) {
-            console.error('BigQuery errors:', JSON.stringify(error.errors, null, 2));
-        }*/
         throw error;
     }
 }
@@ -697,8 +684,6 @@ function processBoost(currentTurn, boostMatch, turns) {
     } else {
         console.log("Stats not updated because the Pokémon was not found:", pokemonName);
     }
-
-    //console.log("new stats", pokemon.stats);
 }
 
 // Process the terastallize effect
@@ -737,7 +722,6 @@ function processVolatileStart(currentTurn, volatileMatch, turns) {
     const existing = pokemon.volatileStatus.find((v) => v.name === statusName);
     if (!existing) {
         pokemon.volatileStatus.push({ name: statusName, turnCounter: 0 });
-        //console.log(pokemonName, "got the volatile status", statusName);
     }
 }
 
@@ -823,7 +807,6 @@ function processMove(currentTurn, moveMatch, turns) {
     } else {
         turns[currentTurn].movesDone[player][slot] = `${moveUsed}${targetInfo}`;
     }
-    //console.log(`Move done updated for ${player} slot ${slot}: ${turns[currentTurn].movesDone[player][slot]}`);
 
     // Find the Pokémon in the current turn's revealedPokemon
     const userPokemon = turns[currentTurn].revealedPokemon[player].find(
@@ -962,8 +945,6 @@ function processWeather(currentTurn, weatherMatch, turns, line) {
             condition: newCondition,
             duration: initialDuration
         };
-        
-        //console.log(`Weather changed to: ${newCondition} with duration: ${initialDuration}`);
     }
 }
 
@@ -1000,14 +981,12 @@ function processRoom(currentTurn, fieldMatch, turns, line) {
             // If the same room effect is already active, cancel (delete) it
             if (turns[currentTurn].room.condition === effect) {
                 turns[currentTurn].room = { condition: "", duration: 0 };
-                //console.log(`${effect} cancelled.`);
             } else {
                 // Otherwise, override the previous room effect with the new one
                 turns[currentTurn].room = {
                     condition: effect,
                     duration: initialDuration
                 };
-                //console.log(`Room effect set to: ${effect} with duration: ${initialDuration}`);
             }
         }
     }
@@ -1015,14 +994,9 @@ function processRoom(currentTurn, fieldMatch, turns, line) {
 
 function processSideStart(currentTurn, sideStartMatch, turns) {
     const playerNumber = sideStartMatch[1];
-    //console.log("Player number:", playerNumber);
     const playerName = sideStartMatch[2].trim();
-    //console.log("Player name:", playerName);
     const effectName = sideStartMatch[3].trim().toLowerCase();
-    //console.log("Effect name:", effectName);
     const side = playerNumber === "1" ? "player1" : "player2";
-
-    //console.log(`Side start detected for ${side} (${playerName}), effect: ${effectName}`);
 
     if (effectName === "light screen") {
         processLightscreen(currentTurn, side, turns, sideStartMatch);
@@ -1040,8 +1014,6 @@ function processSideStart(currentTurn, sideStartMatch, turns) {
         turns[currentTurn].spikes[side].stealthRock = true;
     } else if (effectName === "sticky web") {
         turns[currentTurn].spikes[side].stickyWeb = true;
-    } else {
-        console.log("Unhandled sidestart effect:", effectName);
     }
 }
 
@@ -1077,7 +1049,6 @@ function processTailwind(currentTurn, side, turns, line) {
     const initialDuration = 5;
     turns[currentTurn].tailwind[side] = true;
     turns[currentTurn].tailwind["duration" + (side === "player1" ? "1" : "2")] = initialDuration;
-    //console.log(`Tailwind set for ${side} with duration: ${initialDuration}`);
 }
 
 // New function to process fieldend: clears terrain effects
@@ -1087,7 +1058,6 @@ function processFieldEnd(currentTurn, line, turns) {
             terrain: "",
             duration: 0
         };
-        //console.log("Field ended (terrain cleared).");
     }
 }
 
@@ -1105,7 +1075,6 @@ function processSideEnd(currentTurn, line, turns) {
         turns[currentTurn].screens.reflect = { player1: false, player2: false, duration1: 0, duration2: 0 };
         turns[currentTurn].screens.lightscreen = { player1: false, player2: false, duration1: 0, duration2: 0 };
         turns[currentTurn].screens.auroraveil = { player1: false, player2: false, duration1: 0, duration2: 0 };
-        //console.log("Side effects ended (tailwind and screens cleared).");
     }
 }
 
@@ -1121,149 +1090,6 @@ function getPokemonName(nickname, player, turns, currentTurn) {
     }
     
     return pokemon.name;
-}
-
-/**
- * Garantiza que teams.p1 y teams.p2 sean arrays (evita errores al leer [0])
- */
-function ensureTeamsObject(teams) {
-    if (!teams || typeof teams !== 'object') return { p1: [], p2: [] };
-    if (!Array.isArray(teams.p1)) teams.p1 = [];
-    if (!Array.isArray(teams.p2)) teams.p2 = [];
-    return teams;
-}
-
-/**
- * Quick heuristic extractor to pull team Pokemon names from a raw replay log.
- * Tries several common Showdown markers (|poke|, |team|, |switch|, |player|).
- * Returns { p1: [{name: '...'}, ...], p2: [...] }
- */
-function extractTeamsFromLog(rawLog) {
-    const teams = { p1: [], p2: [] };
-    if (!rawLog || typeof rawLog !== 'string') return teams;
-
-    const lines = rawLog.split('\n').map(l => l.trim());
-    for (const line of lines) {
-        // |poke|p1|Porygon-Z|...
-        const m = line.match(/^\|poke\|p([12])\|([^|]+)/i);
-        if (m) {
-            const side = m[1] === '1' ? 'p1' : 'p2';
-            const name = m[2].trim();
-            if (name) teams[side].push({ name });
-            continue;
-        }
-
-        // |team|p1|Porygon-Z, Pikachu, ...
-        const tm = line.match(/^\|team\|p([12])\|(.+)/i);
-        if (tm) {
-            const side = tm[1] === '1' ? 'p1' : 'p2';
-            const names = tm[2].split(',').map(s => s.trim()).filter(Boolean);
-            names.forEach(n => teams[side].push({ name: n }));
-            continue;
-        }
-
-        // fallback: look for switch lines that may include the species
-        const sm = line.match(/^\|switch\|p([12])(?:[ab]?:)?([^|,]+)/i);
-        if (sm) {
-            const side = sm[1] === '1' ? 'p1' : 'p2';
-            const name = sm[2].trim();
-            if (name) teams[side].push({ name });
-            continue;
-        }
-    }
-
-    // deduplicate by name
-    teams.p1 = teams.p1.filter((v,i,a)=>a.findIndex(x=>x.name===v.name)===i);
-    teams.p2 = teams.p2.filter((v,i,a)=>a.findIndex(x=>x.name===v.name)===i);
-    return teams;
-}
-
-/**
- * Main save function used by fetchReplaysDeploy.js
- * This is defensive: avoids throwing TypeError when parsed structure is missing,
- * logs useful info and skips saving when insufficient data.
- */
-async function saveReplayToBigQuery(replayData) {
-    try {
-        if (!replayData || !replayData.replay_id) {
-            console.error('Invalid replay payload:', replayData);
-            return;
-        }
-
-        if (!replayData.log || typeof replayData.log !== 'string') {
-            console.error('Empty or invalid log for replay', replayData.replay_id);
-            return;
-        }
-
-        // -------------------------------------------------------
-        // Intent: si existe lógica compleja de parseo previa, intentarla primero.
-        // Si falla o el resultado es defecto, aplicamos heurística.
-        // -------------------------------------------------------
-
-        let processed = null;
-
-        try {
-            // Si ya existe una función interna robusta de parseo (por ejemplo run() o parseReplay),
-            // intentamos usarla. Si no existe, omitimos.
-            if (typeof run === 'function') {
-                // Algunos deploys tienen "run" para parsear replays; intentamos usarlo si existe.
-                processed = await run(replayData.log);
-            }
-        } catch (parseErr) {
-            console.warn(`Primary parse failed for ${replayData.replay_id}:`, parseErr.message || parseErr);
-            processed = null;
-        }
-
-        // Si no tenemos objeto `processed`, aplicamos heurística ligera para extraer teams
-        if (!processed) {
-            const extractedTeams = extractTeamsFromLog(replayData.log);
-            processed = {
-                replay_id: replayData.replay_id,
-                format: replayData.format || null,
-                meta: replayData.meta || {},
-                teams: ensureTeamsObject(extractedTeams),
-                turns: [], // fallback vacío
-                raw_log_excerpt: replayData.log.slice(0, 2000)
-            };
-        }
-
-        // Aseguramos estructura teams para evitar TypeError al acceder [0]
-        processed.teams = ensureTeamsObject(processed.teams);
-
-        // Si no hay ningún Pokémon detectado en ambos lados, no guardamos y logueamos snippet
-        if (processed.teams.p1.length === 0 && processed.teams.p2.length === 0) {
-            console.warn(`Replay ${replayData.replay_id} - no team info detected. Skipping save. Log excerpt:\n${replayData.log.slice(0, 1000)}`);
-            return;
-        }
-
-        // Normalizar/transformar a la forma que BigQuery espera (si existe función toSnakeCase)
-        let rowToInsert = processed;
-        if (typeof toSnakeCase === 'function') {
-            try {
-                rowToInsert = toSnakeCase(processed);
-            } catch (e) {
-                // si falla la normalización, seguimos con `processed` tal cual
-                console.warn(`toSnakeCase failed for ${replayData.replay_id}:`, e.message || e);
-                rowToInsert = processed;
-            }
-        }
-
-        // Insertar en BigQuery: usar dataset.table si está configurado
-        try {
-            await bigQuery.dataset('pokemon_replays').table('replays').insert([rowToInsert], { raw: true });
-            console.log(`Saved replay ${replayData.replay_id} (teams p1=${processed.teams.p1.length} p2=${processed.teams.p2.length})`);
-        } catch (bqErr) {
-            // si la inserción falla, mostrar un extracto del log y el error
-            console.error(`Error saving replay ${replayData.replay_id}:`, bqErr.message || bqErr);
-            console.error('Replay log excerpt:', replayData.log.slice(0, 1000));
-            // no relanzar para que el proceso siga
-        }
-
-    } catch (err) {
-        // Capturamos errores inesperados aquí para evitar que el scheduler/fetch aborte
-        console.error('Unexpected error in saveReplayToBigQuery:', err && (err.stack || err.message) || err);
-        // no relanzar
-    }
 }
 
 run().catch(console.dir);

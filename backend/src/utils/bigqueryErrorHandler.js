@@ -1,43 +1,167 @@
+const logger = require('./logger');
+
 /**
  * BigQuery error handling utilities
  * Provides detailed error logging and parsing for debugging insertion failures
  */
 
 /**
- * Parse and log detailed BigQuery insertion errors
- * @param {Error} error - BigQuery PartialFailureError
- * @param {Object} data - The data that failed to insert
- * @param {string} replayId - Replay ID for tracking
+ * Extract detailed error information from BigQuery PartialFailureError
+ * @param {Error} error - The BigQuery error object
+ * @param {string} replayId - The replay ID being processed
+ * @returns {Object} Structured error information
  */
-function logBigQueryError(error, data, replayId) {
-  console.error(`\n========== BigQuery Insertion Error: ${replayId} ==========`);
+function extractBigQueryError(error, replayId) {
+  const errorInfo = {
+    replayId,
+    errorType: error.name || 'UnknownError',
+    message: error.message,
+    details: []
+  };
 
-  if (error.name === 'PartialFailureError' && error.errors) {
-    error.errors.forEach((err, idx) => {
-      console.error(`\n--- Row ${idx} Errors ---`);
-      
-      if (err.errors && Array.isArray(err.errors)) {
-        err.errors.forEach(fieldError => {
-          console.error(`Field: ${fieldError.location || 'unknown'}`);
-          console.error(`Reason: ${fieldError.reason || 'unknown'}`);
-          console.error(`Message: ${fieldError.message || 'no message'}`);
+  // Extract detailed errors from BigQuery PartialFailureError
+  if (error.errors && Array.isArray(error.errors)) {
+    error.errors.forEach((errorRow, index) => {
+      if (errorRow.errors && Array.isArray(errorRow.errors)) {
+        errorRow.errors.forEach(err => {
+          errorInfo.details.push({
+            rowIndex: index,
+            reason: err.reason,
+            location: err.location,
+            message: err.message,
+            debugInfo: err.debugInfo || 'No debug info'
+          });
         });
       }
-
-      if (err.row) {
-        console.error('\n--- Problematic Row Structure ---');
-        console.error(JSON.stringify(err.row, null, 2));
+      
+      // Log the problematic row data
+      if (errorRow.row) {
+        const rowStr = JSON.stringify(errorRow.row);
+        errorInfo.details.push({
+          rowIndex: index,
+          rowDataSample: rowStr.substring(0, 1000), // Increased to 1000 chars
+          rowDataLength: rowStr.length
+        });
       }
     });
-  } else {
-    console.error('Non-PartialFailure error:', error.message);
-    console.error('Stack:', error.stack);
   }
 
-  // Log the full data structure that failed
-  console.error('\n--- Full Data Attempted ---');
-  console.error(JSON.stringify(data, null, 2));
-  console.error('========================================\n');
+  // Include response details
+  if (error.response) {
+    errorInfo.response = {
+      kind: error.response.kind,
+      hasInsertErrors: !!error.response.insertErrors,
+      errorCount: error.response.insertErrors?.length || 0
+    };
+    
+    // Extract specific error details from insertErrors
+    if (error.response.insertErrors && Array.isArray(error.response.insertErrors)) {
+      error.response.insertErrors.forEach((insertError, idx) => {
+        if (insertError.errors) {
+          insertError.errors.forEach(err => {
+            errorInfo.details.push({
+              source: 'insertError',
+              index: idx,
+              reason: err.reason,
+              location: err.location,
+              message: err.message
+            });
+          });
+        }
+      });
+    }
+  }
+
+  return errorInfo;
+}
+
+/**
+ * Log BigQuery error with full details
+ * @param {Error} error - The error object
+ * @param {string} replayId - The replay ID
+ * @param {string} additionalContext - Additional context about the operation
+ */
+function logBigQueryError(error, replayId, additionalContext = '') {
+  const errorInfo = extractBigQueryError(error, replayId);
+  
+  // Log main error
+  logger.error(`BigQuery insertion failed: ${replayId}`, {
+    context: additionalContext,
+    errorType: errorInfo.errorType,
+    message: errorInfo.message,
+    detailsCount: errorInfo.details.length
+  });
+
+  // Log each detail separately for better visibility
+  if (errorInfo.details.length > 0) {
+    errorInfo.details.forEach((detail, idx) => {
+      logger.error(`BigQuery error detail ${idx + 1}/${errorInfo.details.length}`, {
+        replayId,
+        ...detail
+      });
+    });
+  } else {
+    logger.warn(`No detailed error information available for ${replayId}`);
+  }
+
+  // Log response info if available
+  if (errorInfo.response) {
+    logger.error('BigQuery response details', {
+      replayId,
+      ...errorInfo.response
+    });
+  }
+}
+
+/**
+ * Validate data before BigQuery insertion
+ * @param {Object} data - The data to validate
+ * @returns {Object} Validation result with isValid and errors
+ */
+function validateReplayData(data) {
+  const errors = [];
+
+  // Check required fields
+  if (!data.replay_id) {
+    errors.push({ field: 'replay_id', message: 'Missing replay_id' });
+  }
+
+  if (!data.player1 || !data.player2) {
+    errors.push({ field: 'players', message: 'Missing player names' });
+  }
+
+  if (!data.format) {
+    errors.push({ field: 'format', message: 'Missing format' });
+  }
+
+  if (!Array.isArray(data.turns) || data.turns.length === 0) {
+    errors.push({ field: 'turns', message: 'Missing or empty turns array' });
+  }
+
+  // Validate turns structure
+  if (Array.isArray(data.turns)) {
+    data.turns.forEach((turn, idx) => {
+      if (typeof turn.turn_number !== 'number') {
+        errors.push({ 
+          field: `turns[${idx}].turn_number`, 
+          message: 'Invalid turn_number type' 
+        });
+      }
+      
+      // Check for required nested structures
+      if (!turn.starts_with || !turn.ends_with) {
+        errors.push({ 
+          field: `turns[${idx}]`, 
+          message: 'Missing starts_with or ends_with' 
+        });
+      }
+    });
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
 }
 
 /**
@@ -104,7 +228,9 @@ function getErrorSummary(error) {
 }
 
 module.exports = {
+  extractBigQueryError,
   logBigQueryError,
+  validateReplayData,
   extractFieldErrors,
   isSchemaError,
   getErrorSummary

@@ -1,0 +1,1334 @@
+{
+  "success": false,
+  "error": "BigQuery insertion failed",
+  "errorName": "PartialFailureError",
+  "details": [
+    {
+      "errors": [
+        {
+          "message": "no such field: stealthrock.",
+          "reason": "invalid"
+        }
+      ],
+      "row": {
+        "replay_id": "gen9vgc2025regh-2462071398",
+        "player1": "ThePhantom6969",
+        "player2": "Kaspistegi",
+        "player1_rating": 1159,
+        "player2_rating": 1056,
+        "format": "[Gen 9] VGC 2025 Reg H",
+        "winner": "ThePhantom6969",
+        "turns": [
+          {
+            "turn_number": 0,
+            "starts_with": {
+              "player1": [
+                "none",
+                "none"
+              ],
+              "player2": [
+                "none",
+                "none"
+              ]
+            },
+            "ends_with": {
+              "player1": [
+                "Indeedee-F",
+                "Hatterene"
+              ],
+              "player2": [
+                "Klefki",
+                "Whimsicott"
+              ]
+            },
+            "field": {
+              "terrain": "",
+              "duration": 0
+            },
+            "weather": {
+              "condition": "",
+              "duration": 0
+            },
+            "room": {
+              "condition": "",
+              "duration": 0
+            },
+            "screens": {
+              "reflect": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              },
+              "lightscreen": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              },
+              "auroraveil": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              }
+            },
+            "tailwind": {
+              "player1": false,
+              "player2": false,
+              "duration1": 0,
+              "duration2": 0
+            },
+            "spikes": {
+              "player1": {
+                "stealthrock": false,
+                "spikes": 0,
+                "toxicspikes": 0,
+                "stickyweb": false
+              },
+              "player2": {
+                "stealthrock": false,
+                "spikes": 0,
+                "toxicspikes": 0,
+                "stickyweb": false
+              }
+            },
+            "moves_done": {
+              "player1": [
+                "switched in",
+                "switched in"
+              ],
+              "player2": [
+                "switched in",
+                "switched in"
+              ]
+            },
+            "revealed_pokemon": {
+              "player1": [
+                {
+                  "name": "Indeedee-F",
+                  "nickname": "Indeedee",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 100,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "fighting_status": "ok",
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "none",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                },
+                {
+                  "name": "Hatterene",
+                  "nickname": "Hatterene",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 100,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "fighting_status": "ok",
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "none",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                }
+              ],
+              "player2": [
+                {
+                  "name": "Klefki",
+                  "nickname": "Klefki",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 100,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "fighting_status": "ok",
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "none",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                },
+                {
+                  "name": "Whimsicott",
+                  "nickname": "Whimsicott",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 100,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "fighting_status": "ok",
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "none",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                }
+              ]
+            }
+          },
+          {
+            "turn_number": 1,
+            "starts_with": {
+              "player1": [
+                "Indeedee-F",
+                "Hatterene"
+              ],
+              "player2": [
+                "Klefki",
+                "Whimsicott"
+              ]
+            },
+            "ends_with": {
+              "player1": [
+                "Indeedee-F",
+                "Hatterene"
+              ],
+              "player2": [
+                "Klefki",
+                "Whimsicott"
+              ]
+            },
+            "field": {
+              "terrain": "",
+              "duration": 0
+            },
+            "weather": {
+              "condition": "",
+              "duration": 0
+            },
+            "room": {
+              "condition": "",
+              "duration": 0
+            },
+            "screens": {
+              "reflect": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              },
+              "lightscreen": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              },
+              "auroraveil": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              }
+            },
+            "tailwind": {
+              "player1": false,
+              "player2": false,
+              "duration1": 0,
+              "duration2": 0
+            },
+            "spikes": {
+              "player1": {
+                "stealthrock": false,
+                "spikes": 0,
+                "toxicspikes": 0,
+                "stickyweb": false
+              },
+              "player2": {
+                "stealthrock": false,
+                "spikes": 0,
+                "toxicspikes": 0,
+                "stickyweb": false
+              }
+            },
+            "moves_done": {
+              "player1": [
+                "trick room on Indeedee-F",
+                "expanding force on Klefki"
+              ],
+              "player2": [
+                "calm mind on Klefki",
+                "tailwind on Whimsicott"
+              ]
+            },
+            "revealed_pokemon": {
+              "player1": [
+                {
+                  "name": "Indeedee-F",
+                  "nickname": "Indeedee",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 100,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "fighting_status": "ok",
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "trick room",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                },
+                {
+                  "name": "Hatterene",
+                  "nickname": "Hatterene",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 91,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "expanding force",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                }
+              ],
+              "player2": [
+                {
+                  "name": "Klefki",
+                  "nickname": "Klefki",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 52,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "calm mind",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                },
+                {
+                  "name": "Whimsicott",
+                  "nickname": "Whimsicott",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 10,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "tailwind",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                }
+              ]
+            }
+          },
+          {
+            "turn_number": 2,
+            "starts_with": {
+              "player1": [
+                "Indeedee-F",
+                "Hatterene"
+              ],
+              "player2": [
+                "Klefki",
+                "Whimsicott"
+              ]
+            },
+            "ends_with": {
+              "player1": [
+                "Indeedee-F",
+                "Hatterene"
+              ],
+              "player2": [
+                "Klefki",
+                "Maushold-Four"
+              ]
+            },
+            "field": {
+              "terrain": "",
+              "duration": 0
+            },
+            "weather": {
+              "condition": "",
+              "duration": 0
+            },
+            "room": {
+              "condition": "",
+              "duration": 0
+            },
+            "screens": {
+              "reflect": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              },
+              "lightscreen": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              },
+              "auroraveil": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              }
+            },
+            "tailwind": {
+              "player1": false,
+              "player2": false,
+              "duration1": 0,
+              "duration2": 0
+            },
+            "spikes": {
+              "player1": {
+                "stealthrock": false,
+                "spikes": 0,
+                "toxicspikes": 0,
+                "stickyweb": false
+              },
+              "player2": {
+                "stealthrock": false,
+                "spikes": 0,
+                "toxicspikes": 0,
+                "stickyweb": false
+              }
+            },
+            "moves_done": {
+              "player1": [
+                "helping hand on Hatterene",
+                "expanding force on Klefki"
+              ],
+              "player2": [
+                "calm mind on Klefki",
+                "encore on Indeedee-F (fainted), switch to Maushold-Four"
+              ]
+            },
+            "revealed_pokemon": {
+              "player1": [
+                {
+                  "name": "Indeedee-F",
+                  "nickname": "Indeedee",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 100,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "fighting_status": "ok",
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "helping hand",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                },
+                {
+                  "name": "Hatterene",
+                  "nickname": "Hatterene",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 81,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "expanding force",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                }
+              ],
+              "player2": [
+                {
+                  "name": "Klefki",
+                  "nickname": "Klefki",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 4,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "calm mind",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                },
+                {
+                  "name": "Whimsicott",
+                  "nickname": "Whimsicott",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 0,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "encore",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false,
+                  "fighting_status": "fainted"
+                },
+                {
+                  "name": "Maushold-Four",
+                  "nickname": "Maushold",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 100,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "fighting_status": "ok",
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "none",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                }
+              ]
+            }
+          },
+          {
+            "turn_number": 3,
+            "starts_with": {
+              "player1": [
+                "Indeedee-F",
+                "Hatterene"
+              ],
+              "player2": [
+                "Klefki",
+                "Maushold-Four"
+              ]
+            },
+            "ends_with": {
+              "player1": [
+                "Indeedee-F",
+                "Hatterene"
+              ],
+              "player2": [
+                "Grimmsnarl",
+                "Maushold-Four"
+              ]
+            },
+            "field": {
+              "terrain": "",
+              "duration": 0
+            },
+            "weather": {
+              "condition": "",
+              "duration": 0
+            },
+            "room": {
+              "condition": "",
+              "duration": 0
+            },
+            "screens": {
+              "reflect": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              },
+              "lightscreen": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              },
+              "auroraveil": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              }
+            },
+            "tailwind": {
+              "player1": false,
+              "player2": false,
+              "duration1": 0,
+              "duration2": 0
+            },
+            "spikes": {
+              "player1": {
+                "stealthrock": false,
+                "spikes": 0,
+                "toxicspikes": 0,
+                "stickyweb": false
+              },
+              "player2": {
+                "stealthrock": false,
+                "spikes": 0,
+                "toxicspikes": 0,
+                "stickyweb": false
+              }
+            },
+            "moves_done": {
+              "player1": [
+                "helping hand on Hatterene",
+                "expanding force on Maushold-Four"
+              ],
+              "player2": [
+                "fainted, switch to Grimmsnarl",
+                "fainted"
+              ]
+            },
+            "revealed_pokemon": {
+              "player1": [
+                {
+                  "name": "Indeedee-F",
+                  "nickname": "Indeedee",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 100,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "fighting_status": "ok",
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "helping hand",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                },
+                {
+                  "name": "Hatterene",
+                  "nickname": "Hatterene",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 71,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "expanding force",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                }
+              ],
+              "player2": [
+                {
+                  "name": "Klefki",
+                  "nickname": "Klefki",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 0,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "calm mind",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false,
+                  "fighting_status": "fainted"
+                },
+                {
+                  "name": "Whimsicott",
+                  "nickname": "Whimsicott",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 0,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "encore",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false,
+                  "fighting_status": "fainted"
+                },
+                {
+                  "name": "Maushold-Four",
+                  "nickname": "Maushold",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 0,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "fighting_status": "fainted",
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "none",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                },
+                {
+                  "name": "Grimmsnarl",
+                  "nickname": "Grimmsnarl",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 100,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "fighting_status": "ok",
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "none",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                }
+              ]
+            }
+          },
+          {
+            "turn_number": 4,
+            "starts_with": {
+              "player1": [
+                "Indeedee-F",
+                "Hatterene"
+              ],
+              "player2": [
+                "Grimmsnarl",
+                "Maushold-Four"
+              ]
+            },
+            "ends_with": {
+              "player1": [
+                "Ursaluna",
+                "Hatterene"
+              ],
+              "player2": [
+                "Grimmsnarl",
+                "Maushold-Four"
+              ]
+            },
+            "field": {
+              "terrain": "",
+              "duration": 0
+            },
+            "weather": {
+              "condition": "",
+              "duration": 0
+            },
+            "room": {
+              "condition": "",
+              "duration": 0
+            },
+            "screens": {
+              "reflect": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              },
+              "lightscreen": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              },
+              "auroraveil": {
+                "player1": false,
+                "player2": false,
+                "duration1": 0,
+                "duration2": 0
+              }
+            },
+            "tailwind": {
+              "player1": false,
+              "player2": false,
+              "duration1": 0,
+              "duration2": 0
+            },
+            "spikes": {
+              "player1": {
+                "stealthrock": false,
+                "spikes": 0,
+                "toxicspikes": 0,
+                "stickyweb": false
+              },
+              "player2": {
+                "stealthrock": false,
+                "spikes": 0,
+                "toxicspikes": 0,
+                "stickyweb": false
+              }
+            },
+            "moves_done": {
+              "player1": [
+                "switch to Ursaluna",
+                "dazzling gleam on Grimmsnarl"
+              ],
+              "player2": [
+                "parting shot on Hatterene (fainted)",
+                ""
+              ]
+            },
+            "revealed_pokemon": {
+              "player1": [
+                {
+                  "name": "Indeedee-F",
+                  "nickname": "Indeedee",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 100,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "fighting_status": "ok",
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "helping hand",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                },
+                {
+                  "name": "Hatterene",
+                  "nickname": "Hatterene",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 61,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "dazzling gleam",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                },
+                {
+                  "name": "Ursaluna",
+                  "nickname": "Ursaluna",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 100,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "fighting_status": "ok",
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "none",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                }
+              ],
+              "player2": [
+                {
+                  "name": "Klefki",
+                  "nickname": "Klefki",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 0,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "calm mind",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false,
+                  "fighting_status": "fainted"
+                },
+                {
+                  "name": "Whimsicott",
+                  "nickname": "Whimsicott",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 0,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "encore",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false,
+                  "fighting_status": "fainted"
+                },
+                {
+                  "name": "Maushold-Four",
+                  "nickname": "Maushold",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 0,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "fighting_status": "fainted",
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "none",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                },
+                {
+                  "name": "Grimmsnarl",
+                  "nickname": "Grimmsnarl",
+                  "moves": [],
+                  "ability": "",
+                  "item": "",
+                  "remaining_hp": 0,
+                  "volatile_status": [],
+                  "non_volatile_status": "none",
+                  "stats": {
+                    "atk": 0,
+                    "def": 0,
+                    "spa": 0,
+                    "spd": 0,
+                    "spe": 0,
+                    "acc": 0,
+                    "eva": 0
+                  },
+                  "tera": {
+                    "type": "",
+                    "active": false
+                  },
+                  "fighting_status": "fainted",
+                  "consecutive_protect_counter": 0,
+                  "ability_suppressed": false,
+                  "last_move_used": "parting shot",
+                  "mimic_used": false,
+                  "copied_move": "none",
+                  "transformed": false
+                }
+              ]
+            }
+          }
+        ],
+        "teams": {
+          "p1": [
+            {
+              "name": "Porygon2, L50"
+            },
+            {
+              "name": "Decidueye-Hisui, L50, F"
+            },
+            {
+              "name": "Ursaluna, L50, F"
+            },
+            {
+              "name": "Indeedee-F, L50, F"
+            },
+            {
+              "name": "Hatterene, L50, F"
+            },
+            {
+              "name": "Amoonguss, L50, F"
+            },
+            {
+              "name": "Indeedee"
+            },
+            {
+              "name": "Hatterene"
+            },
+            {
+              "name": "Ursaluna"
+            }
+          ],
+          "p2": [
+            {
+              "name": "Grimmsnarl, L50, M"
+            },
+            {
+              "name": "Klefki, L50, M"
+            },
+            {
+              "name": "Grafaiai, L50, F"
+            },
+            {
+              "name": "Maushold-Four, L50"
+            },
+            {
+              "name": "Murkrow, L50, M"
+            },
+            {
+              "name": "Whimsicott, L50, M"
+            },
+            {
+              "name": "Klefki"
+            },
+            {
+              "name": "Whimsicott"
+            },
+            {
+              "name": "Maushold"
+            },
+            {
+              "name": "Grimmsnarl"
+            }
+          ]
+        },
+        "date": "2025-10-15T12:29:23.065Z"
+      }
+    }
+  ],
+  "response": {
+    "kind": "bigquery#tableDataInsertAllResponse",
+    "insertErrors": [
+      {
+        "index": 0,
+        "errors": [
+          {
+            "reason": "invalid",
+            "location": "turns[0].spikes.player2.stealthrock",
+            "debugInfo": "",
+            "message": "no such field: stealthrock."
+          }
+        ]
+      }
+    ]
+  }
+}

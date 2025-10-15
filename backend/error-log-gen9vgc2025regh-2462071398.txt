@@ -1,0 +1,112 @@
+|j|☆ThePhantom6969
+|j|☆Kaspistegi
+|t:|1760524663
+|gametype|doubles
+|player|p1|ThePhantom6969|gambler|1159
+|player|p2|Kaspistegi|102|1056
+|gen|9
+|tier|[Gen 9] VGC 2025 Reg H
+|rated|
+|rule|Species Clause: Limit one of each Pokémon
+|rule|Item Clause: Limit 1 of each item
+|clearpoke
+|poke|p1|Porygon2, L50|
+|poke|p1|Decidueye-Hisui, L50, F|
+|poke|p1|Ursaluna, L50, F|
+|poke|p1|Indeedee-F, L50, F|
+|poke|p1|Hatterene, L50, F|
+|poke|p1|Amoonguss, L50, F|
+|poke|p2|Grimmsnarl, L50, M|
+|poke|p2|Klefki, L50, M|
+|poke|p2|Grafaiai, L50, F|
+|poke|p2|Maushold-Four, L50|
+|poke|p2|Murkrow, L50, M|
+|poke|p2|Whimsicott, L50, M|
+|teampreview|4
+|inactive|Battle timer is ON: inactive players will automatically lose when time's up. (requested by Kaspistegi)
+|c|☆ThePhantom6969|i think your team might need more prankster mons
+|
+|t:|1760524692
+|teamsize|p1|4
+|teamsize|p2|4
+|start
+|switch|p1a: Indeedee|Indeedee-F, L50, F, shiny|100/100
+|switch|p1b: Hatterene|Hatterene, L50, F, shiny|100/100
+|switch|p2a: Klefki|Klefki, L50, M|100/100
+|switch|p2b: Whimsicott|Whimsicott, L50, M|100/100
+|-fieldstart|move: Psychic Terrain|[from] ability: Psychic Surge|[of] p1a: Indeedee
+|turn|1
+|
+|t:|1760524706
+|move|p2b: Whimsicott|Tailwind|p2b: Whimsicott
+|-sidestart|p2: Kaspistegi|move: Tailwind
+|move|p2a: Klefki|Calm Mind|p2a: Klefki
+|-boost|p2a: Klefki|spa|1
+|-boost|p2a: Klefki|spd|1
+|move|p1b: Hatterene|Expanding Force|p2a: Klefki|[spread] p2a,p2b
+|-resisted|p2a: Klefki
+|-damage|p2a: Klefki|52/100
+|-damage|p2b: Whimsicott|10/100
+|-damage|p1b: Hatterene|91/100|[from] item: Life Orb
+|move|p1a: Indeedee|Trick Room|p1a: Indeedee
+|-fieldstart|move: Trick Room|[of] p1a: Indeedee
+|
+|upkeep
+|turn|2
+|
+|t:|1760524731
+|move|p1a: Indeedee|Helping Hand|p1b: Hatterene
+|-singleturn|p1b: Hatterene|Helping Hand|[of] p1a: Indeedee
+|move|p2a: Klefki|Calm Mind|p2a: Klefki
+|-boost|p2a: Klefki|spa|1
+|-boost|p2a: Klefki|spd|1
+|move|p2b: Whimsicott|Encore|p1a: Indeedee
+|-activate|p1a: Indeedee|move: Psychic Terrain
+|move|p1b: Hatterene|Expanding Force|p2a: Klefki|[spread] p2a,p2b
+|-resisted|p2a: Klefki
+|-damage|p2a: Klefki|4/100
+|-damage|p2b: Whimsicott|0 fnt
+|faint|p2b: Whimsicott
+|-damage|p1b: Hatterene|81/100|[from] item: Life Orb
+|
+|upkeep
+|
+|t:|1760524748
+|switch|p2b: Maushold|Maushold-Four, L50|100/100
+|turn|3
+|inactive|Kaspistegi has 30 seconds left.
+|
+|t:|1760524774
+|move|p1a: Indeedee|Helping Hand|p1b: Hatterene
+|-singleturn|p1b: Hatterene|Helping Hand|[of] p1a: Indeedee
+|move|p1b: Hatterene|Expanding Force|p2b: Maushold|[spread] p2a,p2b
+|-resisted|p2a: Klefki
+|-damage|p2a: Klefki|0 fnt
+|-damage|p2b: Maushold|0 fnt
+|faint|p2a: Klefki
+|faint|p2b: Maushold
+|-damage|p1b: Hatterene|71/100|[from] item: Life Orb
+|
+|upkeep
+|
+|t:|1760524784
+|switch|p2a: Grimmsnarl|Grimmsnarl, L50, M|100/100
+|turn|4
+|c|☆ThePhantom6969|you lost because you didn't have enough prankster mons
+|
+|t:|1760524796
+|switch|p1a: Ursaluna|Ursaluna, L50, F, shiny|100/100
+|move|p2a: Grimmsnarl|Parting Shot|p1b: Hatterene
+|-activate|p1b: Hatterene|move: Psychic Terrain
+|move|p1b: Hatterene|Dazzling Gleam|p2a: Grimmsnarl
+|-supereffective|p2a: Grimmsnarl
+|-crit|p2a: Grimmsnarl
+|-damage|p2a: Grimmsnarl|0 fnt
+|faint|p2a: Grimmsnarl
+|-damage|p1b: Hatterene|61/100|[from] item: Life Orb
+|
+|win|ThePhantom6969
+|raw|ThePhantom6969's rating: 1159 &rarr; <strong>1177</strong><br />(+18 for winning)
+|raw|Kaspistegi's rating: 1056 &rarr; <strong>1043</strong><br />(-13 for losing)
+|l|☆Kaspistegi
+|player|p2|

@@ -4,8 +4,6 @@ const cheerio = require("cheerio");
 const { saveReplayToBigQuery } = require('./obtainGameDataDeploy');
 
 const bigQuery = new BigQuery();
-
-// Configuración: si encuentras una replay existente, se para (false) o se sigue (true)
 const CONTINUE_ON_EXISTING = false;
 
 async function getLatestFormat() {
@@ -13,6 +11,7 @@ async function getLatestFormat() {
     const response = await axios.get('https://www.smogon.com/stats/');
     const $ = cheerio.load(response.data);
     const months = new Set();
+    
     $('a').each((index, element) => {
       const href = $(element).attr('href');
       if (href) {
@@ -22,39 +21,37 @@ async function getLatestFormat() {
         }
       }
     });
+    
     const latestMonth = Array.from(months).sort().reverse()[0];
     const formatsResponse = await axios.get(`https://www.smogon.com/stats/${latestMonth}/`);
     const formats = [];
     const $formats = cheerio.load(formatsResponse.data);
+    
     $formats('a').each((index, element) => {
       const href = $(element).attr('href');
       if (href && href.endsWith('.txt') && !href.endsWith('.txt.gz')) {
         formats.push(href.replace('.txt', ''));
       }
     });
-
-    // Filtrar sólo los formatos VGC y devolver la lista completa
-    const vgcBo3Formats = formats
-      .filter(f => f.toLowerCase().includes("vgc"))
-      .map(f => f.trim());
-
+    
+    const vgcBo3Formats = formats.filter(f => 
+      f.toLowerCase().includes("vgc") && f.toLowerCase().includes("bo3")
+    );
+    
     if (!vgcBo3Formats.length) {
       throw new Error("No VGC BO3 formats found");
     }
-
-    // Normalizar: quitar sufijo final si es numérico o '0' (ej. '-1500', '-0') para obtener el formato base
-    const normalized = vgcBo3Formats.map(f => {
-      const parts = f.split('-');
-      const last = parts[parts.length - 1];
-      if (/^\d+$/.test(last) || last === '0') {
-        parts.pop();
-        return parts.join('-');
-      }
-      return f;
+    
+    const uniqueFormats = new Set();
+    vgcBo3Formats.forEach(format => {
+      const baseFormat = format.replace(/-\d+$/, '');
+      uniqueFormats.add(baseFormat);
     });
-
-    // Devolver formatos base únicos, preservando orden
-    return Array.from(new Set(normalized));
+    
+    const formatsArray = Array.from(uniqueFormats).sort();
+    console.log('Latest VGC BO3 formats:', formatsArray.join(', '));
+    
+    return formatsArray;
   } catch (error) {
     console.error("Error in getLatestFormat:", error);
     throw error;
@@ -65,105 +62,164 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// ===== AÑADIR: Array para rastrear errores =====
 async function fetchReplayLinks(formats) {
   try {
-    const formatsToProcess = Array.isArray(formats) ? formats : [formats];
-    const processedReplays = new Set();
-    const stats = {
-      total: 0,
-      success: 0,
-      failed: 0,
-      skipped: 0
-    };
-
-    for (const format of formatsToProcess) {
-      console.log(`\n====== Processing format: ${format} ======`);
-      const searchBaseUrl = `https://replay.pokemonshowdown.com/search.json?format=${encodeURIComponent(format)}`;
-      console.log(`Search URL: ${searchBaseUrl}`);
-
+    let totalProcessed = 0;
+    const failedReplays = []; // ← NUEVO: Rastrear replays fallidos
+    
+    for (const format of formats) {
+      console.log(`\n=== Processing format: ${format} ===`);
+      
       let hasMoreReplays = true;
+      let processedReplays = new Set();
       let lastTimestamp = null;
-      let pageCount = 0;
 
       while (hasMoreReplays) {
         try {
-          let searchUrl = searchBaseUrl;
-          if (lastTimestamp) searchUrl += `&before=${lastTimestamp}`;
+          let searchUrl = `https://replay.pokemonshowdown.com/search.json?format=${format}`;
+          if (lastTimestamp) {
+            searchUrl += `&before=${lastTimestamp}`;
+          }
+          console.log(`Fetching replays from: ${searchUrl}`);
 
           const response = await axios.get(searchUrl);
           const replays = response.data;
 
           if (!replays || !Array.isArray(replays) || replays.length === 0) {
-            console.log(`No more replays for format ${format} (page ${pageCount})`);
+            console.log(`No more replays found for ${format}`);
             break;
           }
 
-          pageCount++;
           hasMoreReplays = replays.length > 50;
+          console.log(`Found ${replays.length} replays (${hasMoreReplays ? 'more pages available' : 'last page'})`);
 
-          console.log(`Page ${pageCount}: Processing ${Math.min(50, replays.length)} replays...`);
-
-          for (const replayMeta of replays.slice(0, 50)) {
-            if (processedReplays.has(replayMeta.id)) {
-              stats.skipped++;
-              continue;
-            }
-
-            stats.total++;
-            let logUrl = null;
-
+          for (const replay of replays.slice(0, 50)) {
             try {
-              logUrl = `https://replay.pokemonshowdown.com/${replayMeta.id}.log`;
-              const logResp = await axios.get(logUrl);
-              
-              const replayPayload = {
-                replay_id: replayMeta.id,
-                format,
-                meta: replayMeta,
-                log: logResp.data,
-                source_url: logUrl
-              };
+              const query = `SELECT replay_id FROM \`pokemon-statistics.pokemon_replays.replays\` WHERE replay_id = '${replay.id}'`;
+              const [rows] = await bigQuery.query(query);
 
-              const result = await saveReplayToBigQuery(replayPayload);
-
-              if (result && result.success) {
-                processedReplays.add(replayMeta.id);
-                stats.success++;
-              } else {
-                stats.failed++;
-                console.warn(`Failed to save ${replayMeta.id}: ${result ? result.error : 'unknown error'}`);
+              if (rows.length > 0) {
+                console.log(`Replay ${replay.id} already exists in database`);
+                if (!CONTINUE_ON_EXISTING) {
+                  hasMoreReplays = false;
+                  break;
+                }
+                continue;
               }
 
-            } catch (err) {
-              stats.failed++;
-              console.error(`Error processing replay ${replayMeta.id} (${logUrl || 'unknown'}): ${err.message}`);
+              if (!processedReplays.has(replay.id)) {
+                const replayUrl = `https://replay.pokemonshowdown.com/${replay.id}.json`;
+                const replayResponse = await axios.get(replayUrl);
+                console.log(`Processing replay ${replay.id}`);
+                
+                // ===== MODIFICAR: Capturar errores detallados =====
+                try {
+                  await saveReplayToBigQuery(replayResponse.data);
+                  processedReplays.add(replay.id);
+                  totalProcessed++;
+                  console.log(`Successfully saved replay ${replay.id}`);
+                } catch (saveError) {
+                  // ===== NUEVO: Registrar el fallo con detalles =====
+                  const errorDetails = {
+                    replayId: replay.id,
+                    format: format,
+                    error: saveError.message || 'Unknown error',
+                    errorName: saveError.name || 'Error',
+                    timestamp: new Date().toISOString()
+                  };
+                  
+                  failedReplays.push(errorDetails);
+                  console.error(`Failed to save replay ${replay.id}: ${saveError.message}`);
+                }
+                
+                await delay(1000);
+              }
+            } catch (error) {
+              console.log(`Error processing replay ${replay.id}:`, error.message);
+              
+              // ===== NUEVO: Registrar también errores de fetch =====
+              failedReplays.push({
+                replayId: replay.id,
+                format: format,
+                error: error.message || 'Failed to fetch replay data',
+                errorName: error.name || 'Error',
+                timestamp: new Date().toISOString()
+              });
             }
           }
 
-          const last = replays[replays.length - 1];
-          lastTimestamp = last && (last.time || last.id) ? (last.time || last.id) : null;
-
-          await delay(300);
+          if (hasMoreReplays && replays.length >= 50) {
+            lastTimestamp = replays[49].uploadtime;
+            console.log(`Setting timestamp for next page: ${lastTimestamp}`);
+            await delay(2000);
+          }
 
         } catch (error) {
-          console.error(`Error fetching replays for format ${format}:`, error.message);
-          hasMoreReplays = false;
+          console.error(`Error processing batch:`, error.message);
+          if (error.response && error.response.status === 404) {
+            hasMoreReplays = false;
+          } else {
+            await delay(5000);
+          }
         }
       }
-
-      console.log(`\n====== Format ${format} complete: ${pageCount} pages processed ======`);
+      
+      console.log(`Finished processing ${format}: ${processedReplays.size} replays saved`);
     }
 
-    console.log(`\n====== FINAL STATS ======`);
-    console.log(`Total processed: ${stats.total}`);
-    console.log(`Successful: ${stats.success}`);
-    console.log(`Failed: ${stats.failed}`);
-    console.log(`Skipped (duplicates): ${stats.skipped}`);
-    console.log(`==========================\n`);
-
-    return Array.from(processedReplays);
+    // ===== NUEVO: Mostrar resumen de errores al final =====
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`EXECUTION SUMMARY`);
+    console.log(`${'='.repeat(80)}`);
+    console.log(`Total replays processed successfully: ${totalProcessed}`);
+    console.log(`Total replays failed: ${failedReplays.length}`);
+    
+    if (failedReplays.length > 0) {
+      console.log(`\n${'='.repeat(80)}`);
+      console.log(`FAILED REPLAYS (${failedReplays.length}):`);
+      console.log(`${'='.repeat(80)}\n`);
+      
+      // Agrupar por tipo de error
+      const errorsByType = {};
+      failedReplays.forEach(failed => {
+        const errorKey = failed.errorName;
+        if (!errorsByType[errorKey]) {
+          errorsByType[errorKey] = [];
+        }
+        errorsByType[errorKey].push(failed);
+      });
+      
+      // Mostrar agrupados por tipo de error
+      Object.keys(errorsByType).forEach(errorType => {
+        const replays = errorsByType[errorType];
+        console.log(`\n--- ${errorType} (${replays.length} replays) ---`);
+        replays.forEach((failed, idx) => {
+          console.log(`${idx + 1}. Replay ID: ${failed.replayId}`);
+          console.log(`   Format: ${failed.format}`);
+          console.log(`   Error: ${failed.error}`);
+          console.log(`   Time: ${failed.timestamp}`);
+          console.log(`   URL: https://replay.pokemonshowdown.com/${failed.replayId}`);
+          console.log('');
+        });
+      });
+      
+      // Listar solo los IDs para fácil copy-paste
+      console.log(`${'='.repeat(80)}`);
+      console.log(`FAILED REPLAY IDs (for easy copy-paste):`);
+      console.log(`${'='.repeat(80)}`);
+      failedReplays.forEach(failed => {
+        console.log(failed.replayId);
+      });
+    } else {
+      console.log(`\n✓ All replays processed successfully!`);
+    }
+    
+    console.log(`\n${'='.repeat(80)}\n`);
+    
+    return { totalProcessed, failedReplays };
   } catch (error) {
-    console.error("Error in fetchReplayLinks:", error);
+    console.error("Error fetching replay links:", error);
     throw error;
   }
 }
@@ -176,12 +232,15 @@ exports.fetchReplaysDaily = async (req, res) => {
     try {
       console.log('Getting latest formats...');
       const formats = await getLatestFormat();
-      console.log('Latest formats:', formats);
+      console.log(`Found ${formats.length} format(s) to process:`, formats.join(', '));
 
-      console.log('Starting to fetch replay links for all formats...');
+      console.log('Starting to fetch replay links...');
       try {
-        const processedReplays = await fetchReplayLinks(formats);
-        console.log(`Successfully processed ${processedReplays.length} replays`);
+        const result = await fetchReplayLinks(formats); // ← Ahora devuelve objeto
+        console.log(`\nFINAL SUMMARY:`);
+        console.log(`- Successfully processed: ${result.totalProcessed} replays`);
+        console.log(`- Failed: ${result.failedReplays.length} replays`);
+        console.log(`- Formats processed: ${formats.length}`);
       } catch (fetchError) {
         console.error('Error in fetchReplayLinks:', fetchError);
         throw fetchError;
