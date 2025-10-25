@@ -24,6 +24,10 @@ function PublicGamesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(25);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Nuevo estado para los formatos disponibles
+  const [availableFormats, setAvailableFormats] = useState([]);
+  const [isLoadingFormats, setIsLoadingFormats] = useState(true);
 
   // Estados para los valores de los filtros en el formulario
   const [sortBy, setSortBy] = useState("date DESC");
@@ -43,6 +47,28 @@ function PublicGamesPage() {
     showSaved: "all",
     formatFilter: "all",
   });
+
+  // Función para obtener los formatos disponibles
+  const fetchAvailableFormats = useCallback(async () => {
+    try {
+      setIsLoadingFormats(true);
+      const response = await axios.get("/api/games/formats");
+      
+      if (response.data && response.data.formats) {
+        setAvailableFormats(response.data.formats);
+      }
+    } catch (error) {
+      console.error("Error fetching available formats:", error);
+      setAvailableFormats([]);
+    } finally {
+      setIsLoadingFormats(false);
+    }
+  }, []);
+
+  // Cargar formatos al montar el componente
+  useEffect(() => {
+    fetchAvailableFormats();
+  }, [fetchAvailableFormats]);
 
   const fetchPublicGames = useCallback(
     async (page, filters) => {
@@ -105,6 +131,16 @@ function PublicGamesPage() {
       showSaved: "all",
       formatFilter: "all",
     });
+  };
+
+  // Helper function to format the display name of regulations
+  const formatRegulationName = (format) => {
+    // Extract regulation letter (e.g., "Reg G" from "[Gen 9] VGC 2025 Reg G (Bo3)")
+    const match = format.match(/Reg ([A-Z])/i);
+    if (match) {
+      return `Reg ${match[1].toUpperCase()}`;
+    }
+    return format; // Fallback to full name if pattern doesn't match
   };
 
   // Este useEffect ahora depende de activeFilters en lugar de los estados individuales
@@ -238,7 +274,7 @@ function PublicGamesPage() {
             </FormControl>
           </Grid>
 
-          {/* Format filter */}
+          {/* Format filter - NOW DYNAMIC */}
           <Grid item xs={12} sm={6} md={4} lg={2}>
             <FormControl size="small" fullWidth>
               <InputLabel>Format</InputLabel>
@@ -246,14 +282,20 @@ function PublicGamesPage() {
                 value={formatFilter}
                 label="Format"
                 onChange={(e) => setFormatFilter(e.target.value)}
+                disabled={isLoadingFormats}
               >
                 <MenuItem value="all">All</MenuItem>
-                <MenuItem value="[Gen 9] VGC 2025 Reg G (Bo3)">
-                  Reg G
-                </MenuItem>
-                <MenuItem value="[Gen 9] VGC 2025 Reg I (Bo3)">
-                  Reg I
-                </MenuItem>
+                {isLoadingFormats ? (
+                  <MenuItem disabled>
+                    <CircularProgress size={20} />
+                  </MenuItem>
+                ) : (
+                  availableFormats.map((format) => (
+                    <MenuItem key={format} value={format}>
+                      {formatRegulationName(format)}
+                    </MenuItem>
+                  ))
+                )}
               </Select>
             </FormControl>
           </Grid>
