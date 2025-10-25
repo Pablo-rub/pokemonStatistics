@@ -1,0 +1,3 @@
+# Excluir archivos de caché
+*.json
+!.gitkeep

@@ -1,194 +1,158 @@
-import React, { useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardMedia,
-  Typography,
-  Box,
-  Skeleton,
-  Tooltip,
-  Chip
-} from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import { getTypeColor } from '../../utils/pokemonTypes';
+import React from 'react';
+import { Card, CardContent, CardMedia, Typography, Box, Chip } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
-/**
- * PokemonCard - Reusable component to display a Pokémon card with types
- * 
- * @param {Object} pokemon - Pokémon data (must include types array)
- * @param {Function} onClick - Optional click handler
- */
-const PokemonCard = ({ pokemon, onClick }) => {
-  const theme = useTheme();
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
+const PokemonCard = ({ pokemon }) => {
+  const navigate = useNavigate();
 
-  const handleImageLoad = () => {
-    setImageLoaded(true);
+  // Función para obtener color del tipo
+  const getTypeColor = (typeName) => {
+    const typeColors = {
+      normal: '#A8A878',
+      fire: '#F08030',
+      water: '#6890F0',
+      electric: '#F8D030',
+      grass: '#78C850',
+      ice: '#98D8D8',
+      fighting: '#C03028',
+      poison: '#A040A0',
+      ground: '#E0C068',
+      flying: '#A890F0',
+      psychic: '#F85888',
+      bug: '#A8B820',
+      rock: '#B8A038',
+      ghost: '#705898',
+      dragon: '#7038F8',
+      dark: '#705848',
+      steel: '#B8B8D0',
+      fairy: '#EE99AC'
+    };
+    return typeColors[typeName?.toLowerCase()] || '#777';
   };
 
-  const handleImageError = () => {
-    setImageError(true);
-    setImageLoaded(true);
+  // CORRECCIÓN: Asegurar que siempre tenemos un identificador válido
+  const handleClick = () => {
+    // Prioridad: usar ID si existe, sino usar name
+    const identifier = pokemon?.id || pokemon?.name;
+    
+    if (!identifier) {
+      console.error('Pokemon card clicked but no ID or name available:', pokemon);
+      return;
+    }
+    
+    console.log('Navigating to pokemon:', identifier);
+    navigate(`/pokemon/${identifier}`);
   };
+
+  // Validación: asegurar que pokemon existe
+  if (!pokemon) {
+    console.error('PokemonCard rendered with undefined pokemon');
+    return null;
+  }
+
+  const displayName = pokemon.displayName || pokemon.name || 'Unknown';
+  const pokemonId = pokemon.id || 0;
+  const types = pokemon.types || [];
+  const image = pokemon.officialArtwork || pokemon.sprite || '/placeholder-pokemon.png';
 
   return (
-    <Tooltip title={`#${pokemon.id} - ${pokemon.displayName}`} arrow>
-      <Card
-        onClick={onClick}
+    <Card
+      onClick={handleClick}
+      sx={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: 'rgba(30, 30, 30, 0.9)',
+        borderRadius: 2,
+        cursor: 'pointer',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: '0 8px 24px rgba(36, 204, 159, 0.3)',
+          backgroundColor: 'rgba(40, 40, 40, 0.95)'
+        }
+      }}
+    >
+      {/* Imagen del Pokémon */}
+      <Box
         sx={{
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          backgroundColor: 'rgba(30, 30, 30, 0.9)',
-          borderRadius: 2,
-          transition: 'all 0.3s ease',
-          cursor: onClick ? 'pointer' : 'default',
-          '&:hover': onClick ? {
-            transform: 'translateY(-8px)',
-            boxShadow: `0 8px 24px ${theme.palette.primary.main}40`,
-            backgroundColor: 'rgba(40, 40, 40, 0.95)'
-          } : {},
-          border: `1px solid ${theme.palette.divider}`
+          position: 'relative',
+          paddingTop: '100%', // Aspect ratio 1:1
+          backgroundColor: 'rgba(20, 20, 20, 0.5)',
+          overflow: 'hidden'
         }}
       >
-        {/* Image Section */}
-        <Box
+        <CardMedia
+          component="img"
+          image={image}
+          alt={displayName}
+          onError={(e) => {
+            e.target.src = '/placeholder-pokemon.png';
+          }}
           sx={{
-            position: 'relative',
-            paddingTop: '100%',
-            backgroundColor: 'rgba(50, 50, 50, 0.3)',
-            overflow: 'hidden'
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            padding: 2
+          }}
+        />
+      </Box>
+
+      {/* Información del Pokémon */}
+      <CardContent sx={{ flexGrow: 1, pt: 2 }}>
+        {/* ID */}
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'rgba(255, 255, 255, 0.5)',
+            fontWeight: 'bold',
+            display: 'block',
+            mb: 0.5
           }}
         >
-          {!imageLoaded && !imageError && (
-            <Skeleton
-              variant="rectangular"
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%'
-              }}
-            />
-          )}
-          
-          {!imageError ? (
-            <CardMedia
-              component="img"
-              image={pokemon.officialArtwork || pokemon.sprite}
-              alt={pokemon.displayName}
-              onLoad={handleImageLoad}
-              onError={handleImageError}
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-                padding: 2,
-                opacity: imageLoaded ? 1 : 0,
-                transition: 'opacity 0.3s ease'
-              }}
-            />
-          ) : (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'rgba(255, 255, 255, 0.5)'
-              }}
-            >
-              <Typography variant="h6">?</Typography>
-            </Box>
-          )}
+          #{String(pokemonId).padStart(4, '0')}
+        </Typography>
+
+        {/* Nombre */}
+        <Typography
+          variant="h6"
+          sx={{
+            color: 'white',
+            fontWeight: 'bold',
+            mb: 1,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {displayName}
+        </Typography>
+
+        {/* Tipos */}
+        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          {types.map((typeObj, index) => {
+            const typeName = typeObj.name || typeObj.type?.name || 'Unknown';
+            return (
+              <Chip
+                key={index}
+                label={typeName.toUpperCase()}
+                size="small"
+                sx={{
+                  backgroundColor: getTypeColor(typeName),
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '0.7rem',
+                  height: '20px'
+                }}
+              />
+            );
+          })}
         </Box>
-
-        {/* Content Section */}
-        <CardContent 
-          sx={{ 
-            flexGrow: 1, 
-            textAlign: 'center', 
-            py: 1.5,
-            px: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 0.5
-          }}
-        >
-          {/* Pokémon ID */}
-          <Typography
-            variant="caption"
-            sx={{
-              color: theme.palette.primary.main,
-              fontWeight: 'bold',
-              display: 'block'
-            }}
-          >
-            #{pokemon.id.toString().padStart(4, '0')}
-          </Typography>
-          
-          {/* Pokémon Name */}
-          <Typography
-            variant="body2"
-            sx={{
-              color: 'white',
-              fontWeight: 500,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              mb: 0.5
-            }}
-          >
-            {pokemon.displayName}
-          </Typography>
-
-          {/* Type Badges */}
-          {pokemon.types && pokemon.types.length > 0 && (
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                gap: 0.5, 
-                justifyContent: 'center',
-                flexWrap: 'wrap'
-              }}
-            >
-              {pokemon.types
-                .sort((a, b) => a.slot - b.slot)
-                .map((type) => {
-                  const typeName = typeof type === 'string' ? type : type.name;
-                  return (
-                    <Chip
-                      key={typeName}
-                      label={typeName}
-                      size="small"
-                      sx={{
-                        backgroundColor: getTypeColor(typeName),
-                        color: 'white',
-                        fontWeight: 'bold',
-                        fontSize: '0.65rem',
-                        height: 20,
-                        '& .MuiChip-label': {
-                          px: 1,
-                          py: 0
-                        }
-                      }}
-                    />
-                  );
-                })}
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-    </Tooltip>
+      </CardContent>
+    </Card>
   );
 };
 

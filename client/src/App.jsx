@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './layout/MainLayout';
 import HomePage from './Pages/HomePage';
 import SavedGamesPage from './Pages/SavedGamesPage';
@@ -31,8 +31,8 @@ function App() {
         <Route path="battle-analytics" element={<BattleAnalyticsPage />} />
         <Route path="contact" element={<ContactPage />} />
         <Route path="pokemon-list" element={<PokemonListPage />} />
-        <Route path="pokemon-list/:id" element={<PokemonDetailPage />} />
-        <Route path="*" element={<div>404 Not Found</div>} />
+        <Route path="pokemon/:nameOrId" element={<PokemonDetailPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );
