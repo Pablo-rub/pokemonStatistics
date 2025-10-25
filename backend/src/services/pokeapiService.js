@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const pokemonCacheService = require('./pokemonCacheService');
 
 // Endpoint para obtener la lista de ítems (items)
 router.get('/items', async (req, res) => {
@@ -58,156 +59,155 @@ router.get('/moves', async (req, res) => {
     }
 });
 
-// Endpoint para obtener la lista de Pokémon (sin Mega Evoluciones) CON TIPOS
+// NUEVO ENDPOINT OPTIMIZADO: Obtener lista de Pokémon con tipos (desde caché)
 router.get('/pokemon', async (req, res) => {
-    console.log('📡 GET /api/pokemon - Request received');
+    console.log('📡 GET /api/pokemon - Request received (CACHED)');
     console.log('Query params:', req.query);
     
     try {
-        const limit = parseInt(req.query.limit) || 1025; // Gen 1-9
+        const limit = parseInt(req.query.limit) || 1025;
         const offset = parseInt(req.query.offset) || 0;
+        const types = req.query.types; // Filtro opcional de tipos
         
-        console.log(`Fetching ${limit} Pokémon from PokeAPI (offset: ${offset})`);
+        // Obtener todos los Pokémon del caché
+        let allPokemon = await pokemonCacheService.getAllPokemon();
         
-        // Obtener lista básica de Pokémon
-        const response = await axios.get(`https://pokeapi.co/api/v2/pokemon?limit=${limit}&offset=${offset}`);
+        console.log(`✅ Loaded ${allPokemon.length} Pokémon from cache`);
         
-        // Formatear datos básicos
-        const basicPokemonList = response.data.results.map((pokemon, index) => {
-            const id = pokemon.url.split('/').filter(Boolean).pop();
-            
-            return {
-                id: parseInt(id),
-                name: pokemon.name
-                    .split('-')
-                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join('-'),
-                displayName: pokemon.name
-                    .split('-')
-                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                    .join(' '),
-                sprite: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`,
-                spriteShiny: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/${id}.png`,
-                officialArtwork: `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`,
-                url: pokemon.url // Guardamos la URL para fetch posterior de tipos
-            };
-        });
-
-        console.log(`✅ Basic data processed for ${basicPokemonList.length} Pokémon`);
-
-        // NUEVO: Obtener tipos en paralelo con límite de concurrencia
-        console.log('🔄 Fetching types for all Pokémon...');
-        
-        const BATCH_SIZE = 50; // Procesar en lotes de 50
-        const pokemonWithTypes = [];
-        
-        for (let i = 0; i < basicPokemonList.length; i += BATCH_SIZE) {
-            const batch = basicPokemonList.slice(i, i + BATCH_SIZE);
-            
-            const batchResults = await Promise.all(
-                batch.map(async (pokemon) => {
-                    try {
-                        // Fetch detallado para obtener tipos
-                        const detailResponse = await axios.get(pokemon.url);
-                        
-                        return {
-                            ...pokemon,
-                            types: detailResponse.data.types.map(typeObj => ({
-                                slot: typeObj.slot,
-                                name: typeObj.type.name.charAt(0).toUpperCase() + typeObj.type.name.slice(1)
-                            }))
-                        };
-                    } catch (err) {
-                        console.error(`❌ Error fetching types for ${pokemon.name}:`, err.message);
-                        // Retornar sin tipos si falla
-                        return {
-                            ...pokemon,
-                            types: []
-                        };
-                    }
-                })
+        // Filtrar por tipos si se especifica
+        if (types) {
+            const typeArray = types.split(',').map(t => t.toLowerCase());
+            allPokemon = allPokemon.filter(pokemon => 
+                pokemon.types && pokemon.types.some(t => 
+                    typeArray.includes(t.name.toLowerCase())
+                )
             );
-            
-            pokemonWithTypes.push(...batchResults);
-            
-            // Log de progreso
-            const progress = Math.min(((i + BATCH_SIZE) / basicPokemonList.length) * 100, 100);
-            console.log(`   Progress: ${progress.toFixed(1)}% (${pokemonWithTypes.length}/${basicPokemonList.length})`);
-            
-            // Pequeña pausa entre lotes para respetar rate limits
-            if (i + BATCH_SIZE < basicPokemonList.length) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
+            console.log(`🔍 Filtered to ${allPokemon.length} Pokémon by types: ${types}`);
         }
         
-        console.log(`✅ Types fetched for all ${pokemonWithTypes.length} Pokémon`);
+        // Ordenar por ID
+        allPokemon.sort((a, b) => a.id - b.id);
         
-        // Remover la propiedad 'url' que ya no necesitamos
-        const finalPokemonList = pokemonWithTypes.map(({ url, ...pokemon }) => pokemon);
+        // Aplicar paginación
+        const start = offset;
+        const end = offset + limit;
+        const paginatedPokemon = allPokemon.slice(start, end);
+        
+        // Formatear respuesta (compatible con el formato anterior)
+        const formattedPokemon = paginatedPokemon.map(pokemon => ({
+            id: pokemon.id,
+            name: pokemon.name,
+            displayName: pokemon.displayName,
+            sprite: pokemon.sprite,
+            spriteShiny: pokemon.spriteShiny,
+            officialArtwork: pokemon.officialArtwork,
+            types: pokemon.types
+        }));
         
         res.json({
-            count: response.data.count,
-            pokemon: finalPokemonList
+            count: allPokemon.length,
+            pokemon: formattedPokemon,
+            cached: true,
+            cacheStats: pokemonCacheService.getStats()
         });
         
     } catch (error) {
         console.error("❌ Error fetching Pokémon list:", error.message);
-        console.error("Stack trace:", error.stack);
         res.status(500).json({ 
             error: "Error fetching Pokémon list",
-            message: error.message,
-            details: error.response?.data || null
+            message: error.message
         });
     }
 });
 
-// Endpoint para obtener detalles de un Pokémon específico
+// Endpoint para obtener detalles de un Pokémon específico (desde caché)
 router.get('/pokemon/:idOrName', async (req, res) => {
     try {
         const { idOrName } = req.params;
-        const response = await axios.get(`https://pokeapi.co/api/v2/pokemon/${idOrName.toLowerCase()}`);
+        console.log(`📡 GET /api/pokemon/${idOrName} (from cache)`);
         
-        const pokemon = response.data;
+        // Intentar obtener del caché primero
+        let pokemon = await pokemonCacheService.getPokemon(idOrName);
         
-        // Formatear datos relevantes
-        const formattedData = {
-            id: pokemon.id,
-            name: pokemon.name,
-            displayName: pokemon.name
-                .split('-')
-                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                .join(' '),
-            height: pokemon.height,
-            weight: pokemon.weight,
-            types: pokemon.types.map(t => ({
-                slot: t.slot,
-                name: t.type.name.charAt(0).toUpperCase() + t.type.name.slice(1)
-            })),
-            abilities: pokemon.abilities.map(a => ({
-                name: a.ability.name
+        // Si no está en caché, obtener de PokeAPI directamente
+        if (!pokemon) {
+            console.log(`⚠️ Pokemon ${idOrName} not in cache, fetching from PokeAPI`);
+            const response = await axios.get(
+                `https://pokeapi.co/api/v2/pokemon/${idOrName.toLowerCase()}`
+            );
+            const data = response.data;
+            
+            pokemon = {
+                id: data.id,
+                name: data.name,
+                displayName: data.name
                     .split('-')
                     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                     .join(' '),
-                isHidden: a.is_hidden,
-                slot: a.slot
-            })),
-            stats: pokemon.stats.map(s => ({
-                name: s.stat.name,
-                baseStat: s.base_stat,
-                effort: s.effort
-            })),
-            sprites: {
-                default: pokemon.sprites.front_default,
-                shiny: pokemon.sprites.front_shiny,
-                officialArtwork: pokemon.sprites.other['official-artwork'].front_default
-            }
-        };
+                height: data.height,
+                weight: data.weight,
+                types: data.types.map(t => ({
+                    slot: t.slot,
+                    name: t.type.name.charAt(0).toUpperCase() + t.type.name.slice(1)
+                })),
+                abilities: data.abilities.map(a => ({
+                    name: a.ability.name
+                        .split('-')
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(' '),
+                    isHidden: a.is_hidden,
+                    slot: a.slot
+                })),
+                stats: data.stats.map(s => ({
+                    name: s.stat.name,
+                    baseStat: s.base_stat,
+                    effort: s.effort
+                })),
+                sprites: {
+                    default: data.sprites.front_default,
+                    shiny: data.sprites.front_shiny,
+                    officialArtwork: data.sprites.other['official-artwork'].front_default
+                }
+            };
+        }
         
-        res.json(formattedData);
+        res.json(pokemon);
     } catch (error) {
-        console.error(`Error fetching Pokémon ${req.params.idOrName}:`, error.message);
-        res.status(error.response?.status || 500).send(`Error fetching Pokémon details`);
+        console.error(`❌ Error fetching Pokémon ${req.params.idOrName}:`, error.message);
+        res.status(error.response?.status || 500).json({
+            error: `Error fetching Pokémon details`,
+            message: error.message
+        });
     }
+});
+
+// NUEVO ENDPOINT: Forzar actualización del caché (admin/debug)
+router.post('/pokemon-cache/refresh', async (req, res) => {
+    try {
+        console.log('🔄 Manual cache refresh requested');
+        await pokemonCacheService.updateCache();
+        res.json({ 
+            message: 'Cache updated successfully',
+            stats: pokemonCacheService.getStats()
+        });
+    } catch (error) {
+        console.error('❌ Error refreshing cache:', error);
+        res.status(500).json({ 
+            error: 'Failed to refresh cache',
+            message: error.message 
+        });
+    }
+});
+
+// NUEVO ENDPOINT: Obtener estadísticas del caché
+router.get('/pokemon-cache/stats', (req, res) => {
+    const stats = pokemonCacheService.getStats();
+    res.json({
+        ...stats,
+        lastUpdateFormatted: stats.lastUpdate 
+            ? new Date(stats.lastUpdate).toLocaleString() 
+            : 'Never'
+    });
 });
 
 // Nuevo endpoint para obtener todas las formas/varieties de un Pokémon

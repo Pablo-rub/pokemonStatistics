@@ -43,8 +43,11 @@ const PokemonListPage = () => {
   
   const itemsPerPage = 24;
   
-  // Fetch Pokémon list
-  const { pokemonList, loading, error } = usePokemonList({ limit: 1025 });
+  // Fetch Pokémon list (ahora mucho más rápido)
+  const { pokemonList, loading, error, cacheInfo } = usePokemonList({ 
+    limit: 1025,
+    types: selectedTypes // Pasar tipos al hook
+  });
 
   // Log cuando cambie la lista de Pokémon
   useEffect(() => {
@@ -54,6 +57,17 @@ const PokemonListPage = () => {
       hasTypes: pokemonList.filter(p => p.types && p.types.length > 0).length
     });
   }, [pokemonList]);
+
+  // Log info de caché (opcional, para debugging)
+  useEffect(() => {
+    if (cacheInfo) {
+      console.log('📊 Cache info:', {
+        count: cacheInfo.count,
+        ageMinutes: cacheInfo.ageMinutes,
+        needsUpdate: cacheInfo.needsUpdate
+      });
+    }
+  }, [cacheInfo]);
 
   // Update URL when filters change
   useEffect(() => {
@@ -124,7 +138,21 @@ const PokemonListPage = () => {
   };
 
   const handlePokemonClick = (pokemon) => {
-    navigate(`/pokemon-list/${pokemon.id}`);
+    if (!pokemon) {
+      console.error('handlePokemonClick called with undefined pokemon');
+      return;
+    }
+
+    // Prioridad: ID > name
+    const identifier = pokemon.id || pokemon.name;
+    
+    if (!identifier) {
+      console.error('Pokemon has no valid identifier:', pokemon);
+      return;
+    }
+
+    console.log('Navigating to pokemon:', identifier, pokemon);
+    navigate(`/pokemon/${identifier}`);
   };
 
   const handleSearchChange = (event) => {
@@ -285,18 +313,23 @@ const PokemonListPage = () => {
           <>
             {/* Pokémon Grid */}
             <Grid container spacing={3}>
-              {paginatedPokemon.map((pokemon) => (
-                <Grid item xs={6} sm={4} md={3} lg={2} key={pokemon.id}>
-                  <Fade in={true} timeout={300}>
-                    <Box>
-                      <PokemonCard
-                        pokemon={pokemon}
-                        onClick={() => handlePokemonClick(pokemon)}
-                      />
-                    </Box>
-                  </Fade>
-                </Grid>
-              ))}
+              {paginatedPokemon.map((pokemon) => {
+                // VALIDACIÓN: Asegurar que cada pokemon tiene un identificador único
+                const key = pokemon.id || pokemon.name || `pokemon-${Math.random()}`;
+                
+                return (
+                  <Grid item xs={6} sm={4} md={3} lg={2} key={key}>
+                    <Fade in={true} timeout={300}>
+                      <Box>
+                        <PokemonCard
+                          pokemon={pokemon}
+                          onClick={() => handlePokemonClick(pokemon)}
+                        />
+                      </Box>
+                    </Fade>
+                  </Grid>
+                );
+              })}
             </Grid>
 
             {/* Pagination */}
@@ -332,6 +365,17 @@ const PokemonListPage = () => {
               </Box>
             )}
           </>
+        )}
+
+        {/* OPCIONAL: Info de caché */}
+        {cacheInfo && cacheInfo.ageMinutes !== null && (
+          <Box sx={{ mb: 2, textAlign: 'right' }}>
+            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+              Data cached {cacheInfo.ageMinutes < 60 
+                ? `${cacheInfo.ageMinutes}m` 
+                : `${Math.floor(cacheInfo.ageMinutes / 60)}h`} ago
+            </Typography>
+          </Box>
         )}
       </Box>
     </Container>

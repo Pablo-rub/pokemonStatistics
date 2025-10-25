@@ -38,7 +38,7 @@ import {
 } from '../utils/typeMatchups';
 
 const PokemonDetailPage = () => {
-  const { id } = useParams();
+  const { nameOrId } = useParams();
   const navigate = useNavigate();
   const theme = useTheme();
   
@@ -53,11 +53,9 @@ const PokemonDetailPage = () => {
   const [abilityDescriptions, setAbilityDescriptions] = useState({});
   const [loadingAbilityDesc, setLoadingAbilityDesc] = useState({});
 
-  // ... existing useEffects and functions ...
-
   useEffect(() => {
     fetchPokemonDetails();
-  }, [id]);
+  }, [nameOrId]);
 
   useEffect(() => {
     if (pokemonData && pokemonData.id <= 1025) {
@@ -85,10 +83,17 @@ const PokemonDetailPage = () => {
     setError(null);
 
     try {
-      const response = await axios.get(`/api/pokemon/${id}`);
+      console.log(`🔄 Fetching details for: ${nameOrId}`);
+      const response = await axios.get(`/api/pokemon/${nameOrId}`);
+      
+      if (!response.data) {
+        throw new Error('No data received from server');
+      }
+      
+      console.log('✅ Pokemon data received:', response.data);
       setPokemonData(response.data);
     } catch (err) {
-      console.error('Error fetching Pokémon details:', err);
+      console.error('❌ Error fetching Pokémon details:', err);
       setError(err.response?.data?.message || 'Error loading Pokémon details');
     } finally {
       setLoading(false);
@@ -202,26 +207,26 @@ const PokemonDetailPage = () => {
   };
 
   const calculateOptimizedTotal = (stats) => {
-    if (!stats || !Array.isArray(stats)) return { total: 0, optimized: 0, wasted: 0 };
+    if (!stats || !Array.isArray(stats)) {
+      return { total: 0, optimized: 0, wasted: 0, wastedStatName: 'N/A' };
+    }
+
+    const hp = stats.find(s => s.name === 'hp')?.baseStat || 0;
+    const attack = stats.find(s => s.name === 'attack')?.baseStat || 0;
+    const defense = stats.find(s => s.name === 'defense')?.baseStat || 0;
+    const spAttack = stats.find(s => s.name === 'special-attack')?.baseStat || 0;
+    const spDefense = stats.find(s => s.name === 'special-defense')?.baseStat || 0;
+    const speed = stats.find(s => s.name === 'speed')?.baseStat || 0;
+
+    const total = hp + attack + defense + spAttack + spDefense + speed;
     
-    const attackStat = stats.find(s => s.name === 'attack');
-    const spAttackStat = stats.find(s => s.name === 'special-attack');
-    
-    if (!attackStat || !spAttackStat) return { total: 0, optimized: 0, wasted: 0 };
-    
-    const total = stats.reduce((sum, stat) => sum + stat.baseStat, 0);
-    const wastedStat = Math.min(attackStat.baseStat, spAttackStat.baseStat);
+    const wastedStat = attack < spAttack ? attack : spAttack;
+    const wastedStatName = attack < spAttack ? 'Attack' : 'Sp. Attack';
     const optimized = total - wastedStat;
-    
-    return {
-      total,
-      optimized,
-      wasted: wastedStat,
-      wastedStatName: attackStat.baseStat < spAttackStat.baseStat ? 'Attack' : 'Sp. Attack'
-    };
+
+    return { total, optimized, wasted: wastedStat, wastedStatName };
   };
 
-  // Render type matchup category
   const renderMatchupCategory = (category, types, effectivenessInfo) => {
     if (!types || types.length === 0) return null;
 
@@ -310,12 +315,25 @@ const PokemonDetailPage = () => {
     );
   }
 
-  if (!pokemonData || !displayedPokemon) return null;
+  if (!pokemonData || !displayedPokemon) {
+    return (
+      <Container maxWidth="xl">
+        <Box sx={{ py: 4 }}>
+          <IconButton onClick={handleBackToList} sx={{ color: 'white', mb: 2 }}>
+            <ArrowBackIcon /> Back to list
+          </IconButton>
+          
+          <Alert severity="warning">
+            No Pokémon data available
+          </Alert>
+        </Box>
+      </Container>
+    );
+  }
 
-  const optimizedStats = calculateOptimizedTotal(displayedPokemon.stats);
+  const optimizedStats = calculateOptimizedTotal(displayedPokemon.stats || []);
   
-  // Calculate type matchups
-  const pokemonTypes = displayedPokemon.types.map(t => t.name.toLowerCase());
+  const pokemonTypes = (displayedPokemon.types || []).map(t => t.name?.toLowerCase() || 'unknown');
   const defensiveMatchups = calculateDefensiveMatchups(pokemonTypes);
   const offensiveMatchups = calculateOffensiveMatchups(pokemonTypes);
 
@@ -336,11 +354,11 @@ const PokemonDetailPage = () => {
           </IconButton>
           
           <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
-            {displayedPokemon.displayName}
+            {displayedPokemon?.displayName || 'Unknown'}
           </Typography>
           
           <Typography variant="h5" sx={{ color: theme.palette.primary.main, ml: 1 }}>
-            #{displayedPokemon.id.toString().padStart(4, '0')}
+            #{(displayedPokemon?.id || 0).toString().padStart(4, '0')}
           </Typography>
 
           {selectedForm && (
@@ -372,8 +390,13 @@ const PokemonDetailPage = () => {
               >
                 <Box
                   component="img"
-                  src={displayedPokemon.sprites.officialArtwork}
-                  alt={displayedPokemon.displayName}
+                  src={
+                    displayedPokemon?.sprites?.officialArtwork || 
+                    displayedPokemon?.officialArtwork || 
+                    displayedPokemon?.sprite || 
+                    '/placeholder-pokemon.png'
+                  }
+                  alt={displayedPokemon?.displayName || 'Pokemon'}
                   sx={{
                     width: '100%',
                     maxWidth: 300,
@@ -385,7 +408,7 @@ const PokemonDetailPage = () => {
                     transition: 'all 0.5s ease'
                   }}
                   onError={(e) => {
-                    e.target.src = displayedPokemon.sprites.default;
+                    e.target.src = '/placeholder-pokemon.png';
                   }}
                 />
 
@@ -458,7 +481,7 @@ const PokemonDetailPage = () => {
                             px: 2
                           }}
                         >
-                          {form.displayName.replace(pokemonData.displayName, '').trim() || form.displayName}
+                          {form.displayName?.replace(pokemonData.displayName, '').trim() || form.displayName}
                         </Button>
                       ))}
                     </ButtonGroup>
@@ -477,10 +500,10 @@ const PokemonDetailPage = () => {
                     Type
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-                    {displayedPokemon.types.map((type) => (
+                    {(displayedPokemon?.types || []).map((type) => (
                       <Chip
                         key={type.slot}
-                        label={type.name}
+                        label={type.name || 'Unknown'}
                         sx={{
                           backgroundColor: getTypeColor(type.name),
                           color: 'white',
@@ -493,14 +516,14 @@ const PokemonDetailPage = () => {
                   </Box>
                 </Box>
 
-                {/* Height and Weight */}
+                {/* Height & Weight */}
                 <Grid container spacing={2} sx={{ mt: 2 }}>
                   <Grid item xs={6}>
                     <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
                       Height
                     </Typography>
                     <Typography variant="h6" sx={{ color: 'white' }}>
-                      {(displayedPokemon.height / 10).toFixed(1)} m
+                      {((displayedPokemon?.height || 0) / 10).toFixed(1)} m
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
@@ -508,7 +531,7 @@ const PokemonDetailPage = () => {
                       Weight
                     </Typography>
                     <Typography variant="h6" sx={{ color: 'white' }}>
-                      {(displayedPokemon.weight / 10).toFixed(1)} kg
+                      {((displayedPokemon?.weight || 0) / 10).toFixed(1)} kg
                     </Typography>
                   </Grid>
                 </Grid>
@@ -516,7 +539,7 @@ const PokemonDetailPage = () => {
             </Fade>
           </Grid>
 
-          {/* Right Column - Stats, Abilities, and Type Matchups */}
+          {/* Right Column - Tabs */}
           <Grid item xs={12} md={8}>
             <Paper
               elevation={3}
@@ -547,50 +570,45 @@ const PokemonDetailPage = () => {
                 <Tab label="Type Matchups" />
               </Tabs>
 
-              {/* Stats Tab */}
               {currentTab === 0 && (
                 <Box>
                   <Typography variant="h5" sx={{ color: 'white', mb: 3, fontWeight: 'bold' }}>
                     Base Stats
                   </Typography>
                   
-                  {displayedPokemon.stats.map((stat) => {
-                    const statName = stat.name
-                      .split('-')
-                      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                      .join(' ');
-                    
-                    return (
-                      <Box key={stat.name} sx={{ mb: 2 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                          <Typography sx={{ color: 'white', fontWeight: 500 }}>
-                            {statName}
-                          </Typography>
-                          <Typography 
-                            sx={{ 
-                              color: getStatColor(stat.baseStat),
-                              fontWeight: 'bold'
-                            }}
-                          >
-                            {stat.baseStat}
-                          </Typography>
-                        </Box>
-                        <LinearProgress
-                          variant="determinate"
-                          value={getStatBarValue(stat.baseStat)}
-                          sx={{
-                            height: 8,
-                            borderRadius: 4,
-                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                            '& .MuiLinearProgress-bar': {
-                              backgroundColor: getStatColor(stat.baseStat),
-                              borderRadius: 4
-                            }
+                  {(displayedPokemon?.stats || []).map((stat) => (
+                    <Box key={stat.name} sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Typography sx={{ color: 'white', fontWeight: 500 }}>
+                          {stat.name
+                            .split('-')
+                            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                            .join(' ')}
+                        </Typography>
+                        <Typography 
+                          sx={{ 
+                            color: getStatColor(stat.baseStat),
+                            fontWeight: 'bold'
                           }}
-                        />
+                        >
+                          {stat.baseStat}
+                        </Typography>
                       </Box>
-                    );
-                  })}
+                      <LinearProgress
+                        variant="determinate"
+                        value={getStatBarValue(stat.baseStat)}
+                        sx={{
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          '& .MuiLinearProgress-bar': {
+                            backgroundColor: getStatColor(stat.baseStat),
+                            borderRadius: 4
+                          }
+                        }}
+                      />
+                    </Box>
+                  ))}
 
                   <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
@@ -743,7 +761,6 @@ const PokemonDetailPage = () => {
                 </Box>
               )}
 
-              {/* Abilities Tab */}
               {currentTab === 1 && (
                 <Box>
                   <Typography variant="h5" sx={{ color: 'white', mb: 3, fontWeight: 'bold' }}>
@@ -751,7 +768,7 @@ const PokemonDetailPage = () => {
                   </Typography>
                   
                   <Grid container spacing={2}>
-                    {displayedPokemon.abilities.map((ability) => (
+                    {(displayedPokemon?.abilities || []).map((ability) => (
                       <Grid item xs={12} key={ability.slot}>
                         <Card
                           sx={{
@@ -868,7 +885,6 @@ const PokemonDetailPage = () => {
                 </Box>
               )}
 
-              {/* Type Matchups Tab */}
               {currentTab === 2 && (
                 <Box>
                   <Typography variant="h5" sx={{ color: 'white', mb: 3, fontWeight: 'bold' }}>
@@ -951,7 +967,7 @@ const PokemonDetailPage = () => {
                   </Card>
 
                   {/* Offensive Matchups */}
-                  {displayedPokemon.types.map((type, index) => {
+                  {(displayedPokemon?.types || []).map((type, index) => {
                     const typeMatchups = offensiveMatchups[type.name];
                     if (!typeMatchups) return null;
 
@@ -961,12 +977,11 @@ const PokemonDetailPage = () => {
                         sx={{
                           backgroundColor: 'rgba(50, 50, 50, 0.5)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
-                          mb: displayedPokemon.types.length > 1 && index < displayedPokemon.types.length - 1 ? 3 : 0
+                          mb: index < displayedPokemon.types.length - 1 ? 3 : 0
                         }}
                       >
                         <CardContent>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                            {/* CAMBIADO: SwordIcon → GavelIcon */}
                             <GavelIcon sx={{ color: getTypeColor(type.name) }} />
                             <Chip
                               label={type.name}
