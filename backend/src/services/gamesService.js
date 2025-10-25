@@ -15,6 +15,36 @@ router.get('/count', async (req, res) => {
     }
 });
 
+// Endpoint para obtener los formatos únicos - CORREGIDO PARA BIGQUERY
+router.get('/formats', async (req, res) => {
+  try {
+    const query = `
+      SELECT DISTINCT format 
+      FROM \`pokemon-statistics.pokemon_replays.replays\`
+      WHERE format IS NOT NULL 
+        AND format != '' 
+      ORDER BY format DESC
+    `;
+    
+    console.log('Fetching formats from BigQuery...');
+    const [rows] = await bigQuery.query(query);
+    
+    // Extraer solo los valores de formato
+    const formats = rows.map(row => row.format);
+    
+    console.log('Formats found:', formats.length);
+    console.log('Sample formats:', formats.slice(0, 3));
+    
+    res.json({ formats });
+  } catch (error) {
+    console.error('Error fetching formats from BigQuery:', error);
+    res.status(500).json({ 
+      error: 'Error fetching formats',
+      message: error.message 
+    });
+  }
+});
+
 // Modify the /api/games endpoint
 router.get('/', async (req, res) => {
   try {
