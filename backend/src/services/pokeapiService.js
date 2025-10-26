@@ -185,9 +185,10 @@ router.get('/pokemon/:idOrName', async (req, res) => {
 router.post('/pokemon-cache/refresh', async (req, res) => {
     try {
         console.log('🔄 Manual cache refresh requested');
-        await pokemonCacheService.updateCache();
+        const result = await pokemonCacheService.updateCache();
         res.json({ 
-            message: 'Cache updated successfully',
+            message: result.success ? 'Cache updated successfully' : 'Cache update incomplete',
+            result,
             stats: pokemonCacheService.getStats()
         });
     } catch (error) {
@@ -206,7 +207,13 @@ router.get('/pokemon-cache/stats', (req, res) => {
         ...stats,
         lastUpdateFormatted: stats.lastUpdate 
             ? new Date(stats.lastUpdate).toLocaleString() 
-            : 'Never'
+            : 'Never',
+        // ✅ NUEVO: Advertencias si el caché está incompleto
+        warnings: stats.isComplete ? [] : [
+            `Cache is incomplete: ${stats.count}/${stats.expected} Pokemon (${stats.completionPercentage}%)`,
+            'Consider running POST /api/pokemon-cache/refresh'
+        ],
+        status: stats.isUpdating ? 'updating' : 'ready'
     });
 });
 
