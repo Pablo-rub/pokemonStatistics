@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Typography,
   Box,
@@ -36,7 +36,7 @@ function SavedGamesPage() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
   
-  // Estados de filtros
+  // ✅ Estados TEMPORALES de filtros (en el formulario)
   const [sortBy, setSortBy] = useState("date DESC");
   const [playerFilter, setPlayerFilter] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
@@ -44,11 +44,18 @@ function SavedGamesPage() {
   const [formatFilter, setFormatFilter] = useState("all");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // Estados para formatos disponibles
+  // ✅ Estados ACTIVOS de filtros (aplicados)
+  const [activeFilters, setActiveFilters] = useState({
+    sortBy: "date DESC",
+    playerFilter: "",
+    ratingFilter: "all",
+    dateFilter: "all",
+    formatFilter: "all",
+  });
+
   const [availableFormats, setAvailableFormats] = useState([]);
   const [isLoadingFormats, setIsLoadingFormats] = useState(true);
 
-  // Fetch formatos disponibles
   const fetchAvailableFormats = useCallback(async () => {
     try {
       setIsLoadingFormats(true);
@@ -69,17 +76,36 @@ function SavedGamesPage() {
     fetchAvailableFormats();
   }, [fetchAvailableFormats]);
 
+  // ✅ RESTAURADO: Función applyFilters (como PublicGamesPage)
   const applyFilters = () => {
     setPage(1);
-    // Los filtros se aplican automáticamente en el useMemo de sortedGames
+    setActiveFilters({
+      sortBy,
+      playerFilter,
+      ratingFilter,
+      dateFilter,
+      formatFilter,
+    });
   };
 
   const resetFilters = () => {
-    setSortBy("date DESC");
-    setPlayerFilter("");
-    setRatingFilter("all");
-    setDateFilter("all");
-    setFormatFilter("all");
+    const defaultFilters = {
+      sortBy: "date DESC",
+      playerFilter: "",
+      ratingFilter: "all",
+      dateFilter: "all",
+      formatFilter: "all",
+    };
+    
+    // Actualizar estados temporales
+    setSortBy(defaultFilters.sortBy);
+    setPlayerFilter(defaultFilters.playerFilter);
+    setRatingFilter(defaultFilters.ratingFilter);
+    setDateFilter(defaultFilters.dateFilter);
+    setFormatFilter(defaultFilters.formatFilter);
+    
+    // Actualizar estados activos
+    setActiveFilters(defaultFilters);
     setPage(1);
   };
 
@@ -87,26 +113,91 @@ function SavedGamesPage() {
     localStorage.setItem('analyticsReplays', JSON.stringify(analyticsReplays));
   }, [analyticsReplays]);
 
+  // ✅ Función para extraer fecha del formato {value: "..."}
+  const extractDateValue = useCallback((dateField) => {
+    if (dateField && typeof dateField === 'object' && dateField.value) {
+      return dateField.value;
+    }
+    if (typeof dateField === 'string') {
+      return dateField;
+    }
+    if (dateField instanceof Date) {
+      return dateField.toISOString();
+    }
+    if (typeof dateField === 'number') {
+      return new Date(dateField).toISOString();
+    }
+    return null;
+  }, []);
+
+  // ✅ Cargar juegos guardados
   useEffect(() => {
     if (!currentUser) {
       setLoading(false);
       return;
     }
+    
+    console.log('📡 Fetching saved replays...');
+    
     axios.get(`/api/users/${currentUser.uid}/saved-replays`)
       .then(res => {
-        const withTimestamps = res.data.map(game => ({
-          ...game,
-          ts: new Date(game.date).getTime()
-        }));
+        console.log('📊 Raw API response:', res.data);
+        
+        if (res.data && res.data.length > 0) {
+          console.log('📋 First game raw:', {
+            replay_id: res.data[0].replay_id,
+            date: res.data[0].date,
+            dateType: typeof res.data[0].date,
+            dateKeys: res.data[0].date ? Object.keys(res.data[0].date) : 'N/A'
+          });
+        }
+        
+        const withTimestamps = res.data.map(game => {
+          const dateString = extractDateValue(game.date);
+          const ts = dateString ? new Date(dateString).getTime() : 0;
+          const isValid = ts > 0 && !isNaN(ts);
+          
+          if (!isValid) {
+            console.warn(`⚠️ Invalid date for ${game.replay_id}:`, {
+              originalDate: game.date,
+              extractedString: dateString,
+              parsedTimestamp: ts
+            });
+          }
+          
+          return {
+            ...game,
+            date: dateString || game.date,
+            ts,
+            _parsedDate: isValid ? new Date(ts).toISOString() : 'INVALID'
+          };
+        });
+        
         setGames(withTimestamps);
+        
+        const validDates = withTimestamps.filter(g => g.ts > 0).length;
+        const invalidDates = withTimestamps.filter(g => g.ts === 0).length;
+        
+        console.log('✅ Processed saved games:', {
+          total: withTimestamps.length,
+          validDates,
+          invalidDates,
+          successRate: `${((validDates / withTimestamps.length) * 100).toFixed(1)}%`,
+          sample: withTimestamps.slice(0, 3).map(g => ({
+            replay_id: g.replay_id,
+            date: g.date,
+            ts: g.ts,
+            _parsedDate: g._parsedDate
+          }))
+        });
+        
+        if (invalidDates > 0) {
+          console.error(`❌ ${invalidDates} games have invalid dates!`);
+        }
       })
-      .catch(err => console.error(err))
+      .catch(err => console.error('❌ Error loading saved games:', err))
       .finally(() => setLoading(false));
-  }, [currentUser]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [sortBy]);
+  }, [currentUser, extractDateValue]);
 
   const handleToggleAnalytics = id => {
     setAnalyticsReplays(prev =>
@@ -135,74 +226,97 @@ function SavedGamesPage() {
     setUnsaving(false);
   };
 
-  // Función de filtrado mejorada (basada en gameFilters.js)
-  const filterGames = (games, filters) => {
+  // ✅ CAMBIO: useMemo usa activeFilters (no estados temporales)
+  const sortedGames = useMemo(() => {
+    console.log('🔍 Filtering games with ACTIVE filters:', activeFilters);
+    console.log('   Total games:', games.length);
+    
     let filtered = [...games];
 
     // Player filter
-    if (filters.playerFilter.trim()) {
-      const query = filters.playerFilter.toLowerCase();
+    if (activeFilters.playerFilter.trim()) {
+      const query = activeFilters.playerFilter.toLowerCase();
       filtered = filtered.filter(game => 
         game.player1?.toLowerCase().includes(query) ||
         game.player2?.toLowerCase().includes(query)
       );
+      console.log('   After player filter:', filtered.length);
     }
 
     // Rating filter
-    if (filters.ratingFilter !== 'all') {
-      if (filters.ratingFilter === 'unknown') {
+    if (activeFilters.ratingFilter !== 'all') {
+      if (activeFilters.ratingFilter === 'unknown') {
         filtered = filtered.filter(game => !game.rating || game.rating === 0);
       } else {
-        const minRating = parseInt(filters.ratingFilter.replace('+', ''));
+        const minRating = parseInt(activeFilters.ratingFilter.replace('+', ''));
         filtered = filtered.filter(game => game.rating && game.rating >= minRating);
       }
+      console.log('   After rating filter:', filtered.length);
     }
 
-    // Date filter
-    if (filters.dateFilter !== 'all') {
+    // Date filter (time range)
+    if (activeFilters.dateFilter !== 'all') {
       const now = Date.now();
       const timeRanges = {
         week: 7 * 24 * 60 * 60 * 1000,
         month: 30 * 24 * 60 * 60 * 1000,
         year: 365 * 24 * 60 * 60 * 1000
       };
-      const range = timeRanges[filters.dateFilter];
+      const range = timeRanges[activeFilters.dateFilter];
       if (range) {
-        filtered = filtered.filter(game => now - game.ts <= range);
+        const beforeFilter = filtered.length;
+        filtered = filtered.filter(game => {
+          const gameTime = game.ts || 0;
+          return gameTime > 0 && (now - gameTime) <= range;
+        });
+        console.log(`   After date range filter: ${filtered.length} (from ${beforeFilter})`);
       }
     }
 
     // Format filter
-    if (filters.formatFilter !== 'all') {
-      filtered = filtered.filter(game => game.format === filters.formatFilter);
+    if (activeFilters.formatFilter !== 'all') {
+      filtered = filtered.filter(game => game.format === activeFilters.formatFilter);
+      console.log('   After format filter:', filtered.length);
     }
 
     // Sort
-    const [field, order] = filters.sortBy.split(' ');
+    const [field, order] = activeFilters.sortBy.split(' ');
+    console.log(`   Sorting by: ${field} ${order}`);
+    
     filtered.sort((a, b) => {
       let valA, valB;
       
       if (field === 'date') {
         valA = a.ts || 0;
         valB = b.ts || 0;
+        
+        if (filtered.indexOf(a) < 2) {
+          console.log(`   Date comparison: ${a.replay_id} (${a._parsedDate}) vs ${b.replay_id} (${b._parsedDate})`);
+          console.log(`       Timestamps: ${valA} vs ${valB}`);
+        }
+        
       } else if (field === 'rating') {
         valA = a.rating || 0;
         valB = b.rating || 0;
+        
+        if (filtered.indexOf(a) < 2) {
+          console.log(`   Rating comparison: ${a.replay_id} (${valA}) vs ${b.replay_id} (${valB})`);
+        }
       }
 
       return order === 'DESC' ? valB - valA : valA - valB;
     });
+    
+    console.log('   First 3 after sort:', filtered.slice(0, 3).map(g => ({
+      replay_id: g.replay_id,
+      ts: g.ts,
+      _parsedDate: g._parsedDate,
+      rating: g.rating
+    })));
 
+    console.log('✅ Final filtered count:', filtered.length);
     return filtered;
-  };
-
-  const sortedGames = filterGames(games, {
-    sortBy,
-    playerFilter,
-    ratingFilter,
-    dateFilter,
-    formatFilter
-  });
+  }, [games, activeFilters]); // ✅ Depende de activeFilters, no de estados temporales
 
   const totalPages = Math.ceil(sortedGames.length / PAGE_SIZE);
   const pageGames = sortedGames.slice(
@@ -333,7 +447,7 @@ function SavedGamesPage() {
         )}
       </Typography>
 
-      {/* Componente de filtros reutilizable */}
+      {/* ✅ RESTAURADO: onApply prop */}
       <GameFilters
         sortBy={sortBy}
         onSortByChange={setSortBy}
@@ -359,27 +473,44 @@ function SavedGamesPage() {
         </Alert>
       )}
 
-      {pageGames.map((game) => (
-        <ReplayCard
-          key={game.replay_id}
-          game={game}
-          showAnalyze
-          showAnalytics
-          onToggleAnalytics={handleToggleAnalytics}
-          isInAnalytics={analyticsReplays.includes(game.replay_id)}
-        />
-      ))}
-
-      {totalPages > 1 && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-          <Pagination
-            count={totalPages}
-            page={page}
-            onChange={(_, v) => setPage(v)}
-            color="secondary"
-            size="small"
-          />
+      {sortedGames.length === 0 ? (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Typography variant="h6" color="text.primary">
+            No replays match the current filters
+          </Typography>
+          <Button
+            variant="outlined"
+            onClick={resetFilters}
+            sx={{ mt: 2 }}
+          >
+            Clear Filters
+          </Button>
         </Box>
+      ) : (
+        <>
+          {pageGames.map((game) => (
+            <ReplayCard
+              key={game.replay_id}
+              game={game}
+              showAnalyze
+              showAnalytics
+              onToggleAnalytics={handleToggleAnalytics}
+              isInAnalytics={analyticsReplays.includes(game.replay_id)}
+            />
+          ))}
+
+          {totalPages > 1 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(_, v) => setPage(v)}
+                color="secondary"
+                size="small"
+              />
+            </Box>
+          )}
+        </>
       )}
 
       <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
