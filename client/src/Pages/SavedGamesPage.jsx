@@ -1,16 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Typography,
   Box,
   CircularProgress,
   Button,
-  TextField,
   Alert,
   Pagination,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -24,7 +19,7 @@ import axios from 'axios';
 import LoginIcon from '@mui/icons-material/Login';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LoginDialog from "../components/LoginDialog";
-import { filterAndSortGames, ClearFiltersButton } from '../utils/gameFilters';
+import GameFilters from "../components/filters/GameFilters";
 
 function SavedGamesPage() {
   const { currentUser, clearSavedReplays } = useAuth();
@@ -40,6 +35,8 @@ function SavedGamesPage() {
   const [addError, setAddError] = useState('');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 10;
+  
+  // Estados de filtros
   const [sortBy, setSortBy] = useState("date DESC");
   const [playerFilter, setPlayerFilter] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
@@ -47,11 +44,42 @@ function SavedGamesPage() {
   const [formatFilter, setFormatFilter] = useState("all");
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  // Estados para formatos disponibles
+  const [availableFormats, setAvailableFormats] = useState([]);
+  const [isLoadingFormats, setIsLoadingFormats] = useState(true);
+
+  // Fetch formatos disponibles
+  const fetchAvailableFormats = useCallback(async () => {
+    try {
+      setIsLoadingFormats(true);
+      const response = await axios.get("/api/games/formats");
+      
+      if (response.data && response.data.formats) {
+        setAvailableFormats(response.data.formats);
+      }
+    } catch (error) {
+      console.error("Error fetching available formats:", error);
+      setAvailableFormats([]);
+    } finally {
+      setIsLoadingFormats(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAvailableFormats();
+  }, [fetchAvailableFormats]);
+
+  const applyFilters = () => {
+    setPage(1);
+    // Los filtros se aplican automáticamente en el useMemo de sortedGames
+  };
+
   const resetFilters = () => {
-    setPlayerFilter('');
-    setRatingFilter('all');
-    setDateFilter('all');
-    setFormatFilter('all');
+    setSortBy("date DESC");
+    setPlayerFilter("");
+    setRatingFilter("all");
+    setDateFilter("all");
+    setFormatFilter("all");
     setPage(1);
   };
 
@@ -94,7 +122,7 @@ function SavedGamesPage() {
       await axios.delete(`/api/users/${currentUser.uid}/saved-replays`);
       setGames([]);
       setAnalyticsReplays([]);
-      clearSavedReplays();      // ← actualiza contexto
+      clearSavedReplays();
     } catch (err) {
       console.error("Error unsaving all:", err);
     }
@@ -107,8 +135,73 @@ function SavedGamesPage() {
     setUnsaving(false);
   };
 
-  const sortedGames = filterAndSortGames(games, {
-    sortBy, playerFilter, ratingFilter, dateFilter, formatFilter
+  // Función de filtrado mejorada (basada en gameFilters.js)
+  const filterGames = (games, filters) => {
+    let filtered = [...games];
+
+    // Player filter
+    if (filters.playerFilter.trim()) {
+      const query = filters.playerFilter.toLowerCase();
+      filtered = filtered.filter(game => 
+        game.player1?.toLowerCase().includes(query) ||
+        game.player2?.toLowerCase().includes(query)
+      );
+    }
+
+    // Rating filter
+    if (filters.ratingFilter !== 'all') {
+      if (filters.ratingFilter === 'unknown') {
+        filtered = filtered.filter(game => !game.rating || game.rating === 0);
+      } else {
+        const minRating = parseInt(filters.ratingFilter.replace('+', ''));
+        filtered = filtered.filter(game => game.rating && game.rating >= minRating);
+      }
+    }
+
+    // Date filter
+    if (filters.dateFilter !== 'all') {
+      const now = Date.now();
+      const timeRanges = {
+        week: 7 * 24 * 60 * 60 * 1000,
+        month: 30 * 24 * 60 * 60 * 1000,
+        year: 365 * 24 * 60 * 60 * 1000
+      };
+      const range = timeRanges[filters.dateFilter];
+      if (range) {
+        filtered = filtered.filter(game => now - game.ts <= range);
+      }
+    }
+
+    // Format filter
+    if (filters.formatFilter !== 'all') {
+      filtered = filtered.filter(game => game.format === filters.formatFilter);
+    }
+
+    // Sort
+    const [field, order] = filters.sortBy.split(' ');
+    filtered.sort((a, b) => {
+      let valA, valB;
+      
+      if (field === 'date') {
+        valA = a.ts || 0;
+        valB = b.ts || 0;
+      } else if (field === 'rating') {
+        valA = a.rating || 0;
+        valB = b.rating || 0;
+      }
+
+      return order === 'DESC' ? valB - valA : valA - valB;
+    });
+
+    return filtered;
+  };
+
+  const sortedGames = filterGames(games, {
+    sortBy,
+    playerFilter,
+    ratingFilter,
+    dateFilter,
+    formatFilter
   });
 
   const totalPages = Math.ceil(sortedGames.length / PAGE_SIZE);
@@ -133,7 +226,7 @@ function SavedGamesPage() {
       >
         <Typography
           component="h1"
-          variant="h"
+          variant="h4"
           gutterBottom
         >
           Saved Games
@@ -233,83 +326,32 @@ function SavedGamesPage() {
         sx={{ marginBottom: 2 }}
       >
         Total Saved: {games.length}
+        {sortedGames.length !== games.length && (
+          <span style={{ marginLeft: 8, color: 'text.secondary' }}>
+            (Showing {sortedGames.length})
+          </span>
+        )}
       </Typography>
 
-      {/* Uncomment this section if you want to add a private replay URL input */}
-      {/*
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 3
-        }}
-      >
-        
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 2,
-            // Limita el ancho total del formulario de añadir replay
-            width: { xs: '100%', sm: '60%', md: '45%', lg: '35%' }
-          }}
-        >
-          <TextField
-            label="Private Replay Url"
-            variant="outlined"
-            size="small"
-            fullWidth
-            value={privateReplayId}
-            onChange={e => setPrivateReplayId(e.target.value)}
-          />
-          <Button
-            variant="contained"
-            onClick={handleAddPrivateReplay}
-            disabled={!privateReplayId}
-            sx={{ whiteSpace: 'nowrap' }}
-          >
-            Add Replay
-          </Button>
-        </Box>
-      </Box>
-      */}
-
-      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-        <TextField
-          label="Player"
-          size="small"
-          value={playerFilter}
-          onChange={e => setPlayerFilter(e.target.value)}
-        />
-        <FormControl size="small">
-          <InputLabel>Rating</InputLabel>
-          <Select value={ratingFilter} onChange={e => setRatingFilter(e.target.value)} label="Rating">
-            <MenuItem value="all">All</MenuItem>
-            <MenuItem value="unknown">Unknown</MenuItem>
-            <MenuItem value="1200+">&gt;1200</MenuItem>
-            <MenuItem value="1500+">&gt;1500</MenuItem>
-            <MenuItem value="1800+">&gt;1800</MenuItem>
-          </Select>
-        </FormControl>
-        <FormControl size="small">
-          <InputLabel>Date</InputLabel>
-          <Select value={dateFilter} onChange={e => setDateFilter(e.target.value)} label="Date">
-            <MenuItem value="all">All</MenuItem>
-            <MenuItem value="week">Last Week</MenuItem>
-            <MenuItem value="month">Last Month</MenuItem>
-            <MenuItem value="year">Last Year</MenuItem>
-          </Select>
-        </FormControl>
-        <FormControl size="small">
-          <InputLabel>Format</InputLabel>
-          <Select value={formatFilter} onChange={e => setFormatFilter(e.target.value)} label="Format">
-            <MenuItem value="all">All</MenuItem>
-            <MenuItem value="[Gen 9] VGC 2025 Reg G (Bo3)">Reg G</MenuItem>
-            <MenuItem value="[Gen 9] VGC 2025 Reg I (Bo3)">Reg I</MenuItem>
-          </Select>
-        </FormControl>
-        <ClearFiltersButton onClear={resetFilters} />
-      </Box>
+      {/* Componente de filtros reutilizable */}
+      <GameFilters
+        sortBy={sortBy}
+        onSortByChange={setSortBy}
+        playerFilter={playerFilter}
+        onPlayerFilterChange={setPlayerFilter}
+        ratingFilter={ratingFilter}
+        onRatingFilterChange={setRatingFilter}
+        dateFilter={dateFilter}
+        onDateFilterChange={setDateFilter}
+        formatFilter={formatFilter}
+        onFormatFilterChange={setFormatFilter}
+        availableFormats={availableFormats}
+        isLoadingFormats={isLoadingFormats}
+        showSavedFilter={false}
+        onApply={applyFilters}
+        onReset={resetFilters}
+        compact={true}
+      />
 
       {addError && (
         <Alert severity="error" sx={{ mb: 2 }}>
