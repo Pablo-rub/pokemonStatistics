@@ -207,13 +207,19 @@ function PublicGamesPage() {
           </Grid>
 
           {/* Player search */}
-          <Grid item xs={12} sm={6} md={4} lg={2}>
+          <Grid item xs={12} sm={6} md={4}>
             <TextField
               label="Search by player"
               value={playerFilter}
               onChange={(e) => setPlayerFilter(e.target.value)}
               size="small"
+              variant="outlined"
               fullWidth
+              sx={{
+                paddingLeft: 1,
+                paddingRight: 1,
+                margin: 0,
+              }}
             />
           </Grid>
 
