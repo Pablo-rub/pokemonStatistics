@@ -366,17 +366,6 @@ const PokemonListPage = () => {
             )}
           </>
         )}
-
-        {/* OPCIONAL: Info de caché */}
-        {cacheInfo && cacheInfo.ageMinutes !== null && (
-          <Box sx={{ mb: 2, textAlign: 'right' }}>
-            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-              Data cached {cacheInfo.ageMinutes < 60 
-                ? `${cacheInfo.ageMinutes}m` 
-                : `${Math.floor(cacheInfo.ageMinutes / 60)}h`} ago
-            </Typography>
-          </Box>
-        )}
       </Box>
     </Container>
   );
