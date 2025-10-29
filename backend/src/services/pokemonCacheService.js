@@ -1,8 +1,7 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-
-const CACHE_FILE = path.join(__dirname, '../cache/pokemon-data.json');
+const cacheRepo = require('./cache/cacheRepository');
 
 // ✅ CAMBIO: De 24 horas a 30 días
 const CACHE_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 días en milisegundos
@@ -46,38 +45,37 @@ class PokemonCacheService {
   async _doInitialize() {
     try {
       console.log('🔄 Initializing Pokemon cache...');
-      
-      // Intentar cargar desde archivo
-      if (fs.existsSync(CACHE_FILE)) {
-        const fileData = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf8'));
-        const fileAge = Date.now() - fileData.timestamp;
-        
+
+      // Intentar cargar desde el repo configurado (Redis/GCS/File)
+      const stored = await cacheRepo.load();
+      if (stored) {
+        const fileData = stored;
+        const fileAge = Date.now() - (fileData.timestamp || 0);
+
         // ✅ NUEVO: Validar que el caché tenga todos los Pokémon
         const cacheCount = Object.keys(fileData.data || {}).length;
         const isComplete = cacheCount >= MAX_POKEMON_ID;
-        
-        // ✅ CAMBIO: Cargar caché aunque esté desactualizado si está completo
-        // Actualizar en background si es necesario
+
         if (isComplete) {
           this.cache = fileData.data;
           this.lastUpdate = fileData.timestamp;
-          
+
           const daysOld = Math.floor(fileAge / (24 * 60 * 60 * 1000));
-          console.log(`✅ Pokemon cache loaded from file (${cacheCount}/${MAX_POKEMON_ID} entries, ${daysOld} days old)`);
-          
+          console.log(`✅ Pokemon cache loaded from ${cacheRepo.repoName} repo (${cacheCount}/${MAX_POKEMON_ID} entries, ${daysOld} days old)`);
+
           // Si está desactualizado, actualizar en background SIN bloquear
           if (fileAge >= CACHE_DURATION) {
             console.log('⏰ Cache is outdated, scheduling background update...');
             this.scheduleBackgroundUpdate();
           }
-          
+
           return;
         } else {
           const daysOld = Math.floor(fileAge / (24 * 60 * 60 * 1000));
-          console.log(`⚠️ Cache incomplete (${cacheCount}/${MAX_POKEMON_ID}), will refresh`);
+          console.log(`⚠️ Cache incomplete in ${cacheRepo.repoName} repo (${cacheCount}/${MAX_POKEMON_ID}), will refresh`);
         }
       }
-      
+
       // Si no existe o está incompleto, actualizar BLOQUEANDO
       await this.updateCache();
     } catch (error) {
@@ -278,23 +276,20 @@ class PokemonCacheService {
 
   // Guardar caché en archivo JSON
   async saveCacheToFile() {
+    // Delegated to cache repository (file/gcs/redis). Keep function for compatibility.
     try {
-      const dir = path.dirname(CACHE_FILE);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-
-      const data = {
+      const payload = {
         timestamp: this.lastUpdate,
         version: '1.0',
         count: Object.keys(this.cache).length,
         data: this.cache
       };
-
-      fs.writeFileSync(CACHE_FILE, JSON.stringify(data));
-      console.log(`💾 Pokemon cache saved to file (${data.count} entries)`);
-    } catch (error) {
-      console.error('❌ Error saving cache to file:', error);
+      const saved = await cacheRepo.save(payload);
+      if (!saved) {
+        console.warn('⚠️ saveCacheToFile: repo.save returned false');
+      }
+    } catch (err) {
+      console.error('❌ Error saving cache via repo:', err.message);
     }
   }
 
