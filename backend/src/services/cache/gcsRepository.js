@@ -50,7 +50,6 @@ module.exports = {
   save
 };
 
-// Optional health-check: write/read/delete a temporary object to validate permissions
 async function check() {
   if (!bucket) return { ok: false, message: 'No bucket configured' };
   const tmpName = `${CHECK_PATH_PREFIX}${Date.now()}.json`;
