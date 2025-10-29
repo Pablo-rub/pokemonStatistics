@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { auth } from "../firebase/firebase";
+import { auth, db, isFirebaseEnabled } from "../firebase/firebase";
 import { 
   GoogleAuthProvider, 
   signInWithPopup, 
@@ -14,10 +14,7 @@ import {
 } from "firebase/auth";
 import { getAuthErrorMessage } from '../utils/errorMessages';
 import axios from 'axios';
-import { db } from '../firebase/firebase';
-import { 
-  collection, doc, setDoc, deleteDoc, getDoc 
-} from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 
 const AuthContext = createContext();
 
@@ -136,6 +133,12 @@ export function AuthProvider({ children }) {
   const clearSavedReplays = () => setSavedReplaysIds([]);
 
   useEffect(() => {
+    if (!isFirebaseEnabled || !auth || typeof auth.onAuthStateChanged !== 'function') {
+      // Firebase not configured in this environment (e.g., local dev without credentials)
+      setLoading(false);
+      return () => {};
+    }
+
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (!user) {
         localStorage.removeItem('analyticsReplays');
@@ -200,6 +203,16 @@ export function AuthProvider({ children }) {
 
 export const useSavedReplays = () => {
   const { currentUser } = useAuth();
+
+  if (!isFirebaseEnabled || !db || !currentUser) {
+    // Return no-op implementations when Firebase is not available or no user is present
+    return {
+      isSaved: async () => false,
+      save: async () => { throw new Error('Firebase not configured or no user'); },
+      unsave: async () => { throw new Error('Firebase not configured or no user'); }
+    };
+  }
+
   const base = collection(db, 'users', currentUser.uid, 'savedReplays');
 
   const isSaved = async (id) => {
