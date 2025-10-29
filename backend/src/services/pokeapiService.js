@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const pokemonCacheService = require('./pokemonCacheService');
+const cacheRepo = require('./cache/cacheRepository');
 
 // Endpoint para obtener la lista de ítems (items)
 router.get('/items', async (req, res) => {
@@ -215,6 +216,23 @@ router.get('/pokemon-cache/stats', (req, res) => {
         ],
         status: stats.isUpdating ? 'updating' : 'ready'
     });
+});
+
+// NUEVO ENDPOINT: Check repo connectivity (GCS/Redis/File)
+router.get('/pokemon-cache/check', async (req, res) => {
+    try {
+        const repoName = cacheRepo.repoName || 'unknown';
+        // First, try the generic check exposed by cacheRepo
+        let checkResult = await cacheRepo.check().catch(e => ({ ok: false, message: e.message }));
+
+        // Also try load() to see if data exists
+        const loaded = await cacheRepo.load().catch(e => null);
+        const hasData = loaded && loaded.count ? true : false;
+
+        res.json({ repo: repoName, check: checkResult, hasData });
+    } catch (err) {
+        res.status(500).json({ ok: false, message: err.message });
+    }
 });
 
 // Nuevo endpoint para obtener todas las formas/varieties de un Pokémon
