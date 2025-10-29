@@ -45,6 +45,7 @@ class PokemonCacheService {
   async _doInitialize() {
     try {
       console.log('🔄 Initializing Pokemon cache...');
+      console.log(`🔎 Cache repo in use: ${cacheRepo.repoName}`);
 
       // Intentar cargar desde el repo configurado (Redis/GCS/File)
       const stored = await cacheRepo.load();
@@ -286,10 +287,12 @@ class PokemonCacheService {
       };
       const saved = await cacheRepo.save(payload);
       if (!saved) {
-        console.warn('⚠️ saveCacheToFile: repo.save returned false');
+        console.warn(`⚠️ Failed to save cache via repo (${cacheRepo.repoName}). Check /api/pokemon-cache/check for diagnostics.`);
+      } else {
+        console.log(`✅ Cache saved via repo (${cacheRepo.repoName}), entries=${payload.count}`);
       }
     } catch (err) {
-      console.error('❌ Error saving cache via repo:', err.message);
+      console.error('❌ Error saving cache via repo:', err && err.message ? err.message : err);
     }
   }
 
