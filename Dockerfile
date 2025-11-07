@@ -29,9 +29,9 @@ RUN cd client && npm run build
 FROM node:18
 WORKDIR /app
 
-# Copiar dependencias del backend
-COPY package*.json ./
-RUN npm install
+# Copiar dependencias del backend (CORREGIDO: usar backend/package*.json)
+COPY backend/package*.json ./backend/
+RUN cd backend && npm install
 
 # Copiar código del backend
 COPY backend/ ./backend/
