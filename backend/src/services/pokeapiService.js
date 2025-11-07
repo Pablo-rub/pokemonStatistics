@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const pokemonCacheService = require('./pokemonCacheService');
+const cacheRepo = require('./cache/cacheRepository');
 
 // Endpoint para obtener la lista de ítems (items)
 router.get('/items', async (req, res) => {
@@ -215,6 +216,91 @@ router.get('/pokemon-cache/stats', (req, res) => {
         ],
         status: stats.isUpdating ? 'updating' : 'ready'
     });
+});
+
+// NUEVO ENDPOINT: Check repo connectivity (GCS/Redis/File) - MEJORADO
+router.get('/pokemon-cache/check', async (req, res) => {
+    try {
+        const repoName = cacheRepo.repoName || 'unknown';
+        
+        // Environment info
+        const envInfo = {
+            GCS_BUCKET: process.env.GCS_BUCKET || 'NOT_SET',
+            REDIS_URL: process.env.REDIS_URL ? 'SET (hidden)' : 'NOT_SET',
+            NODE_ENV: process.env.NODE_ENV || 'development',
+            platform: process.env.K_SERVICE ? 'Cloud Run' : 'Local'
+        };
+        
+        // Check repo health
+        let checkResult = await cacheRepo.check().catch(e => ({ 
+            ok: false, 
+            message: e.message 
+        }));
+
+        // Check if data exists
+        const loaded = await cacheRepo.load().catch(e => null);
+        const hasData = loaded && loaded.count ? true : false;
+        
+        // Cache stats
+        const cacheStats = pokemonCacheService.getStats();
+        
+        // Build response with detailed diagnostics
+        const response = {
+            timestamp: new Date().toISOString(),
+            repository: {
+                type: repoName,
+                configured: repoName !== 'file' || process.env.GCS_BUCKET || process.env.REDIS_URL,
+                health: checkResult
+            },
+            environment: envInfo,
+            cache: {
+                hasData,
+                dataCount: loaded ? loaded.count : 0,
+                dataTimestamp: loaded ? new Date(loaded.timestamp).toISOString() : null,
+                stats: cacheStats
+            },
+            recommendations: []
+        };
+        
+        // Add recommendations based on status
+        if (repoName === 'file' && process.env.NODE_ENV === 'production') {
+            response.recommendations.push({
+                level: 'warning',
+                message: 'Using local file cache in production. This is ephemeral on Cloud Run.',
+                action: 'Set GCS_BUCKET=pokemon-statistics-cache environment variable in Cloud Run',
+                command: 'Run: ./scripts/configure-cloud-run.ps1'
+            });
+        }
+        
+        if (repoName === 'gcs' && !checkResult.ok) {
+            response.recommendations.push({
+                level: 'error',
+                message: 'GCS bucket configured but not accessible',
+                action: 'Verify service account permissions and bucket existence',
+                commands: [
+                    'gcloud storage buckets describe gs://pokemon-statistics-cache',
+                    'gcloud storage buckets add-iam-policy-binding gs://pokemon-statistics-cache --member="serviceAccount:pokemon-statistics@pokemon-statistics.iam.gserviceaccount.com" --role="roles/storage.objectAdmin"'
+                ]
+            });
+        }
+        
+        if (!hasData && cacheStats.count === 0) {
+            response.recommendations.push({
+                level: 'info',
+                message: 'Cache is empty. Trigger initial population.',
+                action: 'POST /api/pokemon-cache/refresh to populate cache',
+                note: 'This will take ~30-60 seconds to fetch all 1025 Pokemon from PokeAPI'
+            });
+        }
+        
+        res.json(response);
+    } catch (err) {
+        res.status(500).json({ 
+            ok: false, 
+            message: err.message,
+            timestamp: new Date().toISOString()
+        });
+    }
 });
 
 // Nuevo endpoint para obtener todas las formas/varieties de un Pokémon
