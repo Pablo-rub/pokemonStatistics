@@ -228,7 +228,7 @@ router.get('/pokemon-cache/check', async (req, res) => {
             GCS_BUCKET: process.env.GCS_BUCKET || 'NOT_SET',
             REDIS_URL: process.env.REDIS_URL ? 'SET (hidden)' : 'NOT_SET',
             NODE_ENV: process.env.NODE_ENV || 'development',
-            hasGoogleCredentials: !!process.env.GOOGLE_APPLICATION_CREDENTIALS
+            platform: process.env.K_SERVICE ? 'Cloud Run' : 'Local'
         };
         
         // Check repo health

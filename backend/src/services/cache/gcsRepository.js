@@ -11,12 +11,16 @@ let bucket = null;
 
 if (bucketName) {
   try {
+    // Storage client automatically uses:
+    // 1. GOOGLE_APPLICATION_CREDENTIALS if set (local dev)
+    // 2. Cloud Run service account metadata service (production)
     storage = new Storage();
     bucket = storage.bucket(bucketName);
     console.log(`✅ GCS Repository initialized with bucket: ${bucketName}`);
+    console.log(`   Authentication: ${process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'Credentials file' : 'Cloud Run service account'}`);
   } catch (err) {
     console.error('❌ gcsRepository init error:', err.message);
-    console.error('   Make sure GOOGLE_APPLICATION_CREDENTIALS is set or running on GCP with proper service account');
+    console.error('   Make sure service account has storage.objectAdmin role on the bucket');
   }
 } else {
   console.warn('⚠️  GCS_BUCKET environment variable not set. GCS repository will not be available.');
