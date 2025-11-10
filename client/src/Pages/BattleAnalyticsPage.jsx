@@ -38,6 +38,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import LoginDialog from '../components/LoginDialog';
 import LoginIcon from '@mui/icons-material/Login';
+import SEO from '../components/SEO';
 
 export default function BattleAnalyticsPage() {
   const theme = useTheme();
@@ -88,6 +89,11 @@ export default function BattleAnalyticsPage() {
         component="main"
         sx={{ maxWidth: 800, mx: 'auto', mt: 8, p: 3 }}
       >
+        <SEO 
+          title="Battle Analytics Dashboard"
+          description="Deep dive into battle statistics and analytics. Sign in to analyze trends, win rates, and team compositions from your saved VGC matches."
+          keywords="battle analytics, vgc statistics, pokemon data analysis, competitive analytics"
+        />
         <Typography
           component="h1"
           variant="h"
@@ -291,6 +297,11 @@ const PIE_COLORS = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'];
 
   return (
     <Box component="main" sx={{ p: 2 }}>
+      <SEO 
+        title="Battle Analytics Dashboard"
+        description={`Analyze ${stats ? `${Object.keys(stats.usedPokemon).length} Pokémon across ${stats.replays.length} battles` : 'your battle statistics'}. View trends, win rates, and team compositions from your saved VGC matches.`}
+        keywords="battle analytics, vgc statistics, pokemon data analysis, competitive analytics, battle insights, win rates"
+      />
       <Typography 
         component="h1"
         variant="h4"

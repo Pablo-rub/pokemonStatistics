@@ -9,6 +9,7 @@ import {
 import ReplayCard from "../components/ReplayCard";
 import { useAuth } from "../contexts/AuthContext";
 import GameFilters from "../components/filters/GameFilters";
+import SEO from "../components/SEO";
 
 function PublicGamesPage() {
   const [games, setGames] = useState([]);
@@ -134,6 +135,11 @@ function PublicGamesPage() {
 
   return (
     <Box component="main" sx={{ padding: { xs: 1, sm: 2 } }}>
+      <SEO 
+        title="Public Battle Replays"
+        description={`Browse and watch ${numGames ? `${numGames} ` : ''}recent competitive Pokémon VGC matches. Learn from top players and discover new strategies.`}
+        keywords="pokemon replays, vgc battles, competitive matches, pokemon showdown replays, vgc gameplay, public games"
+      />
       <Typography variant="h4" component="h1" gutterBottom>
         Public Games
       </Typography>

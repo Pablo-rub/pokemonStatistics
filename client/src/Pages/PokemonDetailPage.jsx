@@ -30,6 +30,7 @@ import ShieldIcon from '@mui/icons-material/Shield';
 import GavelIcon from '@mui/icons-material/Gavel';
 import { useTheme } from '@mui/material/styles';
 import axios from 'axios';
+import SEO from '../components/SEO';
 import {
   calculateDefensiveMatchups,
   calculateOffensiveMatchups,
@@ -288,6 +289,11 @@ const PokemonDetailPage = () => {
   if (loading) {
     return (
       <Container maxWidth="xl">
+        <SEO 
+          title="Loading Pokémon Details..."
+          description="Loading detailed competitive stats, abilities, moves, and type matchups for this Pokémon."
+          keywords="pokemon stats, pokemon details, vgc analysis"
+        />
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'center', 
@@ -303,6 +309,11 @@ const PokemonDetailPage = () => {
   if (error) {
     return (
       <Container maxWidth="xl">
+        <SEO 
+          title="Error Loading Pokémon"
+          description="Unable to load Pokémon details. Please try again."
+          keywords="pokemon, error"
+        />
         <Box sx={{ py: 4 }}>
           <Alert severity="error">{error}</Alert>
           <Box sx={{ mt: 2 }}>
@@ -337,8 +348,26 @@ const PokemonDetailPage = () => {
   const defensiveMatchups = calculateDefensiveMatchups(pokemonTypes);
   const offensiveMatchups = calculateOffensiveMatchups(pokemonTypes);
 
+  // SEO dinámico basado en el Pokémon
+  const pokemonName = displayedPokemon?.displayName || displayedPokemon?.name || 'Unknown Pokémon';
+  const pokemonTypesStr = (displayedPokemon?.types || []).map(t => t.name).join('/');
+  const totalStats = optimizedStats.total;
+  const seoTitle = selectedForm 
+    ? `${pokemonName} ${selectedForm.formType} - Stats & Analysis`
+    : `${pokemonName} - Stats & Competitive Analysis`;
+  
+  const seoDescription = `Complete competitive analysis for ${pokemonName}${pokemonTypesStr ? ` (${pokemonTypesStr} type)` : ''}. Base stats total: ${totalStats}, OST: ${optimizedStats.optimized}. View abilities, type matchups, and optimal builds for VGC battles.`;
+  
+  const seoKeywords = `${pokemonName}, pokemon stats, ${pokemonTypesStr}, ${(displayedPokemon?.abilities || []).map(a => a.name).join(', ')}, vgc ${pokemonName}, competitive ${pokemonName}, pokemon analysis`;
+
   return (
     <Container maxWidth="xl">
+      <SEO 
+        title={seoTitle}
+        description={seoDescription}
+        keywords={seoKeywords}
+        image={displayedPokemon?.sprites?.officialArtwork || displayedPokemon?.officialArtwork}
+      />
       <Box sx={{ py: 4 }}>
         {/* Header */}
         <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>

@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import PokemonSprite from "../components/PokemonSprite";
 import TurnCard from "../components/TurnCard";
+import SEO from "../components/SEO";
 
 export default function AnalyzeBattlePage() {
   const { replayId } = useParams();
@@ -25,6 +26,11 @@ export default function AnalyzeBattlePage() {
   if (!data) {
     return (
       <Box sx={{ textAlign: 'center', mt: 8 }}>
+        <SEO 
+          title="Loading Battle Analysis..."
+          description="Loading detailed turn-by-turn analysis for this battle replay."
+          keywords="battle analysis, loading"
+        />
         <CircularProgress color="secondary" />
       </Box>
     );
@@ -32,6 +38,11 @@ export default function AnalyzeBattlePage() {
 
   return (
     <Box component="main" sx={{ p: { xs: 2, md: 4 } }}>
+      <SEO 
+        title={`Analyze Battle ${replayId}`}
+        description={`Detailed turn-by-turn analysis of battle replay ${replayId}. Review decisions, team matchups, and key moments from this competitive VGC match.`}
+        keywords={`battle analysis, replay ${replayId}, vgc analysis, match review, battle breakdown, turn analysis`}
+      />
       <Typography 
         component="h1"
         variant="h4" 

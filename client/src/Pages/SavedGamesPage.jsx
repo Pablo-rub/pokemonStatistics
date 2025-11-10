@@ -20,6 +20,7 @@ import LoginIcon from '@mui/icons-material/Login';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import LoginDialog from "../components/LoginDialog";
 import GameFilters from "../components/filters/GameFilters";
+import SEO from "../components/SEO";
 
 function SavedGamesPage() {
   const { currentUser, clearSavedReplays } = useAuth();
@@ -338,6 +339,11 @@ function SavedGamesPage() {
         component="main"
         sx={{ maxWidth: 800, mx: 'auto', mt: 8, p: 3 }}
       >
+        <SEO 
+          title="My Saved Games"
+          description="View and manage your saved Pokémon VGC battle replays. Sign in to access your personal collection."
+          keywords="saved battles, pokemon replays, my games, vgc replays, battle history, saved matches"
+        />
         <Typography
           component="h1"
           variant="h4"
@@ -378,6 +384,11 @@ function SavedGamesPage() {
   if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+        <SEO 
+          title="Loading Saved Games..."
+          description="Loading your saved Pokémon VGC battle replays."
+          keywords="saved battles, loading"
+        />
         <CircularProgress />
       </Box>
     );
@@ -396,6 +407,11 @@ function SavedGamesPage() {
           gap: 3
         }}
       >
+        <SEO 
+          title="No Saved Games"
+          description="You haven't saved any battle replays yet. Start saving replays to build your personal collection."
+          keywords="saved battles, no games, pokemon replays"
+        />
         <BookmarkBorderIcon sx={{ fontSize: 60, color: 'grey.500' }} />
         <Typography 
           variant="h5" 
@@ -426,6 +442,11 @@ function SavedGamesPage() {
 
   return (
     <Box component="main" sx={{ padding: 2 }}>
+      <SEO 
+        title={`My Saved Games (${games.length})`}
+        description={`View and manage your ${games.length} saved Pokémon VGC battle replays. Analyze your matches and track your competitive performance.`}
+        keywords={`saved battles, pokemon replays, my games, vgc replays, battle history, saved matches, ${games.length} replays`}
+      />
       <Typography 
         component="h1"
         variant="h4" 
