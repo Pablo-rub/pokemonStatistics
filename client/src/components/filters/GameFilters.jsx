@@ -10,6 +10,7 @@ import {
   Box,
   CircularProgress,
 } from "@mui/material";
+import { formatGameFormat } from "../../utils/formatHelpers";
 
 /**
  * Componente reutilizable de filtros para juegos/replays
@@ -35,17 +36,6 @@ const GameFilters = ({
   onReset,
   compact = false,
 }) => {
-  // Helper para formatear nombres de regulaciones
-  const formatRegulationName = (format) => {
-    if (!format) return format;
-    
-    const match = format.match(/Reg ([A-Z])/i);
-    if (match) {
-      return `Reg ${match[1].toUpperCase()}`;
-    }
-    return format;
-  };
-
   return (
     <Box
       sx={{
@@ -240,7 +230,7 @@ const GameFilters = ({
               ) : (
                 availableFormats.map((format) => (
                   <MenuItem key={format} value={format}>
-                    {formatRegulationName(format)}
+                    {formatGameFormat(format)}
                   </MenuItem>
                 ))
               )}

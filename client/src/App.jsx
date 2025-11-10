@@ -14,6 +14,7 @@ import BattleAnalyticsPage from './Pages/BattleAnalyticsPage';
 import ContactPage from './Pages/ContactPage';
 import PokemonListPage from './Pages/PokemonListPage';
 import PokemonDetailPage from './Pages/PokemonDetailPage';
+import TeamBuilderPage from './Pages/TeamBuilderPage';
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
         <Route path="contact" element={<ContactPage />} />
         <Route path="pokemon-list" element={<PokemonListPage />} />
         <Route path="pokemon/:nameOrId" element={<PokemonDetailPage />} />
+        <Route path="team-builder" element={<TeamBuilderPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
