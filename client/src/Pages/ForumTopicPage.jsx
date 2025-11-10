@@ -21,6 +21,7 @@ import LoginIcon from '@mui/icons-material/Login';
 import { useAuth } from '../contexts/AuthContext';
 import LoginDialog from '../components/LoginDialog';
 import axios from 'axios';
+import SEO from '../components/SEO';
 
 export default function ForumTopicPage() {
   const { topicId } = useParams();
@@ -111,6 +112,11 @@ export default function ForumTopicPage() {
         flexDirection: 'column'
       }}
     >
+      <SEO 
+        title={topic?.title || 'Forum Topic'}
+        description={topic?.description || `Join the discussion: ${topic?.title || 'Forum topic'}. Share your thoughts and strategies with the VGC community.`}
+        keywords={`pokemon forum, ${topic?.title || 'discussion'}, vgc discussion, pokemon strategy, community`}
+      />
       <Box sx={{ 
         mb: 2, 
         display: 'flex', 

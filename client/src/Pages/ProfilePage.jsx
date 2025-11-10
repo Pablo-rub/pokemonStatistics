@@ -34,6 +34,7 @@ import {
   VerifiedUser
 } from '@mui/icons-material';
 import LoginDialog from "../components/LoginDialog";
+import SEO from "../components/SEO";
 
 const ProfilePage = () => {
   const { currentUser, changePassword, deleteAccount, logout } = useAuth();
@@ -142,6 +143,11 @@ const ProfilePage = () => {
   if (!currentUser) {
     return (
       <Container maxWidth="md" sx={{ py: 4, textAlign: 'center' }}>
+        <SEO 
+          title="My Profile"
+          description="Manage your Trainer Academy profile. Sign in to view your statistics, saved battles, and customize your account settings."
+          keywords="user profile, my account, trainer profile, vgc profile, account settings"
+        />
         <Paper 
           elevation={3} 
           sx={{ 
@@ -215,6 +221,11 @@ const ProfilePage = () => {
 
   return (
     <Container component="main" maxWidth="lg" sx={{ py: 4 }}>
+      <SEO 
+        title="My Profile"
+        description={`Manage your Trainer Academy profile. View your ${currentUser?.displayName || 'user'} account statistics, saved battles, and customize your settings.`}
+        keywords={`user profile, ${currentUser?.displayName}, my account, trainer profile, vgc profile, account settings`}
+      />
       <Typography 
         component="h1"
         variant="h4" 

@@ -19,6 +19,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import CloseIcon from '@mui/icons-material/Close';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import TwitterIcon from '@mui/icons-material/Twitter';
+import SEO from '../components/SEO';
 
 const ContactPage = () => {
   const theme = useTheme();
@@ -45,6 +46,11 @@ const ContactPage = () => {
       mx: 'auto', 
       p: { xs: 2, sm: 3 }
     }}>
+      <SEO 
+        title="Contact & Help"
+        description="Get in touch with the Trainer Academy team. Find answers to FAQs, access help resources, and reach our support for questions or feedback about Pokémon VGC statistics."
+        keywords="contact, support, help, faq, trainer academy contact, vgc help, pokemon support"
+      />
       <Typography 
         variant={isMobile ? "h4" : "h3"} 
         sx={{ 

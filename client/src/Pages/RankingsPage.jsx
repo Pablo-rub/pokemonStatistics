@@ -14,6 +14,7 @@ import PokemonList from '../components/rankings/PokemonList';
 import DetailsPane from '../components/rankings/DetailsPane';
 import MultiLineChart from '../components/rankings/MultiLineChart';
 import PokemonSprite from '../components/PokemonSprite';
+import SEO from '../components/SEO';
 
 const victoryEndpoints = {
   historicalWinrate: '/api/victories',
@@ -1173,6 +1174,11 @@ const PokemonUsage = () => {
 
     return (
         <Box component="main" sx={{ padding: 2 }}>
+            <SEO 
+                title={`${rankingType === 'usage' ? 'Usage' : rankingType === 'victories' ? 'Winrate' : rankingType === 'teams' ? 'Teams' : 'Leads'} Rankings${format ? ` - ${format}` : ''}`}
+                description={`View ${rankingType === 'usage' ? 'usage statistics' : rankingType === 'victories' ? 'winrate rankings' : rankingType === 'teams' ? 'top team compositions' : 'lead Pokémon statistics'} for ${format || 'VGC'}. Analyze abilities, moves, items, tera types and teammates for competitive Pokémon battles.`}
+                keywords={`pokemon rankings, ${format}, vgc rankings, ${rankingType} statistics, competitive pokemon, ${selectedPokemon ? selectedPokemon.name + ' stats' : 'pokemon usage'}`}
+            />
             <Typography component="h1" variant="h4" gutterBottom>
                 Pokémon Usage Statistics
             </Typography>

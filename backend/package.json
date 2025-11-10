@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "generate-sitemap": "node generateSitemap.js"
   },
   "dependencies": {
     "@google-cloud/bigquery": "^7.9.1",

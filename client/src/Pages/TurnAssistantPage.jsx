@@ -28,6 +28,7 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import HelpDialog from '../components/HelpDialog';
 import useDraggable from "../hooks/useDraggable";
 import TeamDialog from "../components/TeamDialog";
+import SEO from "../components/SEO";
 
 // Estado inicial compartido para condiciones de batalla
 const defaultBattleConditions = {
@@ -444,6 +445,11 @@ function TurnAssistantPage() {
       aria-label="Turn Assistant"
       sx={{ padding: 3 }}
     >
+      <SEO 
+        title="Turn Assistant - Battle Strategy Tool"
+        description="Get real-time battle assistance for competitive Pokémon VGC. Analyze matchups, predict moves, and make optimal decisions during battles."
+        keywords="battle assistant, vgc calculator, pokemon battle tool, turn prediction, competitive assistant, battle strategy"
+      />
       <Typography component="h1" variant="h4" gutterBottom>
         Turn Assistant
       </Typography>

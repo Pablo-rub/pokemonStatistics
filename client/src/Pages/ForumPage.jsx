@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import ChatIcon from '@mui/icons-material/Chat';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
+import SEO from '../components/SEO';
 
 const ForumPage = () => {
   const [topics, setTopics] = useState([]);
@@ -56,6 +57,11 @@ const ForumPage = () => {
         minHeight: '80vh'
       }}
     >
+      <SEO 
+        title="Community Forum"
+        description="Join the Trainer Academy community. Discuss strategies, share replays, ask questions, and connect with other competitive Pokémon VGC players."
+        keywords="pokemon forum, vgc community, pokemon discussion, competitive pokemon community, vgc strategies"
+      />
       <Box sx={{ 
         mb: 4, 
         display: 'flex', 
