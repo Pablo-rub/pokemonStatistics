@@ -20,6 +20,7 @@ import PokemonCard from '../components/pokemon/PokemonCard';
 import TypeFilter from '../components/pokemon/TypeFilter';
 import usePokemonList from '../hooks/usePokemonList';
 import { matchesTypeFilter } from '../utils/pokemonTypes';
+import SEO from '../components/SEO';
 
 const PokemonListPage = () => {
   const theme = useTheme();
@@ -174,6 +175,11 @@ const PokemonListPage = () => {
   if (loading) {
     return (
       <Container maxWidth="xl">
+        <SEO 
+          title="Pokémon List"
+          description="Browse and explore all Pokémon from Generations 1-9. Filter by type, search by name, and discover detailed stats for competitive VGC battles."
+          keywords="pokemon list, pokemon database, pokemon types, pokemon generations, vgc pokemon"
+        />
         <Box sx={{ 
           display: 'flex', 
           justifyContent: 'center', 
@@ -189,6 +195,11 @@ const PokemonListPage = () => {
   if (error) {
     return (
       <Container maxWidth="xl">
+        <SEO 
+          title="Pokémon List"
+          description="Browse and explore all Pokémon from Generations 1-9. Filter by type, search by name, and discover detailed stats for competitive VGC battles."
+          keywords="pokemon list, pokemon database, pokemon types, pokemon generations, vgc pokemon"
+        />
         <Box sx={{ py: 4 }}>
           <Alert severity="error">{error}</Alert>
         </Box>
@@ -196,8 +207,36 @@ const PokemonListPage = () => {
     );
   }
 
+  // Build dynamic SEO based on filters
+  const buildSEOTitle = () => {
+    if (searchQuery && selectedTypes.length > 0) {
+      return `${searchQuery} - ${selectedTypes.join(', ')} Type Pokémon`;
+    } else if (searchQuery) {
+      return `Search: ${searchQuery} - Pokémon List`;
+    } else if (selectedTypes.length > 0) {
+      return `${selectedTypes.join(', ')} Type Pokémon`;
+    }
+    return 'All Pokémon - Complete Database';
+  };
+
+  const buildSEODescription = () => {
+    if (searchQuery && selectedTypes.length > 0) {
+      return `Find ${searchQuery} and other ${selectedTypes.join(', ')} type Pokémon. Showing ${filteredPokemon.length} results from our complete VGC Pokémon database.`;
+    } else if (searchQuery) {
+      return `Search results for "${searchQuery}". Browse ${filteredPokemon.length} Pokémon matching your search in our competitive VGC database.`;
+    } else if (selectedTypes.length > 0) {
+      return `Explore ${filteredPokemon.length} ${selectedTypes.join(', ')} type Pokémon. Complete stats, abilities, and movesets for competitive VGC battles.`;
+    }
+    return `Browse and explore all ${pokemonList.length} Pokémon from Generations 1-9. Filter by type, search by name, and discover detailed stats for competitive VGC battles.`;
+  };
+
   return (
     <Container maxWidth="xl">
+      <SEO 
+        title={buildSEOTitle()}
+        description={buildSEODescription()}
+        keywords={`pokemon list, ${selectedTypes.join(', ')} type, ${searchQuery}, pokemon database, vgc pokemon, competitive pokemon`}
+      />
       <Box sx={{ py: 4 }}>
         {/* Header */}
         <Box sx={{ mb: 4 }}>

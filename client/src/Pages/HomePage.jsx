@@ -19,6 +19,7 @@ import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import OndemandVideoIcon from '@mui/icons-material/OndemandVideo';
 import ExploreIcon from '@mui/icons-material/Explore';
 import ForumIcon from '@mui/icons-material/Forum';
+import SEO from '../components/SEO';
 
 export default function HomePage() {
   const theme = useTheme();
@@ -70,6 +71,11 @@ export default function HomePage() {
 
   return (
     <>
+      <SEO 
+        title="Home"
+        description="Trainer Academy — Your ultimate resource for Pokémon VGC competitive statistics. Check rankings, analyze matches, explore team compositions and improve your strategy with detailed statistics."
+        keywords="pokemon vgc, competitive pokemon, pokemon rankings, pokemon statistics, vgc stats, pokemon battles, pokemon analysis"
+      />
       {/* Banner region */}
       <Box component="header" role="banner">
         {/* Hero Section */}
