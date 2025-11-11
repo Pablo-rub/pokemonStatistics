@@ -179,7 +179,7 @@ export const calculateDefensiveMatchups = (pokemonTypes) => {
     // Apply type chart for each of the Pokémon's types
     pokemonTypes.forEach(defendingType => {
       const typeMatchup = TYPE_CHART[attackingType];
-      const multiplier = typeMatchup?.[defendingType.toLowerCase()] || 1;
+      const multiplier = typeMatchup?.[defendingType.toLowerCase()] ?? 1;
       effectiveness *= multiplier;
     });
 
@@ -208,7 +208,7 @@ export const calculateOffensiveMatchups = (pokemonTypes) => {
 
     // For each defending type, get the effectiveness
     allTypes.forEach(defendingType => {
-      matchups[defendingType] = typeChart[defendingType] || 1;
+      matchups[defendingType] = typeChart[defendingType] ?? 1;
     });
 
     result[attackingType] = categorizeMatchups(matchups);
