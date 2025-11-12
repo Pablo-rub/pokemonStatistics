@@ -60,7 +60,7 @@ const generateSitemapXML = (pages) => {
     xml += '  </url>\n';
   });
   
-  xml += '</urlset>';
+  xml += '</urlset>\n';
   
   return xml;
 };
