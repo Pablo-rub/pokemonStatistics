@@ -38,6 +38,8 @@ COPY backend/ ./backend/
 
 # Crear directorio public y copiar archivos del frontend
 COPY --from=build /app/client/build ./public
+# Copiar también a la ruta que espera server.js
+COPY --from=build /app/client/build ./client/build
 
 # Exponer puerto y configurar variables
 EXPOSE 8080
