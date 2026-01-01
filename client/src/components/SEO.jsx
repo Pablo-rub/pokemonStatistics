@@ -16,11 +16,14 @@ const SEO = ({
   description, 
   keywords = '',
   image = 'https://traineracademy.xyz/android-chrome-192x192.png',
-  type = 'website'
+  type = 'website',
+  noindex = false // Allow pages to opt out of indexing
 }) => {
   const location = useLocation();
   const siteUrl = 'https://traineracademy.xyz';
-  const currentUrl = `${siteUrl}${location.pathname}${location.search}`;
+  
+  // Remove query strings for canonical URL to avoid duplicate content issues
+  const canonicalUrl = `${siteUrl}${location.pathname}`;
   
   // Default fallback values
   const defaultTitle = 'Trainer Academy — Rankings & Match Analysis for Pokémon VGC';
@@ -36,18 +39,19 @@ const SEO = ({
       <meta name="title" content={fullTitle} />
       <meta name="description" content={metaDescription} />
       {keywords && <meta name="keywords" content={keywords} />}
-      <link rel="canonical" href={currentUrl} />
+      {noindex && <meta name="robots" content="noindex, follow" />}
+      <link rel="canonical" href={canonicalUrl} />
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={type} />
-      <meta property="og:url" content={currentUrl} />
+      <meta property="og:url" content={canonicalUrl} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={metaDescription} />
       <meta property="og:image" content={image} />
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:url" content={currentUrl} />
+      <meta name="twitter:url" content={canonicalUrl} />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={metaDescription} />
       <meta name="twitter:image" content={image} />
